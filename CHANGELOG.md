@@ -25,6 +25,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   redelivered event collapses, and each trail is ordered by its links within one
   request, project and tenant. The mirror carries the three fields the contract
   gained (`prevEventDigest`, `decidedAt`, `redactionProfile`).
+- `services/pdp-double`, an AuthZEN decision point double for the enforcer's
+  external decision point: HTTPS only, a CA made in memory and scoped by
+  critical name constraints to its own names, answers scripted per scenario,
+  hostile by default, and every question journalled before it is answered.
 - Every run report opens with its provenance: the lab commit (untracked files
   count as uncommitted changes), each pin, each image on this machine with its
   ID and the pin its label names, and the machine.
