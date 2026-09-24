@@ -207,6 +207,6 @@ func scenario(decisions map[int]labspec.DecisionExpectation) labspec.Scenario {
 		Profile:         []string{"core"},
 		EnforcementMode: "enforce",
 		Trajectory:      "trajectories/scenario-1.yaml",
-		Expect:          labspec.Expect{Decisions: decisions},
+		Expect:          labspec.Expect{Decisions: decisions, Evidence: &labspec.EvidenceExpectation{}},
 	}
 }

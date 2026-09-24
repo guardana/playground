@@ -92,7 +92,7 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
-	compose := l.compose.WithEnv(l.environment(spec, runID))
+	compose := l.compose.WithEnv(l.environment(spec, runID, runDir))
 	// Taken before anything boots. assertion.Run times the checks, which are
 	// the fast part; a report that said a run took no time because the reading
 	// of its records took no time would be telling a reader the wrong thing
@@ -112,37 +112,24 @@ func (l lab) runScenario(
 		}()
 	}
 
-	gateway, victim, probed := l.probes(ctx, compose, spec, trajectory, runDir)
-	replayed := l.replay(ctx, compose, spec, runID, runDir)
-	records, unreadable := l.collect(spec, boot, runID, runDir)
-
-	trail := filepath.Join(runDir, "evidence.jsonl")
-	graded := assertion.Run(ctx, records,
-		check.Boot{Source: filepath.Join(runDir, "boot.json")},
-		check.NetworkIsolation{Gateway: gateway, Victim: victim, Source: probed},
-		replayed,
-		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
-		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
-		check.Effects{Scenario: spec, JournalDir: filepath.Join(runDir, "journals")},
-		check.Evidence{
-			Scenario: spec, EvidenceFile: trail, ReadError: unreadable,
-			Unstamped: spec.Stub.Verdicts == "",
-			// The trail is read from runDir, which execute created for this run
-			// and refuses when it already exists.
-			FreshTrail: true,
-		},
-	)
+	var graded assertion.Report
+	var rows []check.DecisionRow
+	if spec.IsVerifier() {
+		graded = l.gradeVerifier(ctx, compose, spec, boot, runID, runDir)
+	} else {
+		graded, rows = l.gradeTrajectory(ctx, compose, spec, trajectory, boot, runID, runDir)
+	}
 	graded.StartedAt, graded.EndedAt = started, l.clock()
 	if spec.Gap != nil {
 		graded.Gap = spec.Gap.Why
 	}
-	return graded, check.DecisionRows(spec, trajectory, records, trail)
+	return graded, rows
 }
 
 // boot brings up every long running service in the profile and records what
-// came up. The agent is left out: it is a one-shot the runner drives itself,
-// and starting it here would replay the trajectory before the topology has
-// been proved.
+// came up. The agent and the verifier are left out: they are one-shots the
+// runner drives itself, and starting one here would run it before the
+// topology has been proved.
 func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
 	inProfile, err := compose.Services(ctx, spec.Profile)
@@ -150,7 +137,9 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 		l.note("listing the profile's services: %v", err)
 		return boot
 	}
-	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool { return name == agentService })
+	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
+		return name == agentService || name == verifierService
+	})
 	if err := compose.Up(ctx, spec.Profile, wanted); err != nil {
 		// Recorded rather than returned: what did come up is still a fact, and
 		// the boot check reports the rest as not running.

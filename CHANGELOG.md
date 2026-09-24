@@ -15,6 +15,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Verifier scenarios: a scenario with `verifier` probe steps instead of a
+  trajectory, graded on each step's exit code, the pin it wrote and the JSON
+  report it printed (`expect.verifier`), and on every victim's journal. It runs
+  in the `verifier` profile alone. The `verifier` compose service runs the
+  pinned verifier on `tool-net` alone, hardened, with only the run's
+  `verifier/` directory mounted; a run fails when the verifier has a route out
+  or a default route. Four scenarios in `scenarios/verify/` probe the victims
+  at guardana 0.26.1; `verify-04` is red while the verifier reports drift at
+  another severity than its rule catalogue lists.
+
 - `make enforcer-image` builds the enforcer from `git archive` of its pinned
   commit in the clone `ENFORCER_SOURCE` names, never from a working tree, and
   refuses when the archive does not hash to that commit's tree or the clone

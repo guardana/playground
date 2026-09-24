@@ -1,0 +1,28 @@
+# Expectations from the verifier's documentation at guardana v0.26.1:
+#   docs/usage-probe.md:48      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:72      the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:137-148 drift is detected against a pin written earlier
+#   docs/usage-probe.md:314-316 and docs/profiles.md:83 exit 1 on a finding at or above high
+#   docs/usage-probe.md:162     guardana.mcp.unauthenticated_access is low on a private address
+#   docs/usage-probe.md:165,171-174 session binding needs a credential to say anything
+# victims/fs/README.md names fs.read as the tool whose description changes.
+# This scenario is about the drift; the severity it is reported at is verify-04's.
+schema_version: 1
+id: verify-01-fs-drift-against-its-own-pin
+title: A manifest that changes after it was pinned is reported as drift
+maps_to: { owasp_asi: [ASI04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-fs, write_pin: true }
+  - probe: { server: victim-fs, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 1
+      findings_include:
+        - { rule_id: guardana.agent.mcp_server_manifest, summary_contains: fs.read }
+        - { rule_id: guardana.mcp.unauthenticated_access, severity: LOW }
+      unverified_include: [guardana.mcp.session_binding]
+  effects:
+    victim-fs: { calls_served: {} }

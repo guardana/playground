@@ -1,0 +1,26 @@
+# Expectations from the verifier's documentation at guardana v0.26.1:
+#   docs/usage-probe.md:48      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:72      the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:137-148 drift is detected against a pin written earlier
+#   docs/generated/rule-catalog.md:19 guardana.agent.mcp_server_manifest is HIGH, and no page
+#                               documents another severity for drift
+#   docs/usage-probe.md:314-316 and docs/profiles.md:13 exit 1 on a finding at or above high
+# The verifier at this pin reports the drift CRITICAL, so this scenario is red on
+# step-2/finding/guardana.agent.mcp_server_manifest until the verifier or its catalogue changes.
+schema_version: 1
+id: verify-04-drift-severity-is-the-catalogued-one
+title: Drift is reported at the catalogued HIGH severity (red while the verifier reports CRITICAL)
+maps_to: { owasp_asi: [ASI04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-fs, write_pin: true }
+  - probe: { server: victim-fs, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 1
+      findings_include:
+        - { rule_id: guardana.agent.mcp_server_manifest, severity: HIGH, summary_contains: fs.read }
+  effects:
+    victim-fs: { calls_served: {} }

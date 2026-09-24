@@ -23,6 +23,19 @@ func TestAOneShotRunBuildsItsImageFirst(t *testing.T) {
 	}
 }
 
+// A split run is built by a separate command first: compose prints build
+// progress on standard output, which a split run keeps as a record.
+func TestASplitRunNamesItsEntrypointBeforeTheService(t *testing.T) {
+	got := strings.Join(runSplitArgs("verifier", "python", []string{"-c", "x"}), " ")
+	if want := "run --rm --no-TTY --entrypoint python verifier -c x"; got != want {
+		t.Errorf("argv is %q, want %q", got, want)
+	}
+	got = strings.Join(runSplitArgs("verifier", "", []string{"probe"}), " ")
+	if want := "run --rm --no-TTY verifier probe"; got != want {
+		t.Errorf("argv is %q, want %q", got, want)
+	}
+}
+
 func TestParseStatusReadsBothShapesComposeWrites(t *testing.T) {
 	lines := `{"Name":"lab-victim-fs-1","Service":"victim-fs","State":"running","Health":"healthy"}
 {"Name":"lab-stub-gateway-1","Service":"stub-gateway","State":"exited","ExitCode":1,"Health":""}

@@ -31,6 +31,11 @@ func load(root, scenarioPath string) (labspec.Scenario, labspec.Trajectory, erro
 	if err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}
+	if spec.IsVerifier() {
+		// LoadScenario has checked every rule a verifier scenario has: there
+		// is no trajectory for it to agree with.
+		return spec, labspec.Trajectory{}, nil
+	}
 	trajectory, err := labspec.LoadTrajectory(filepath.Join(root, spec.Trajectory))
 	if err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
@@ -85,7 +90,11 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		Boot:     boot,
 		Journals: make(map[string][]journal.Entry, len(spec.Expect.Effects)),
 	}
-	events, err := readTrail(filepath.Join(runDir, "evidence.jsonl"))
+	var events []evidence.Event
+	var err error
+	if !spec.IsVerifier() {
+		events, err = readTrail(filepath.Join(runDir, "evidence.jsonl"))
+	}
 	var unreadable error
 	if err != nil {
 		l.note("reading the evidence trail: %v", err)

@@ -14,7 +14,7 @@ import (
 
 func evidenceScenario(expect labspec.EvidenceExpectation) labspec.Scenario {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}})
-	spec.Expect.Evidence = expect
+	spec.Expect.Evidence = &expect
 	return spec
 }
 

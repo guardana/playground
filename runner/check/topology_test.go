@@ -149,3 +149,47 @@ func TestNetworkIsolationCarriesTheReasonAProbeGave(t *testing.T) {
 		t.Errorf("the victim probe result does not carry the reason it got: %+v", results[1])
 	}
 }
+
+func TestTheVerifierReachesWhatItProbesAndNothingOutside(t *testing.T) {
+	reached := check.Probe{Target: "victim-fs:8080", Ran: true, Reached: true}
+	noRoute := check.Probe{Target: "192.0.2.1:443", Ran: true, Detail: "Network is unreachable"}
+	noDefault := check.Probe{Target: "a default route", Ran: true, Detail: "none"}
+	for name, test := range map[string]struct {
+		server, outside, routes check.Probe
+		red                     string
+		outcome                 assertion.Outcome
+	}{
+		"sealed": {reached, noRoute, noDefault, "", assertion.Pass},
+		"a route out": {reached, check.Probe{Target: "192.0.2.1:443", Ran: true, Reached: true}, noDefault,
+			"verifier-reach/no-route-out", assertion.Fail},
+		"an unreached probe": {check.Probe{Target: "victim-fs:8080", Ran: true}, noRoute, noDefault,
+			"verifier-reach/victim-fs:8080", assertion.Fail},
+		"a dial that told nothing": {reached, check.Probe{Target: "192.0.2.1:443", Detail: "timed out"}, noDefault,
+			"verifier-reach/no-route-out", assertion.Indeterminate},
+		"an unreachable dial beside a default route": {reached, noRoute,
+			check.Probe{Target: "a default route", Ran: true, Reached: true, Detail: "ipv4 via eth0"},
+			"verifier-reach/no-default-route", assertion.Fail},
+		"routing tables not read": {reached, noRoute, check.Probe{Target: "a default route", Detail: "no such file"},
+			"verifier-reach/no-default-route", assertion.Indeterminate},
+	} {
+		t.Run(name, func(t *testing.T) {
+			results, err := check.VerifierReach{Servers: []check.Probe{test.server}, Outside: test.outside, Routes: test.routes}.
+				Run(context.Background(), assertion.Records{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != 3 {
+				t.Fatalf("%d results, want 3", len(results))
+			}
+			for _, result := range results {
+				want := assertion.Pass
+				if result.Check == test.red {
+					want = test.outcome
+				}
+				if result.Outcome != want {
+					t.Errorf("%s = %s, want %s", result.Check, result.Outcome, want)
+				}
+			}
+		})
+	}
+}

@@ -1,0 +1,23 @@
+# Expectations from the verifier's documentation at guardana v0.26.1:
+#   docs/usage-probe.md:72      the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:147-148 without --mcp-pin drift is reported inconclusive, never clean
+#   docs/usage-probe.md:299-302 an inconclusive check is reported under `unverified`
+#   docs/usage-probe.md:162     guardana.mcp.unauthenticated_access is low on a private address
+#   docs/usage-probe.md:314-316 and docs/profiles.md:83-85 a low finding and unverified results
+#                               do not fail the default gate, so the run exits 0
+schema_version: 1
+id: verify-03-unpinned-manifest-is-unverified
+title: A manifest probed with no pin is reported unverified, not clean
+maps_to: { owasp_asi: [ASI04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-crm }
+expect:
+  verifier:
+    1:
+      exit_code: 0
+      findings_include:
+        - { rule_id: guardana.mcp.unauthenticated_access, severity: LOW }
+      unverified_include: [guardana.agent.mcp_server_manifest]
+  effects:
+    victim-crm: { calls_served: {} }

@@ -33,6 +33,11 @@ func TestEveryScenarioLoadsAndMatchesItsTrajectory(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadScenario: %v", err)
 			}
+			if scenario.IsVerifier() {
+				// LoadScenario checks every rule a verifier scenario has; it
+				// names no trajectory to agree with.
+				return
+			}
 			trajectoryPath := filepath.Join(repoRoot, scenario.Trajectory)
 			trajectory, err := labspec.LoadTrajectory(trajectoryPath)
 			if err != nil {

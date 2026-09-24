@@ -9,7 +9,7 @@ import (
 )
 
 // environment is what compose interpolates into the topology for this run.
-func (l lab) environment(spec labspec.Scenario, runID string) map[string]string {
+func (l lab) environment(spec labspec.Scenario, runID, runDir string) map[string]string {
 	env := map[string]string{
 		"LAB_RUN_ID":           runID,
 		"LAB_REPORTS_DIR":      containerReports,
@@ -17,6 +17,9 @@ func (l lab) environment(spec labspec.Scenario, runID string) map[string]string 
 	}
 	if absolute, err := filepath.Abs(l.reports); err == nil {
 		env["LAB_REPORTS_HOST_DIR"] = absolute
+	}
+	if absolute, err := filepath.Abs(runDir); err == nil {
+		env["LAB_RUN_HOST_DIR"] = absolute
 	}
 	if spec.Stub.Verdicts != "" {
 		env["LAB_STUB_VERDICTS"] = inContainer(spec.Stub.Verdicts)

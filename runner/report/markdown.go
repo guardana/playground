@@ -25,7 +25,13 @@ func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p 
 	out.printf("\n")
 
 	writeProvenance(out, p)
-	writeDecisions(out, rows)
+	if slices.ContainsFunc(r.Results, func(result assertion.Result) bool {
+		return strings.HasPrefix(result.Check, check.VerifierPrefix)
+	}) {
+		out.printf("## Decisions\n\nA verifier scenario makes no call through the enforcer, so no decision is graded; each verifier step is graded under Checks.\n\n")
+	} else {
+		writeDecisions(out, rows)
+	}
 	writeResults(out, r.Results)
 	return out.err
 }

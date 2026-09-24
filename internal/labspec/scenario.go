@@ -17,17 +17,18 @@ var EnforcementModes = []string{"observe", "shadow", "warn", "approve", "enforce
 // Expect is read from a record: a decision, an evidence event, or the victim's
 // own journal of what it served. Nothing here reads what the agent said.
 type Scenario struct {
-	SchemaVersion   int       `json:"schema_version"`
-	ID              string    `json:"id"`
-	Title           string    `json:"title"`
-	MapsTo          MapsTo    `json:"maps_to,omitempty"`
-	Profile         []string  `json:"profile"`
-	EnforcementMode string    `json:"enforcement_mode"`
-	Trajectory      string    `json:"trajectory"`
-	Stub            Stub      `json:"stub,omitempty"`
-	Gap             *Gap      `json:"gap,omitempty"`
-	Expect          Expect    `json:"expect"`
-	Tolerance       Tolerance `json:"tolerance,omitempty"`
+	SchemaVersion   int            `json:"schema_version"`
+	ID              string         `json:"id"`
+	Title           string         `json:"title"`
+	MapsTo          MapsTo         `json:"maps_to,omitempty"`
+	Profile         []string       `json:"profile"`
+	EnforcementMode string         `json:"enforcement_mode"`
+	Trajectory      string         `json:"trajectory,omitempty"`
+	Verifier        []VerifierStep `json:"verifier,omitempty"`
+	Stub            Stub           `json:"stub,omitempty"`
+	Gap             *Gap           `json:"gap,omitempty"`
+	Expect          Expect         `json:"expect"`
+	Tolerance       Tolerance      `json:"tolerance,omitempty"`
 }
 
 // MapsTo records which catalogued failure this scenario is an instance of, so a
@@ -49,9 +50,12 @@ type Stub struct {
 // Expect holds the three places a run is graded from, and none of them is the
 // agent's account of its own work.
 type Expect struct {
-	Decisions map[int]DecisionExpectation  `json:"decisions"`
+	Decisions map[int]DecisionExpectation  `json:"decisions,omitempty"`
 	Effects   map[string]EffectExpectation `json:"effects"`
-	Evidence  EvidenceExpectation          `json:"evidence"`
+	Evidence  *EvidenceExpectation         `json:"evidence,omitempty"`
+	// Verifier grades a verifier scenario's steps, which make no call through
+	// the enforcer and so leave no decision or trail to grade.
+	Verifier map[int]VerifierExpectation `json:"verifier,omitempty"`
 }
 
 // DecisionExpectation is what one step's decision has to say. The reason codes
@@ -106,12 +110,7 @@ func (s Scenario) validate(fileName string) error {
 	if s.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("%w: schema_version is %d, want %d", ErrInvalid, s.SchemaVersion, SchemaVersion)
 	}
-	if err := first(
-		required("id", s.ID),
-		required("title", s.Title),
-		required("trajectory", s.Trajectory),
-		oneOf("enforcement_mode", s.EnforcementMode, EnforcementModes...),
-	); err != nil {
+	if err := first(required("id", s.ID), required("title", s.Title)); err != nil {
 		return err
 	}
 	if s.ID != fileName {
@@ -119,6 +118,25 @@ func (s Scenario) validate(fileName string) error {
 	}
 	if len(s.Profile) == 0 {
 		return fmt.Errorf("%w: profile is empty", ErrInvalid)
+	}
+	if s.IsVerifier() {
+		return s.validateVerifier()
+	}
+	return s.validateTrajectoryKind()
+}
+
+func (s Scenario) validateTrajectoryKind() error {
+	if err := first(
+		required("trajectory", s.Trajectory),
+		oneOf("enforcement_mode", s.EnforcementMode, EnforcementModes...),
+	); err != nil {
+		return err
+	}
+	if s.Expect.Evidence == nil {
+		return fmt.Errorf("%w: expect.evidence is missing, so nothing states what the trail has to show", ErrInvalid)
+	}
+	if len(s.Expect.Verifier) > 0 {
+		return fmt.Errorf("%w: expect.verifier is set and the scenario has no verifier steps", ErrInvalid)
 	}
 	if len(s.Expect.Decisions) == 0 {
 		// Nothing to read a verdict from is nothing to grade the run by.

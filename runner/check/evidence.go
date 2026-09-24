@@ -46,7 +46,13 @@ func (e Evidence) Run(_ context.Context, records assertion.Records) ([]assertion
 	if trail, nothingToGrade := e.trailResult(records); nothingToGrade {
 		return []assertion.Result{trail}, nil
 	}
-	expect := e.Scenario.Expect.Evidence
+	if e.Scenario.Expect.Evidence == nil {
+		return []assertion.Result{{
+			Check: "evidence/expectation", Outcome: assertion.Indeterminate,
+			Want: "an evidence expectation", Got: "the scenario states none", Source: e.EvidenceFile,
+		}}, nil
+	}
+	expect := *e.Scenario.Expect.Evidence
 	results := []assertion.Result{e.runResult(records)}
 	if expect.ChainComplete {
 		results = append(results, e.chainResults(records.Evidence)...)

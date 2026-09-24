@@ -69,6 +69,8 @@ type fakeCompose struct {
 	// what the fake writes when the replay runs; nil writes nothing.
 	trail    string
 	journals map[string]string
+	// split answers the verifier's runs; nil answers every one as not run.
+	split func(service, entrypoint string, args []string) (Split, error)
 
 	broughtUp []string
 	wentDown  bool

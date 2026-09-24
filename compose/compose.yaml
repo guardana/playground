@@ -1,5 +1,5 @@
 # The lab's world: six victim tool servers, a page that attacks them, a mail
-# sink, the gateway and the agent.
+# sink, the gateway, the agent and the verifier.
 #
 # Two networks, both internal, and one service on both. Nothing in the lab has a
 # route out; the agent sits on `agent-net` and can reach the gateway and nothing
@@ -39,7 +39,9 @@ x-hardened: &hardened
 x-victim: &victim
   <<: *hardened
   networks: [tool-net]
-  profiles: [core]
+  # `verifier` brings the victims up without the gateway, which lists every
+  # victim's tools at startup and would spend the listing a drift is read on.
+  profiles: [core, verifier]
   volumes:
     - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
   healthcheck:
@@ -144,7 +146,7 @@ services:
   attacker-web:
     image: ${ATTACKER_WEB_IMAGE}
     networks: [tool-net]
-    profiles: [core]
+    profiles: [core, verifier]
     read_only: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
@@ -169,7 +171,7 @@ services:
   mailpit:
     image: ${MAILPIT_IMAGE}
     networks: [tool-net]
-    profiles: [core]
+    profiles: [core, verifier]
     read_only: true
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
@@ -255,6 +257,31 @@ services:
     depends_on:
       stub-gateway:
         condition: service_healthy
+
+  # The verifier, run by the runner once per step with `docker compose run`.
+  # It probes victims on tool-net and sees one host path: the run's verifier/
+  # directory, where it writes its pins. The journals it is graded from stay
+  # out of its reach. With no LAB_RUN_HOST_DIR the source does not exist and
+  # the mount is refused, so a hand-run never mounts reports/.
+  verifier:
+    image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
+    <<: *hardened
+    build:
+      context: verifier
+      dockerfile: ../Dockerfile.verifier
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE}
+        VERIFIER_CLI: ${VERIFIER_CLI}
+        VERIFIER_VERSION: ${VERIFIER_VERSION}
+    user: "65532:65532"
+    networks: [tool-net]
+    profiles: [verifier]
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier
+        target: /lab-run
+        bind:
+          create_host_path: false
 
 networks:
   # Both networks are sealed. The agent replays the attack payloads, so it is

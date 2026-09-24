@@ -2,7 +2,8 @@
 
 A run is two files. The trajectory says which tool calls happen. The scenario
 says what the lab expects to find afterwards. Nothing states an expectation
-twice, so the two can never disagree about one.
+twice, so the two can never disagree about one. A
+[verifier scenario](#verifier-scenarios) is one file: it names no trajectory.
 
 Both are loaded by `internal/labspec`, which refuses a key it has no field for.
 A misspelled expectation that loads is an assertion nobody makes.
@@ -103,6 +104,8 @@ three are checked when the files load:
   not expect, and it fails the run. `calls_served: {}` is the assertion that the
   victim served nothing, which is what a working denial looks like from the far
   side of the gateway.
+- **`evidence` is stated.** All three keys are read, and `false` is an
+  assertion, so a scenario without the block would assert without saying so.
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
   was expected is a failure unless that step is listed, and listing a step whose
   expectation is already `INDETERMINATE` is refused because it says nothing.
@@ -184,6 +187,69 @@ everywhere is one mapping fewer to get wrong.
 the enforcement plane is not built yet: the stub decides nothing, it reads that
 file. A scenario carrying the field has not yet run against anything that
 decides.
+
+### Verifier scenarios
+
+A verifier scenario runs the verifier (`VERIFIER_PACKAGE` at `VERIFIER_VERSION`
+in `versions.env`) against the victims instead of a trajectory through the
+enforcer. It has `verifier` steps and `expect.verifier` for each of them:
+
+```yaml
+schema_version: 1
+id: verify-01-fs-drift-against-its-own-pin
+title: A manifest that changes after it was pinned is reported as drift
+profile: [verifier]
+verifier:
+  - probe: { server: victim-fs, write_pin: true }
+  - probe: { server: victim-fs, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 1
+      findings_include:
+        - { rule_id: guardana.agent.mcp_server_manifest, summary_contains: fs.read }
+        - { rule_id: guardana.mcp.unauthenticated_access, severity: LOW }
+      findings_exclude: [guardana.mcp.cache_scope]
+      unverified_include: [guardana.mcp.session_binding]
+  effects:
+    victim-fs: { calls_served: {} }
+```
+
+- `probe` runs `probe --mcp http://<server>:8080/mcp --format json`. `write_pin`
+  approves the manifest (`--write-mcp-pin`); `pin_from: n` compares against the
+  pin step n wrote, which has to be an earlier step on the same server.
+- `exit_code` is required, 0 to 7 as the verifier's exit-code table documents.
+  It is graded only beside the step's record: the pin for a `write_pin` step,
+  the JSON report on standard output for any other. Standard error is kept in
+  the run directory and never read.
+- `findings_include` names a finding by `rule_id`, and optionally its
+  `severity` as the report spells it (`LOW`, `HIGH`, …) and a text its evidence
+  summary contains. `findings_exclude` names a rule that ran and left nothing:
+  no finding, no waived finding, no unverified result, no error. A rule that
+  did not run, ran and could not tell, or found something a waiver accepted,
+  fails it. `unverified_include` names a rule reported as
+  unverified. A `write_pin` step states only `exit_code`.
+- `effects` names every probed server and stays exhaustive: the verifier
+  documents that it never calls a tool, and the victim's journal says whether
+  that held. The verifier reaches every victim on `tool-net`, so the runner
+  also grades each victim the profile booted and the scenario does not name as
+  serving nothing.
+- `profile` is `[verifier]` and nothing else: another profile boots the
+  gateway, which lists every victim's tools when it starts and spends the
+  listing a drift is read on.
+- `trajectory`, `enforcement_mode`, `stub`, `gap`, `tolerance`,
+  `expect.decisions` and `expect.evidence` are refused: nothing in the run
+  could grade them.
+
+The `verifier` profile brings up the victims without the gateway. Before the
+steps, the runner dials each probed server and a documentation address outside
+the lab from the verifier's network, and reads the verifier's
+`/proc/net/route` and `/proc/net/ipv6_route`. A run fails when the outside
+dial connects, and when either table holds a usable default route; a dial
+that ends in anything but "no route" or an unknown name is indeterminate. The
+verifier sees one host directory, the run's `verifier/`, where its pins land;
+the victims' journals it is graded from are out of its reach.
 
 ## What a runner reads
 

@@ -80,16 +80,60 @@ func (NetworkIsolation) ID() string { return "network-isolation" }
 // Run grades one result per probe, the gateway first.
 func (n NetworkIsolation) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
 	return []assertion.Result{
-		n.grade("network-isolation/gateway-reachable", n.Gateway, true),
-		n.grade("network-isolation/victim-unreachable", n.Victim, false),
+		gradeReach("network-isolation/gateway-reachable", n.Gateway, true, n.Source),
+		gradeReach("network-isolation/victim-unreachable", n.Victim, false, n.Source),
 	}, nil
 }
 
-func (n NetworkIsolation) grade(name string, probe Probe, wantReached bool) assertion.Result {
+// VerifierReach reports whether the verifier's network reaches every server a
+// scenario probes and has no route out of the lab. Outside is dialled by
+// address, and only "no route" counts as unreachable: a dial that timed out
+// says nothing about whether a route exists. A router past the network answers
+// "no route" too, so Routes reads the container's own routing tables, and
+// Reached there means they hold a default route.
+type VerifierReach struct {
+	Servers []Probe
+	Outside Probe
+	Routes  Probe
+	Source  string
+}
+
+// ID names the check in a report.
+func (VerifierReach) ID() string { return "verifier-reach" }
+
+// Run grades one result per probed server, then the way out, then the tables.
+func (v VerifierReach) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
+	results := make([]assertion.Result, 0, len(v.Servers)+2)
+	for _, server := range v.Servers {
+		results = append(results, gradeReach("verifier-reach/"+server.Target, server, true, v.Source))
+	}
+	results = append(results, gradeReach("verifier-reach/no-route-out", v.Outside, false, v.Source))
+	return append(results, v.gradeRoutes()), nil
+}
+
+func (v VerifierReach) gradeRoutes() assertion.Result {
+	result := assertion.Result{
+		Check:  "verifier-reach/no-default-route",
+		Want:   "no default route in /proc/net/route or /proc/net/ipv6_route",
+		Source: v.Source,
+		Detail: spoken(v.Routes.Detail),
+	}
+	switch {
+	case !v.Routes.Ran:
+		result.Outcome, result.Got = assertion.Indeterminate, "the routing tables were not read"
+	case v.Routes.Reached:
+		result.Outcome, result.Got = assertion.Fail, "a default route"
+	default:
+		result.Outcome, result.Got = assertion.Pass, "no default route"
+	}
+	return result
+}
+
+func gradeReach(name string, probe Probe, wantReached bool, source string) assertion.Result {
 	result := assertion.Result{
 		Check:  name,
 		Want:   describeReach(probe.Target, wantReached),
-		Source: n.Source,
+		Source: source,
 	}
 	if !probe.Ran {
 		result.Outcome = assertion.Indeterminate

@@ -30,6 +30,10 @@ type Compose interface {
 	// error is for a command that could not be run at all; a container that ran
 	// and exited non-zero comes back in the Execution.
 	RunOnce(ctx context.Context, profiles []string, service string, args []string) (Execution, error)
+	// RunSplit is RunOnce for a service whose standard output is a record: it
+	// comes back apart from standard error, which carries compose's own
+	// progress. A non-empty entrypoint replaces the image's.
+	RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error)
 	Down(ctx context.Context, profiles []string) error
 	// WithEnv returns a Compose that adds these variables to every invocation.
 	// The run identifier is one of them, and it changes per run, so it is not
@@ -41,6 +45,13 @@ type Compose interface {
 type Execution struct {
 	ExitCode int
 	Output   string
+}
+
+// Split is what one container did, its two output streams kept apart.
+type Split struct {
+	ExitCode int
+	Stdout   string
+	Stderr   string
 }
 
 // dockerCompose runs the real thing.
@@ -109,6 +120,30 @@ func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service s
 	return execution, nil
 }
 
+func (d dockerCompose) RunSplit(
+	ctx context.Context, profiles []string, service, entrypoint string, args []string,
+) (Split, error) {
+	// Built apart from the run: compose prints build progress on standard
+	// output, which here is the record.
+	if _, err := d.capture(ctx, profiles, "build", service); err != nil {
+		return Split{}, err
+	}
+	command := d.command(ctx, profiles, runSplitArgs(service, entrypoint, args)...)
+	var out, problems strings.Builder
+	command.Stdout, command.Stderr = &out, &problems
+	err := command.Run()
+	split := Split{Stdout: out.String(), Stderr: problems.String()}
+	var exit *exec.ExitError
+	switch {
+	case err == nil:
+	case errors.As(err, &exit):
+		split.ExitCode = exit.ExitCode()
+	default:
+		return split, err
+	}
+	return split, nil
+}
+
 func (d dockerCompose) Down(ctx context.Context, profiles []string) error {
 	_, err := d.capture(ctx, profiles, "down", "--volumes", "--remove-orphans")
 	return err
@@ -153,4 +188,12 @@ func composeArgs(file, envFile string, profiles, args []string) []string {
 // earlier checkout left under that name.
 func runOnceArgs(service string, args []string) []string {
 	return append([]string{"run", "--rm", "--no-TTY", "--build", service}, args...)
+}
+
+func runSplitArgs(service, entrypoint string, args []string) []string {
+	run := []string{"run", "--rm", "--no-TTY"}
+	if entrypoint != "" {
+		run = append(run, "--entrypoint", entrypoint)
+	}
+	return append(append(run, service), args...)
 }
