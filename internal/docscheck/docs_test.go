@@ -2,11 +2,15 @@ package docscheck_test
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/guardana/playground/internal/docscheck/repofiles"
 )
 
 const repoRoot = "../.."
@@ -65,6 +69,42 @@ func TestCapabilityClaimsCarryAStatus(t *testing.T) {
 	}
 }
 
+// A run writes its reports as markdown under reports/, which git ignores. They
+// are output, not documentation, and a link in one must never fail the gate.
+func TestIgnoredRunReportsAreNotPages(t *testing.T) {
+	directory := filepath.Join(repoRoot, "reports")
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		if err := os.Mkdir(directory, 0o750); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.Remove(directory); err != nil {
+				t.Errorf("planted directory left behind: %v", err)
+			}
+		}()
+	}
+	planted := filepath.Join(directory, "planted-docscheck-probe.md")
+	if _, err := os.Stat(planted); err == nil {
+		t.Fatalf("%s already exists; refusing to overwrite", planted)
+	}
+	if err := os.WriteFile(planted, []byte("[gone](missing-page.md)\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Remove(planted); err != nil {
+			t.Errorf("planted file left behind: %v", err)
+		}
+	}()
+
+	pages := markdownPages(t)
+	if slices.Contains(pages, filepath.Join(repoRoot, "reports", "planted-docscheck-probe.md")) {
+		t.Errorf("the page walk read %s, which git ignores", planted)
+	}
+	if !slices.Contains(pages, filepath.Join(repoRoot, "docs", "status.md")) {
+		t.Errorf("the page walk missed docs/status.md, so it proves nothing about what it left out")
+	}
+}
+
 func containsAny(text string, needles []string) bool {
 	for _, needle := range needles {
 		if strings.Contains(text, needle) {
@@ -77,27 +117,15 @@ func containsAny(text string, needles []string) bool {
 func markdownPages(t *testing.T) []string {
 	t.Helper()
 
-	var pages []string
-	err := filepath.WalkDir(repoRoot, func(path string, entry os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if path == repoRoot {
-				return nil
-			}
-			if name := entry.Name(); strings.HasPrefix(name, ".") && name != ".github" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasSuffix(path, ".md") {
-			pages = append(pages, path)
-		}
-		return nil
-	})
+	files, err := repofiles.List(context.Background(), repoRoot)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var pages []string
+	for _, file := range files {
+		if strings.HasSuffix(file, ".md") {
+			pages = append(pages, filepath.Join(repoRoot, filepath.FromSlash(file)))
+		}
 	}
 	if len(pages) == 0 {
 		t.Fatal("no markdown found; the link check inspected nothing")

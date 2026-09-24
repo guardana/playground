@@ -20,6 +20,7 @@ make quality
 ```
 
 `make quality` is the whole gate, and CI runs the same targets.
+`make docs-impact FOR=<path>` names the pages a change to that path makes suspect.
 
 Local tooling — editor settings, agent configuration, scratch notes — stays out
 of the repository. Put it in `.git/info/exclude` rather than in `.gitignore`, so

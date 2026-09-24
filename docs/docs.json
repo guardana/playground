@@ -1,0 +1,60 @@
+{
+  "types": [
+    {"name": "runbook", "heading": "Runbooks", "budget": 1200},
+    {"name": "explanation", "heading": "How it works", "budget": 2500},
+    {"name": "reference", "heading": "Reference", "budget": 1500},
+    {"name": "contract", "heading": "Contracts", "exempt": true},
+    {"name": "project", "heading": "Project", "exempt": true}
+  ],
+  "audiences": ["engineering", "product"],
+  "readme": {"root": 600, "folder": 300},
+  "ceilings": {
+    "victims/fs/README.md": 387,
+    "victims/shell/README.md": 583
+  },
+  "directories": {
+    "docs": "project",
+    "docs/contracts": "contract",
+    "docs/how-it-works": "explanation",
+    "docs/product": "explanation",
+    "docs/reference": "reference",
+    "docs/runbooks": "runbook"
+  },
+  "page_types": {},
+  "frozen": [
+    "AGENTS.md",
+    "README.md",
+    "ROADMAP.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "GOVERNANCE.md",
+    "docs/status.md",
+    "docs/dependencies.md",
+    "attacks/README.md",
+    "victims/*/README.md"
+  ],
+  "excluded": [
+    ".github/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "victims/fs/fixture/"
+  ],
+  "surfaces": [
+    "agents/**",
+    "attacks/**",
+    "compose/**",
+    "config/**",
+    "internal/assertion/**",
+    "internal/evidence/**",
+    "internal/journal/**",
+    "internal/labspec/**",
+    "runner/**",
+    "scenarios/**",
+    "services/**",
+    "trajectories/**",
+    "victims/**",
+    "versions.env",
+    "Makefile"
+  ]
+}

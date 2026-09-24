@@ -52,6 +52,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   directory, never an unreadable record unless a rule names it. A command cut
   short is journalled as unknown until the next listing shows what the record
   says. `compose/Dockerfile.approver` puts it beside the pinned `/enforcer/control`.
+- Documentation machinery: page frontmatter, budgets and `covers` in
+  `docs/docs.json`, checked by `make docs-frontmatter` (outside the gate until
+  the pages carry it); a generated `docs/README.md`; `make docs-impact` for
+  the pages a change makes suspect. The link check no longer reads untracked
+  run reports.
 - Every run report opens with its provenance: the lab commit (untracked files
   count as uncommitted changes), each pin, each image on this machine with its
   ID and the pin its label names, and the machine.
