@@ -108,3 +108,47 @@ func TestLocateAllRefusesAnEmptyCatalogue(t *testing.T) {
 		t.Error("-all over a repository with no scenario found something to do")
 	}
 }
+
+// A scenario outside the workspace would have the files it names read from
+// the workspace, which is another scenario than the one written.
+func TestLocateRefusesAPathOutsideTheWorkspace(t *testing.T) {
+	root := scenarioTree(t, "scenarios/flow/flow-02.yaml")
+	other := scenarioTree(t, "scenarios/flow/flow-03.yaml")
+	link := filepath.Join(root, "scenarios/flow/linked.yaml")
+	if err := os.Symlink(filepath.Join(other, "scenarios/flow/flow-03.yaml"), link); err != nil {
+		t.Fatal(err)
+	}
+	for _, given := range []string{filepath.Join(other, "scenarios/flow/flow-03.yaml"), link, "../x/../" + filepath.Base(other) + "/scenarios/flow/flow-03.yaml"} {
+		_, err := locate(root, settings{scenario: given})
+		if err == nil || !strings.Contains(err.Error(), "outside the workspace") {
+			t.Errorf("-scenario %s was %v, want refused as outside the workspace", given, err)
+		}
+	}
+}
+
+func TestLocateReadsARelativePathInTheWorkspace(t *testing.T) {
+	root := scenarioTree(t, "scenarios/flow/flow-02.yaml")
+	found, err := locate(root, settings{scenario: "scenarios/flow/flow-02.yaml"})
+	if err != nil {
+		t.Fatalf("locate: %v", err)
+	}
+	if want := filepath.Join(root, "scenarios/flow/flow-02.yaml"); len(found) != 1 || found[0] != want {
+		t.Errorf("found %v, want [%s]", found, want)
+	}
+}
+
+// Found by identifier or by -all, a link out of the workspace is the same
+// scenario it is when named by path, and is refused the same way.
+func TestLocateRefusesALinkOutOfTheWorkspaceHoweverItIsFound(t *testing.T) {
+	root := scenarioTree(t, "scenarios/flow/flow-02.yaml")
+	other := scenarioTree(t, "scenarios/flow/flow-03.yaml")
+	if err := os.Symlink(filepath.Join(other, "scenarios/flow/flow-03.yaml"), filepath.Join(root, "scenarios/flow/linked.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	for name, given := range map[string]settings{"by identifier": {scenario: "linked"}, "-all": {all: true}} {
+		found, err := locate(root, given)
+		if err == nil || !strings.Contains(err.Error(), "outside the workspace") {
+			t.Errorf("%s found %v, %v; want the link refused as outside the workspace", name, found, err)
+		}
+	}
+}

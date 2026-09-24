@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Fails when something that is not the product has entered the repository.
 #
-# Three objective rules: no file whose name marks it as working material, no
-# text outside English, no placeholder left behind. Style is not checked here;
-# it is a review question.
+# Four objective rules: no file whose name marks it as working material, no
+# text outside English, no placeholder left behind, and no path that exists only
+# on a maintainer's machine, since a stranger's clone has no sibling checkout and
+# no such home directory. Style is not checked here; it is a review question.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -49,6 +50,24 @@ while IFS= read -r hit; do
 done < <(
 	files | grep -E '\.(md|go|ya?ml|proto|json|sh)$' |
 		tr '\n' '\0' | xargs -0 grep -nIE '\b(TBD|FIXME|XXX|lorem ipsum)\b|<placeholder>' 2>/dev/null || true
+)
+
+# Paths only a maintainer's machine has: a home directory, the macOS /tmp and
+# per-user temporary directory, a sibling checkout of a system under test. A
+# path counts only where one starts, so a URL segment does not; the distroless
+# images' own home, /home/nonroot, is every stranger's too.
+start='(^|[^A-Za-z0-9._~-])'
+name_end='(/|$|[^A-Za-z0-9._-])'
+# The home alternative takes the whole name and no character after it, so a
+# second path right after /home/nonroot still finds its start.
+machine_path="${start}/Users/|${start}/home/[A-Za-z0-9._-]+|${start}/private/(tmp|var/folders)${name_end}"
+sibling_end='(/|$|[^A-Za-z0-9_-])'
+machine_path="$machine_path|${start}/var/folders/|\.\./(control|guardana)${sibling_end}"
+while IFS= read -r hit; do
+	note "maintainer path: $hit"
+done < <(
+	files | tr '\n' '\0' | xargs -0 grep -noIE "$machine_path" 2>/dev/null |
+		grep -vE '/home/nonroot$' || true
 )
 
 if [ "$status" -ne 0 ]; then

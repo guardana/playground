@@ -119,7 +119,9 @@ up:
 down:
 	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) down --volumes --remove-orphans
 
-# One scenario, named by its identifier, which is its file name.
+# One scenario, named by its identifier, which is its file name. With
+# LAB_WORKSPACE=<dir> set, scenarios and the files they name are read from that
+# directory outside the clone, laid out like the lab, instead of from the clone.
 scenario:
 	@test -n "$(ID)" || { echo "usage: make scenario ID=<scenario id>" >&2; exit 2; }
 	$(GO) run ./runner -scenario $(ID) -reports $(REPORTS)

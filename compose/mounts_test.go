@@ -2,6 +2,7 @@ package compose
 
 import (
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -47,7 +48,11 @@ func source(volume any) string {
 	return named
 }
 
-const runDir = "${LAB_RUN_HOST_DIR:-../reports/manual}"
+const (
+	runDir = "${LAB_RUN_HOST_DIR:-../reports/manual}"
+	// workspace is the clone unless the runner names LAB_WORKSPACE.
+	workspace = "${LAB_WORKSPACE:-..}"
+)
 
 // Each service writes into the part of the run it owns and sees no other: a
 // victim that could write the collector's file, or the decision point's CA,
@@ -57,12 +62,12 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"victim-crm": {runDir + "/journals"}, "victim-db": {runDir + "/journals"},
 		"victim-fs": {runDir + "/journals"}, "victim-shell": {runDir + "/journals"},
 		"victim-mail": {runDir + "/journals"}, "victim-web": {runDir + "/journals"},
-		"scripted-agent":  {runDir + "/agent", "../trajectories"},
+		"scripted-agent":  {runDir + "/agent", workspace + "/trajectories"},
 		"stub-gateway":    {runDir, "../config"},
-		"pdp-double":      {runDir + "/journals", "../config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
-		"approver":        {runDir + "/journals", "../config/approver", "approvals"},
+		"pdp-double":      {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
+		"approver":        {runDir + "/journals", workspace + "/config/approver", "approvals"},
 		"collector":       {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector"},
-		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", "../config/contracts"},
+		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
 		"toxiproxy-tools": {"./toxiproxy/proxies.json"},
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki", "spool", "approvals", "holds"},
@@ -127,5 +132,40 @@ func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
 		if slices.Contains(services["enforcer"].Profiles, profile) {
 			t.Errorf("profile %s starts both gateways, so the agent would reach two", profile)
 		}
+	}
+}
+
+// workspaceMount is a workspace directory bound read-only. A missing source is
+// refused rather than created: Docker would create it root-owned, inside the
+// adopter's workspace.
+func workspaceMount(dir, target string) map[string]any {
+	return map[string]any{
+		"type": "bind", "source": workspace + dir, "target": target, "read_only": true,
+		"bind": map[string]any{"create_host_path": false},
+	}
+}
+
+// A workspace is the adopter's; no container writes into it or creates a
+// directory in it, and each sees only the directory it reads.
+func TestTheWorkspaceIsMountedReadOnly(t *testing.T) {
+	want := map[string]map[string]any{
+		"scripted-agent": workspaceMount("/trajectories", "/trajectories"),
+		"pdp-double":     workspaceMount("/config/pdp", "/scripts"),
+		"approver":       workspaceMount("/config/approver", "/scripts"),
+		"trace-verifier": workspaceMount("/config/contracts", "/contracts"),
+	}
+	for name, service := range readMounts(t).Services {
+		for _, volume := range service.Volumes {
+			if !strings.HasPrefix(source(volume), workspace) {
+				continue
+			}
+			if expected, pinned := want[name]; !pinned || !reflect.DeepEqual(volume, any(expected)) {
+				t.Errorf("%s mounts %v from the workspace, want %v", name, volume, want[name])
+			}
+			delete(want, name)
+		}
+	}
+	for name, volume := range want {
+		t.Errorf("%s does not mount %s", name, volume)
 	}
 }

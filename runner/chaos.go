@@ -148,7 +148,7 @@ func (l lab) applyToxic(
 		fault.Latency = time.Duration(toxic.Latency)
 	case labspec.ToxicHang:
 		fault.Hang = true
-		partial, err := os.ReadFile(filepath.Join(l.root, spec.Gateway.Config)) // #nosec G304 -- a repository path the scenario names.
+		partial, err := os.ReadFile(l.workspace.file(spec.Gateway.Config)) // #nosec G304 -- a workspace path the scenario names.
 		if err == nil {
 			fault.CallTimeout, err = gateway.CallTimeout(partial)
 		}

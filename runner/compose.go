@@ -24,6 +24,9 @@ import (
 type Compose interface {
 	// Services names every service in the profiles, whether or not it is up.
 	Services(ctx context.Context, profiles []string) ([]string, error)
+	// Build builds every image the profiles use, the one-shots included; Up
+	// and RunOnce build nothing.
+	Build(ctx context.Context, profiles []string) error
 	Up(ctx context.Context, profiles, services []string) error
 	Status(ctx context.Context, profiles, services []string) ([]assertion.Service, error)
 	// RunOnce runs one service to completion with the arguments given. The
@@ -103,8 +106,13 @@ func (d dockerCompose) Services(ctx context.Context, profiles []string) ([]strin
 	return services, nil
 }
 
+func (d dockerCompose) Build(ctx context.Context, profiles []string) error {
+	_, err := d.capture(ctx, profiles, "build")
+	return err
+}
+
 func (d dockerCompose) Up(ctx context.Context, profiles, services []string) error {
-	_, err := d.capture(ctx, profiles, append([]string{"up", "-d", "--build", "--wait"}, services...)...)
+	_, err := d.capture(ctx, profiles, upArgs(services)...)
 	return err
 }
 
@@ -211,35 +219,12 @@ func (d dockerCompose) capture(ctx context.Context, profiles []string, args ...s
 }
 
 func (d dockerCompose) command(ctx context.Context, profiles []string, args ...string) *exec.Cmd {
-	// #nosec G204 -- the arguments are built by this package from the scenario
-	// and the compose topology, both of which are the lab's own files.
+	// #nosec G204,G702 -- the arguments are built by this package from the
+	// compose topology and the scenario, which is the clone's or the workspace
+	// of the person running the lab; no shell reads them and each is one argument.
 	command := exec.CommandContext(ctx, "docker", append([]string{"compose"},
 		composeArgs(d.file, d.envFile, profiles, args)...)...)
 	command.Dir = d.directory
 	command.Env = d.env
 	return command
-}
-
-// composeArgs builds the arguments after "docker compose".
-func composeArgs(file, envFile string, profiles, args []string) []string {
-	built := []string{"--env-file", envFile, "-f", file}
-	for _, profile := range profiles {
-		built = append(built, "--profile", profile)
-	}
-	return append(built, args...)
-}
-
-// runOnceArgs builds the service's image before running it: the image name is
-// fixed across runs, so without the build a run replays whatever agent an
-// earlier checkout left under that name.
-func runOnceArgs(service string, args []string) []string {
-	return append([]string{"run", "--rm", "--no-TTY", "--build", service}, args...)
-}
-
-func runSplitArgs(service, entrypoint string, args []string) []string {
-	run := []string{"run", "--rm", "--no-TTY"}
-	if entrypoint != "" {
-		run = append(run, "--entrypoint", entrypoint)
-	}
-	return append(append(run, service), args...)
 }

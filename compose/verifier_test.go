@@ -109,7 +109,7 @@ func TestTheTraceVerifierReachesNothing(t *testing.T) {
 		"its own profile alone": slices.Equal(tracer.Profiles, []string{"trace"}),
 		"the run's verifier directory and the contracts, read-only, alone": len(tracer.Volumes) == 2 &&
 			reflect.DeepEqual(tracer.Volumes[0], readOnly(runVerifierMount)) &&
-			tracer.Volumes[1] == "../config/contracts:/contracts:ro",
+			reflect.DeepEqual(tracer.Volumes[1], workspaceMount("/config/contracts", "/contracts")),
 	} {
 		if !held {
 			t.Errorf("the trace verifier does not have %s: %+v", what, tracer)

@@ -9,9 +9,11 @@
 // read its input — is a run that did not establish what it claimed, and a lab
 // that reported those as green would be worth nothing.
 //
-// Paths are read relative to the working directory, which is the repository
-// root: `make scenario` runs it from there, and a scenario names its trajectory
-// and its declared verdicts by their paths in the repository.
+// The lab's own files are read relative to the working directory, which is
+// the clone: `make scenario` runs it from there. A scenario names its files by
+// their paths in the workspace, which is the clone too unless LAB_WORKSPACE
+// names a directory outside it laid out the same way; then scenarios are
+// located and read only there.
 package main
 
 import (
@@ -57,11 +59,15 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if err := refuseOverriddenPins(root, environ); err != nil {
 		return err
 	}
-	scenarios, err := locate(root, chosen)
+	space, err := openWorkspace(root, chosen.reports, environ)
 	if err != nil {
 		return err
 	}
-	subject := newLab(root, chosen, environ, out)
+	scenarios, err := locate(space.dir, chosen)
+	if err != nil {
+		return err
+	}
+	subject := newLab(root, space, chosen, environ, out)
 	if subject.namespace, err = enforcerNamespace(root); err != nil {
 		return err
 	}
@@ -90,10 +96,11 @@ func parse(args []string, out io.Writer) (settings, error) {
 	return chosen, nil
 }
 
-func newLab(root string, chosen settings, environ []string, out io.Writer) lab {
+func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer) lab {
 	return lab{
-		root:    root,
-		reports: chosen.reports,
+		root:      root,
+		workspace: space,
+		reports:   chosen.reports,
 		compose: dockerCompose{
 			file:      composeFile,
 			envFile:   versionFile,
@@ -106,7 +113,7 @@ func newLab(root string, chosen settings, environ []string, out io.Writer) lab {
 		clock:    time.Now,
 		suffix:   randomSuffix,
 		log:      out,
-		describe: describeHost(root, command),
+		describe: describeHost(root, space, command),
 		keysDir:  labKeysDir(lookupIn(environ)),
 		sign:     signWithEnforcer(root, command),
 		inspect:  command,

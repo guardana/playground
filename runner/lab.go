@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -20,7 +19,10 @@ import (
 // thing that knows a scenario's files by their repository paths, so it is the
 // one that translates them into the paths a container sees.
 const (
-	agentService    = "scripted-agent"
+	agentService = "scripted-agent"
+	// agentProfile holds the agent alone; no scenario names it, and a build
+	// over the scenario's own profiles would skip the agent's image.
+	agentProfile    = "agent"
 	gatewayService  = "stub-gateway"
 	servicePort     = "8080"
 	gatewayEndpoint = "http://" + gatewayService + ":" + servicePort + "/mcp"
@@ -42,9 +44,12 @@ func inContainer(repositoryPath string) string { return "/" + repositoryPath }
 
 // lab runs one scenario end to end.
 type lab struct {
-	root    string
-	reports string
-	compose Compose
+	// root is the clone, which the lab's own files are read from; workspace is
+	// where the scenario and every file it names are read from.
+	root      string
+	workspace workspace
+	reports   string
+	compose   Compose
 	// timeout is how long one scenario may take. Zero is read as the default:
 	// the rule is that every docker call carries a deadline, and a zero here
 	// would be a deadline that has already passed.
@@ -88,7 +93,7 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 	}
 
 	provenance := l.provenance(ctx)
-	spec, trajectory, err := load(l.root, scenarioPath)
+	spec, trajectory, err := load(l.workspace, scenarioPath)
 	if err != nil {
 		// Nothing has been brought up, and nothing will be: a pair that does
 		// not validate cannot be graded, and a run that cannot be graded is a
@@ -150,10 +155,10 @@ func (l lab) runScenario(
 	return graded, rows
 }
 
-// boot brings up every long running service in the profile and records what
-// came up. The agent and the verifier are left out: they are one-shots the
-// runner drives itself, and starting one here would run it before the
-// topology has been proved.
+// boot builds every image the profile uses, the agent's included, before the
+// plane loads its policy, whose freshness a build under load would spend; then
+// it brings up the long running services and records what came up. The agent
+// and the verifier are one-shots the runner drives after the topology is proved.
 func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
 	inProfile, err := compose.Services(ctx, spec.Profile)
@@ -164,6 +169,12 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
 		return name == agentService || name == verifierService || name == traceService
 	})
+	if err := compose.Build(ctx, append(slices.Clone(spec.Profile), agentProfile)); err != nil {
+		for _, name := range wanted {
+			boot.Services = append(boot.Services, assertion.Service{Name: name, Detail: "not started, the build failed: " + err.Error()})
+		}
+		return l.writeBoot(runDir, boot)
+	}
 	if err := compose.Up(ctx, spec.Profile, wanted); err != nil {
 		// Recorded rather than returned: what did come up is still a fact, and
 		// the boot check reports the rest as not running.
@@ -175,51 +186,14 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 		return boot
 	}
 	boot.Services = status
+	return l.writeBoot(runDir, boot)
+}
+
+func (l lab) writeBoot(runDir string, boot assertion.Boot) assertion.Boot {
 	if err := writeJSON(filepath.Join(runDir, "boot.json"), boot); err != nil {
 		l.note("writing the boot record: %v", err)
 	}
 	return boot
-}
-
-// probes asks, from inside agent-net, whether the gateway answers and one
-// victim does not. Both answers are recorded, in memory for the check and on
-// disk for the person the check sends to a file. Neither is inferred from the
-// other: a topology where nothing at all is reachable would otherwise look like
-// a topology that is right about the victim.
-func (l lab) probes(
-	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
-) (check.Probe, check.Probe, []check.Probe, string) {
-	gateway := l.probe(ctx, compose, spec.Profile, gatewayHost(spec)+":"+servicePort)
-	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
-	proxies, unnamed := l.sealedProxies(spec)
-	var sealed []check.Probe
-	for _, target := range append(sealedFromAgent(spec), proxies...) {
-		sealed = append(sealed, l.probe(ctx, compose, spec.Profile, target))
-	}
-	if unnamed != nil {
-		sealed = append(sealed, check.Probe{Target: proxyService, Detail: unnamed.Error()})
-	}
-
-	source := filepath.Join(runDir, "probes.log")
-	recorded := fmt.Sprintf("gateway %s ran=%t reached=%t %s\nvictim %s ran=%t reached=%t %s\n",
-		gateway.Target, gateway.Ran, gateway.Reached, gateway.Detail,
-		victim.Target, victim.Ran, victim.Reached, victim.Detail)
-	for _, probe := range sealed {
-		recorded += fmt.Sprintf("sealed %s ran=%t reached=%t %s\n", probe.Target, probe.Ran, probe.Reached, probe.Detail)
-	}
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if err := os.WriteFile(source, []byte(recorded), 0o600); err != nil {
-		l.note("writing the probe record: %v", err)
-	}
-	return gateway, victim, sealed, source
-}
-
-func (l lab) probe(ctx context.Context, compose Compose, profiles []string, target string) check.Probe {
-	execution, err := compose.RunOnce(ctx, profiles, agentService, []string{"-probe", target})
-	if err != nil {
-		return check.Probe{Target: target, Detail: err.Error()}
-	}
-	return readProbe(target, execution.Output)
 }
 
 func (l lab) mint(id string) string {

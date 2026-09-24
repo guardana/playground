@@ -17,15 +17,6 @@ func TestComposeArgsCarryTheFileTheEnvFileAndEveryProfile(t *testing.T) {
 	}
 }
 
-// A one-shot service is built on every run: its image name is fixed, so an
-// image built from an older checkout would otherwise be the one that runs.
-func TestAOneShotRunBuildsItsImageFirst(t *testing.T) {
-	got := strings.Join(runOnceArgs("scripted-agent", []string{"-probe", "x:1"}), " ")
-	if want := "run --rm --no-TTY --build scripted-agent -probe x:1"; got != want {
-		t.Errorf("argv is %q, want %q", got, want)
-	}
-}
-
 // A split run builds nothing, so the verifier image the runner checked is the
 // one that runs.
 func TestASplitRunNamesItsEntrypointBeforeTheService(t *testing.T) {

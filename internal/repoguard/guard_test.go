@@ -29,6 +29,16 @@ func TestGuardsRejectWhatTheyClaimTo(t *testing.T) {
 		{"working material", "check-hygiene.sh", "SPEC-draft-2026.md", "notes\n"},
 		{"output from a run", "check-hygiene.sh", "docs/re" + "ports/run-2026.md", "scenario: pass\n"},
 		{"local tooling", "check-hygiene.sh", "." + "envrc", "export LAB_DEBUG=1\n"},
+		{"a macOS home directory", "check-hygiene.sh", "probe.md", "Keys live in /Us" + "ers/someone/keys.\n"},
+		{"a Linux home directory", "check-hygiene.sh", "probe.md", "Clone into /ho" + "me/someone/src.\n"},
+		{"a Linux home directory at the end of a line", "check-hygiene.sh", "probe.md", "HOME=/ho" + "me/someone\n"},
+		{"a home directory after the distroless one, by a space", "check-hygiene.sh", "probe.md", "HOME=/ho" + "me/nonroot /ho" + "me/someone/x\n"},
+		{"a home directory after the distroless one, by a colon", "check-hygiene.sh", "probe.md", "PATH=/ho" + "me/nonroot:/ho" + "me/someone/bin\n"},
+		{"the macOS /tmp by its real path", "check-hygiene.sh", "probe.md", "Reports in /priv" + "ate/tmp/run-1.\n"},
+		{"a macOS per-user temporary directory", "check-hygiene.sh", "probe.md", "Left in /va" + "r/folders/7x/T/run.\n"},
+		{"a macOS per-user temporary directory by its real path", "check-hygiene.sh", "probe.md", "At /priv" + "ate/var/folders/7x/T.\n"},
+		{"the enforcer's sibling checkout", "check-hygiene.sh", "probe.md", "Build from ../con" + "trol at the pin.\n"},
+		{"the verifier's sibling checkout", "check-hygiene.sh", "probe.md", "Read ../guar" + "dana/docs first.\n"},
 	}
 
 	for _, test := range cases {
@@ -64,6 +74,32 @@ func TestGuardsRejectWhatTheyClaimTo(t *testing.T) {
 				t.Errorf("%s accepted %q", test.script, test.content)
 			}
 		})
+	}
+}
+
+// A guard that refuses text a stranger's repository legitimately holds is
+// switched off by the first person it blocks, so each near miss must pass.
+// Each is split like the refused samples, so it is judged only when planted.
+func TestHygieneTakesPathsThatAreNoMaintainersMachine(t *testing.T) {
+	for _, content := range []string{
+		"The distroless image runs with HOME=/ho" + "me/nonroot/ and /ho" + "me/nonroot\n",
+		"See ../con" + "trol-plane.md and ../guar" + "dana-gateway/ for the layout.\n",
+		"The API answers at https://example.com/Us" + "ers/ and https://example.com/ho" + "me/x/.\n",
+	} {
+		planted := filepath.Join(repoRoot, "probe.md")
+		if _, err := os.Stat(planted); err == nil {
+			t.Fatal("probe.md already exists; refusing to overwrite")
+		}
+		if err := os.WriteFile(planted, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		err := runGuard("check-hygiene.sh")
+		if removed := os.Remove(planted); removed != nil {
+			t.Errorf("planted file left behind: %v", removed)
+		}
+		if err != nil {
+			t.Errorf("check-hygiene.sh refused %q: %v", content, err)
+		}
 	}
 }
 

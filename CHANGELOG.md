@@ -26,6 +26,21 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `plane/image` fails unless the enforcer container's own image carries that
   label equal to the pin, and says which tree it found. An enforcer image
   built before this change carries no such label and has to be rebuilt.
+- `-scenario <path>` is read relative to the workspace (the clone by default)
+  and refused outside it; a scenario found by identifier or by `-all` that
+  links outside it is refused the same way. `-reports` inside a directory a
+  container mounts is refused.
+- `make check-hygiene` refuses a path that exists only on a maintainer's
+  machine: a home directory other than the distroless images' own, the macOS
+  temporary directories by their real paths, or a sibling checkout of either
+  system under test. A URL segment that looks like one passes.
+- The runner builds every image a scenario's profiles use, the agent's
+  included, before it starts anything, and nothing after: the plane's policy
+  goes stale on a clock that starts when it loads, and building the agent
+  during the probes had spent that clock. A build that fails brings nothing up
+  and fails every service's boot check with the build's error.
+- A report's image line says the label matches the pin rather than the image,
+  and for the enforcer adds whether the image's tree label is `ENFORCER_TREE`.
 - The gate's file list reads git only in the repository's own work tree and
   refuses an empty list, so a copy inside another repository is scanned file by
   file and no guard reports clean having read nothing.
@@ -36,12 +51,19 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and toxiproxy images came back with the services that read them; a test in
   `compose/` fails on a variable nothing reads.
 - The verifier image is built by `make verifier-image` alone: the `verifier`
-  service carries no `build:` and the runner builds nothing before a verifier
-  or trace run, so the image it checked against `VERIFIER_VERSION` is the one
-  that runs.
+  service carries no `build:` and the runner's build before a run skips it,
+  so the image it checked against `VERIFIER_VERSION` is the one that runs.
 
 ### Added
 
+- `LAB_WORKSPACE=<dir>` runs your own scenarios, trajectories, policies,
+  gateway parts, contracts and double scripts from a directory outside the
+  clone, laid out like the lab and in the unchanged format. The runner refuses
+  it before anything boots when it sits inside the clone or the reports
+  directory, holds the reports directory or the lab key, has a link on the way
+  to a directory a container mounts, is not a directory, is set and empty, or
+  lacks a file a scenario names. Every report names the workspace, and its
+  commit when it is the top of a git checkout.
 - Chaos: a scenario the enforcer decides can name `chaos:` faults, applied
   after boot and lifted before the drain, each graded as `chaos/fault-<n>` from
   a record showing it in place: a `latency` or `hang` toxic on one victim's

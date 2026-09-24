@@ -25,10 +25,14 @@ import (
 // run on a prefix whose end nobody saw.
 const maxEvents = 50000
 
-// load reads the two files and checks the rules that need both of them.
-func load(root, scenarioPath string) (labspec.Scenario, labspec.Trajectory, error) {
+// load reads the two files and checks the rules that need both of them,
+// every file the scenario names read from the workspace.
+func load(space workspace, scenarioPath string) (labspec.Scenario, labspec.Trajectory, error) {
 	spec, err := labspec.LoadScenario(scenarioPath)
 	if err != nil {
+		return labspec.Scenario{}, labspec.Trajectory{}, err
+	}
+	if err := space.refuseMissing(spec); err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}
 	if spec.IsVerifier() {
@@ -36,7 +40,7 @@ func load(root, scenarioPath string) (labspec.Scenario, labspec.Trajectory, erro
 		// is no trajectory for it to agree with.
 		return spec, labspec.Trajectory{}, nil
 	}
-	trajectory, err := labspec.LoadTrajectory(filepath.Join(root, spec.Trajectory))
+	trajectory, err := labspec.LoadTrajectory(space.file(spec.Trajectory))
 	if err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}

@@ -262,7 +262,12 @@ services:
     profiles: [agent]
     volumes:
       - ${LAB_RUN_HOST_DIR:-../reports/manual}/agent:/reports/${LAB_RUN_ID:-manual}/agent
-      - ../trajectories:/trajectories:ro
+      - type: bind
+        source: ${LAB_WORKSPACE:-..}/trajectories
+        target: /trajectories
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       <<: *lab-env
       LAB_SERVER_NAME: scripted-agent
@@ -306,7 +311,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      - ../config/contracts:/contracts:ro
+      - type: bind
+        source: ${LAB_WORKSPACE:-..}/config/contracts
+        target: /contracts
+        read_only: true
+        bind:
+          create_host_path: false
 
   # Where the enforcer's trail lands. Nothing else may reach it: a victim that
   # could post its own log records here could forge evidence, so it is the
@@ -431,7 +441,12 @@ services:
       <<: *lab-env
     volumes:
       - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
-      - ../config/pdp:/scripts:ro
+      - type: bind
+        source: ${LAB_WORKSPACE:-..}/config/pdp
+        target: /scripts
+        read_only: true
+        bind:
+          create_host_path: false
       - type: bind
         source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki
         target: /pki
@@ -467,7 +482,12 @@ services:
       <<: *lab-env
     volumes:
       - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
-      - ../config/approver:/scripts:ro
+      - type: bind
+        source: ${LAB_WORKSPACE:-..}/config/approver
+        target: /scripts
+        read_only: true
+        bind:
+          create_host_path: false
       - approvals:/var/lib/lab/approvals
     healthcheck:
       test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]

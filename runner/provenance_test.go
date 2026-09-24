@@ -106,7 +106,9 @@ func TestInspectImageReadsWhatTheDaemonSays(t *testing.T) {
 // them set to its own pin, so reading the wrong label is a mismatch.
 func labelledDaemon(_ context.Context, name string, args ...string) (string, error) {
 	labels := map[string]map[string]string{
-		"playground-enforcer:c0ffee": {"org.opencontainers.image.revision": "c0ffee", "org.opencontainers.image.version": "wrong"},
+		"playground-enforcer:c0ffee": {
+			"org.opencontainers.image.revision": "c0ffee", "org.opencontainers.image.version": "wrong", treeLabel: "7ree",
+		},
 		"playground-verifier:0.26.1": {"org.opencontainers.image.revision": "wrong", "org.opencontainers.image.version": "0.26.1"},
 	}
 	if name != "docker" || len(args) != 5 {
@@ -124,10 +126,15 @@ func TestEachImageIsReadByItsOwnLabel(t *testing.T) {
 	pins := []report.Pin{
 		{Name: "ENFORCER_IMAGE", Value: "playground-enforcer"}, {Name: "ENFORCER_COMMIT", Value: "c0ffee"},
 		{Name: "VERIFIER_IMAGE", Value: "playground-verifier"}, {Name: "VERIFIER_VERSION", Value: "0.26.1"},
+		{Name: "ENFORCER_TREE", Value: "7ree"},
 	}
 	found := images(context.Background(), labelledDaemon, pins)
 	if len(found) != 2 {
 		t.Fatalf("read %d images, want 2", len(found))
+	}
+	if found[0].Tree != "7ree" || found[0].TreeWant != "7ree" || found[1].TreeWant != "" {
+		t.Errorf("the enforcer's tree reads as %q wanting %q, the verifier's wanting %q; want 7ree, 7ree and none",
+			found[0].Tree, found[0].TreeWant, found[1].TreeWant)
 	}
 	for _, image := range found {
 		if !image.Matches() {
@@ -156,5 +163,74 @@ func TestLabCommitCountsAnUntrackedFile(t *testing.T) {
 	writeFile(filepath.Join(root, "scenarios", "new.yaml"), "id: new\n")
 	if got := labCommit(ctx, command, root); !strings.Contains(got, "with uncommitted changes") {
 		t.Errorf("a checkout with an untracked scenario reads as %q", got)
+	}
+}
+
+// gitSays answers `git -C <dir> rev-parse` as the top of a checkout at commit,
+// for one directory alone, and reports a clean status there; any other
+// directory is not a checkout.
+func gitSays(dir, commit string) lookup {
+	answers := map[string]string{"rev-parse --show-toplevel": dir, "rev-parse HEAD": commit}
+	return func(_ context.Context, name string, args ...string) (string, error) {
+		switch {
+		case name != "git":
+			return "", fmt.Errorf("unexpected lookup %s %v", name, args)
+		case len(args) < 3 || args[1] != dir:
+			return "", errors.New("exit status 128: fatal: not a git repository")
+		case args[2] == "status":
+			return "", nil
+		}
+		return answers[strings.Join(args[2:], " ")], nil
+	}
+}
+
+func TestTheReportNamesTheWorkspaceAndItsCommit(t *testing.T) {
+	root := t.TempDir()
+	writeFile(filepath.Join(root, versionFile), "ENFORCER_COMMIT=abc\n")
+	const commit = "89abcdef0123456789abcdef0123456789abcdef"
+	for _, test := range []struct {
+		name  string
+		space workspace
+		says  []string
+	}{
+		{"the clone", workspace{dir: root}, []string{"the clone"}},
+		{"a checkout", workspace{dir: "/work/policies", external: true}, []string{"`/work/policies`", commit}},
+		{"not a checkout", workspace{dir: "/work/loose", external: true}, []string{"`/work/loose`", "not a git checkout"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := describeHost(root, test.space, gitSays("/work/policies", commit))(context.Background()).Workspace
+			for _, want := range test.says {
+				if !strings.Contains(got, want) {
+					t.Errorf("the workspace reads as %q, want it to say %q", got, want)
+				}
+			}
+		})
+	}
+}
+
+// git answers from the nearest enclosing repository, so a workspace inside
+// another checkout would otherwise be reported under that checkout's commit.
+func TestAWorkspaceInsideAnotherCheckoutIsNotReportedUnderItsCommit(t *testing.T) {
+	outer := t.TempDir()
+	ctx, cancel := context.WithTimeout(context.Background(), provenanceTimeout)
+	defer cancel()
+	base := []string{"-C", outer, "-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false"}
+	for _, args := range [][]string{{"init", "-q"}, {"commit", "-q", "--allow-empty", "-m", "one"}} {
+		if _, err := command(ctx, "git", append(base, args...)...); err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+	}
+	commit, err := command(ctx, "git", "-C", outer, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	inner := filepath.Join(outer, "policies")
+	writeFile(filepath.Join(inner, "scenarios", "x.yaml"), "id: x\n")
+	got := describeWorkspace(ctx, command, workspace{dir: resolved(inner), external: true})
+	if strings.Contains(got, commit) || !strings.Contains(got, "not a git checkout (inside "+resolved(outer)+")") {
+		t.Errorf("a workspace inside another checkout reads as %q", got)
+	}
+	if got := describeWorkspace(ctx, command, workspace{dir: resolved(outer), external: true}); !strings.Contains(got, commit) {
+		t.Errorf("a workspace that is a checkout reads as %q, want its commit %s", got, commit)
 	}
 }

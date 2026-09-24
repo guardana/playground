@@ -23,8 +23,10 @@ type settings struct {
 }
 
 // locate returns the scenario files to run, in the order they will be run.
+// root is the workspace: the clone, or the directory LAB_WORKSPACE names.
 //
-// -scenario takes either an identifier, which is a file's own name, or a path.
+// -scenario takes either an identifier, which is a file's own name, or a path,
+// which is read relative to root.
 // An identifier two files claim is refused rather than resolved to the first
 // one: a run has to report under a name that names one thing.
 func locate(root string, s settings) ([]string, error) {
@@ -40,10 +42,7 @@ func locate(root string, s settings) ([]string, error) {
 		return nil, errors.New("one of -scenario or -all is required")
 	}
 	if looksLikeAPath(s.scenario) {
-		if _, err := os.Stat(s.scenario); err != nil {
-			return nil, fmt.Errorf("-scenario %s: %w", s.scenario, err)
-		}
-		return []string{s.scenario}, nil
+		return scenarioAt(root, s.scenario)
 	}
 	pattern := filepath.Join(root, scenarioDir, "*", s.scenario+".yaml")
 	found, err := filepath.Glob(pattern)
@@ -54,10 +53,34 @@ func locate(root string, s settings) ([]string, error) {
 	case 0:
 		return nil, fmt.Errorf("no scenario named %q under %s", s.scenario, filepath.Join(root, scenarioDir))
 	case 1:
-		return found, nil
+		return refuseOutside(root, "-scenario "+s.scenario, found)
 	default:
 		return nil, fmt.Errorf("two or more scenarios are named %q: %s", s.scenario, strings.Join(found, ", "))
 	}
+}
+
+// scenarioAt takes a path only inside the workspace: a scenario elsewhere would
+// have the files it names read from the workspace, and be graded as another.
+func scenarioAt(root, given string) ([]string, error) {
+	path := given
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(root, path)
+	}
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("-scenario %s: %w", given, err)
+	}
+	return refuseOutside(root, "-scenario "+given, []string{path})
+}
+
+// refuseOutside refuses a scenario file that resolves outside the workspace,
+// however it was found: a link out of it is another scenario than its name says.
+func refuseOutside(root, asked string, found []string) ([]string, error) {
+	for _, path := range found {
+		if !within(resolved(path), resolved(root)) {
+			return nil, fmt.Errorf("%s: %s is outside the workspace %s", asked, path, root)
+		}
+	}
+	return found, nil
 }
 
 func everyScenario(root string) ([]string, error) {
@@ -71,7 +94,7 @@ func everyScenario(root string) ([]string, error) {
 		return nil, fmt.Errorf("no scenario found under %s", filepath.Join(root, scenarioDir))
 	}
 	slices.Sort(found)
-	return found, nil
+	return refuseOutside(root, "-all", found)
 }
 
 func looksLikeAPath(value string) bool {

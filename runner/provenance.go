@@ -65,13 +65,15 @@ func pinValue(pins []report.Pin, name string) string {
 	return ""
 }
 
-// describeHost reads what produced a run from the lab's checkout, versions.env,
-// the local Docker daemon and the runtime.
-func describeHost(root string, run lookup) func(context.Context) report.Provenance {
+// describeHost reads what produced a run from the lab's checkout, the
+// workspace, versions.env, the local Docker daemon and the runtime.
+func describeHost(root string, space workspace, run lookup) func(context.Context) report.Provenance {
 	return func(ctx context.Context) report.Provenance {
 		ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
 		defer cancel()
-		described := report.Provenance{Lab: labCommit(ctx, run, root), Machine: machine(ctx, run)}
+		described := report.Provenance{
+			Lab: labCommit(ctx, run, root), Workspace: describeWorkspace(ctx, run, space), Machine: machine(ctx, run),
+		}
 		pins, err := readPins(filepath.Join(root, versionFile))
 		if err != nil {
 			described.Pins = []report.Pin{{Name: versionFile, Value: "unreadable: " + err.Error()}}
@@ -83,13 +85,27 @@ func describeHost(root string, run lookup) func(context.Context) report.Provenan
 	}
 }
 
-// images reads the enforcer by the commit its build stamps and the verifier by
-// the release its build stamps.
+// images reads the enforcer by the commit and the tree its build stamps and
+// the verifier by the release its build stamps.
 func images(ctx context.Context, run lookup, pins []report.Pin) []report.Image {
+	name, commit := pinValue(pins, "ENFORCER_IMAGE"), pinValue(pins, "ENFORCER_COMMIT")
+	enforcer := inspectImage(ctx, run, name, commit, revisionLabel)
+	enforcer.TreeWant = or(pinValue(pins, "ENFORCER_TREE"), "none in versions.env")
+	if enforcer.Missing == "" {
+		tree := inspectImage(ctx, run, name, commit, treeLabel)
+		enforcer.Tree = or(tree.Missing, tree.Label)
+	}
 	return []report.Image{
-		inspectImage(ctx, run, pinValue(pins, "ENFORCER_IMAGE"), pinValue(pins, "ENFORCER_COMMIT"), revisionLabel),
+		enforcer,
 		inspectImage(ctx, run, pinValue(pins, "VERIFIER_IMAGE"), pinValue(pins, "VERIFIER_VERSION"), versionLabel),
 	}
+}
+
+func or(value, otherwise string) string {
+	if value == "" {
+		return otherwise
+	}
+	return value
 }
 
 // refuseVerifierImage refuses a run the verifier grades when the local image
@@ -135,7 +151,26 @@ func (l lab) provenance(ctx context.Context) report.Provenance {
 	return l.describe(ctx)
 }
 
+// describeWorkspace names the workspace by its path and, when it is a
+// checkout, its commit, which is what a person rerunning the scenario needs.
+func describeWorkspace(ctx context.Context, run lookup, space workspace) string {
+	if !space.external {
+		return "the clone"
+	}
+	return fmt.Sprintf("`%s`, %s", space.dir, labCommit(ctx, run, space.dir))
+}
+
+// labCommit names the commit of the checkout rooted at root. git answers from
+// the nearest enclosing repository, so a directory that is not the top of one
+// is not reported under that repository's commit.
 func labCommit(ctx context.Context, run lookup, root string) string {
+	top, err := run(ctx, "git", "-C", root, "rev-parse", "--show-toplevel")
+	switch {
+	case err != nil:
+		return "not a git checkout: " + err.Error()
+	case resolved(top) != resolved(root):
+		return fmt.Sprintf("not a git checkout (inside %s)", top)
+	}
 	commit, err := run(ctx, "git", "-C", root, "rev-parse", "HEAD")
 	if err != nil {
 		return "not a git checkout: " + err.Error()

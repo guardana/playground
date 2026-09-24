@@ -92,13 +92,20 @@ func TestTheSignerWritesOutsideTheRunAndOnlyTheBundleIsKept(t *testing.T) {
 	}
 }
 
-func TestALabKeyInsideTheCloneOrTheReportsIsRefused(t *testing.T) {
-	for _, place := range []string{"clone", "reports"} {
+// A key in a workspace directory a container mounts would be read by that
+// container, the agent included.
+func TestALabKeyInsideTheCloneTheReportsOrTheWorkspaceIsRefused(t *testing.T) {
+	for _, place := range []string{"clone", "reports", "workspace"} {
 		t.Run(place, func(t *testing.T) {
 			subject, compose, scenario := enforcerLab(t)
 			inside := filepath.Join(subject.root, "keys")
-			if place == "reports" {
+			switch place {
+			case "reports":
 				inside = filepath.Join(subject.reports, "keys")
+			case "workspace":
+				apart(t, &subject, classification, fingerprints, versionFile)
+				subject.workspace.external = true
+				inside = filepath.Join(subject.workspace.dir, "trajectories", "keys")
 			}
 			writeFile(filepath.Join(inside, "public.txt"), "key_id: ed25519-0011223344556677\npublic_key: cHVibGljLWtleQ==\n")
 			subject.keysDir = inside

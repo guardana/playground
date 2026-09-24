@@ -168,8 +168,8 @@ gateway:
   identifier when `pdp_script` is set.
 - `policy` is an `agent-policy/v1alpha1` document, signed for the run with the
   lab key (`make lab-key`) by the enforcer's own `policy sign`. The key lives
-  outside the clone and the reports directory (`LAB_KEYS_DIR`); a run refuses
-  one inside either.
+  outside the clone, the reports directory and the workspace (`LAB_KEYS_DIR`);
+  a run refuses one inside any of them.
 - `unclassified` keeps tools out of the classification on purpose, so a
   scenario can meet one the enforcer does not know.
 - `upstream_tenants` puts a victim in a tenant of its own (the upstream's
@@ -452,6 +452,50 @@ the collector at most once, and a scenario the stub decides takes no chaos.
 There is no proxy on `evidence-net` or `pdp-net`: a proxy reachable from
 `tool-net` there would let a victim post into the collector, and the decision
 point double scripts its own timeouts and malformed answers.
+
+## A workspace outside the clone
+
+`LAB_WORKSPACE=<dir>` runs your own scenarios without putting them in the
+clone. The directory is laid out like the lab, and a scenario in it is the same
+format (`schema_version: 1`) with every path relative to the workspace root:
+
+    <dir>/scenarios/<class>/<id>.yaml
+    <dir>/trajectories/
+    <dir>/config/policies/
+    <dir>/config/gateway/scenarios/
+    <dir>/config/contracts/
+    <dir>/config/pdp/
+    <dir>/config/approver/
+
+With it set, `make scenario ID=<id>` and `-all` look for scenarios only there,
+and a path given to `-scenario` has to be inside it (a relative one is read from
+it). The runner reads the trajectory, the policy and the gateway part from the
+workspace, and compose mounts its `trajectories/`, `config/contracts/`,
+`config/pdp/` and `config/approver/` read-only in place of the lab's; a
+directory a profile mounts has to exist, since compose refuses a missing one
+rather than create it. `versions.env`, the classification and fingerprints, the
+listing snapshots, compose and the images stay the lab's.
+
+The runner refuses before anything boots, with the reason:
+
+- `LAB_WORKSPACE` set and empty, not there, or not a directory;
+- a workspace inside the clone or inside the reports directory, or a reports
+  directory inside the workspace, after links are resolved (with no workspace,
+  a reports directory inside a directory of the clone a container mounts);
+- a scenario file, found by identifier, by `-all` or by path, that resolves
+  outside the workspace;
+- a link anywhere on the way to `trajectories/`, `config/contracts/`,
+  `config/pdp/`, `config/approver/`, `config/policies/` or
+  `config/gateway/scenarios/`: compose binds these by the path as written and
+  Docker follows a link, so a container would see what it points at;
+- a scenario naming a file the workspace does not hold, one that is not a
+  regular file, or one that resolves outside its directory;
+- a lab key (`LAB_KEYS_DIR`) inside the workspace;
+- a workspace scenario the stub decides: the stub reads the clone's `config/`.
+
+Every report names the workspace, and its commit when the workspace is the top
+of a git checkout; a workspace inside another repository is reported as not a
+checkout, with that repository's top named, and never under its commit.
 
 ## What a runner reads
 

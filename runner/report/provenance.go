@@ -9,10 +9,12 @@ import (
 // under, the images on this machine tagged with those pins, and the machine. A value nobody could
 // read is carried as the reason it could not be read, never left blank.
 type Provenance struct {
-	Lab     string
-	Pins    []Pin
-	Images  []Image
-	Machine string
+	Lab string
+	// Workspace is where the scenario and the files it names were read from.
+	Workspace string
+	Pins      []Pin
+	Images    []Image
+	Machine   string
 }
 
 // Pin is one variable of versions.env as the run read it.
@@ -31,29 +33,45 @@ type Image struct {
 	Want  string
 	// Missing says why the image could not be read; empty when it was.
 	Missing string
+	// Tree is the tree label the enforcer's build sets from the source it
+	// verified; TreeWant is ENFORCER_TREE, empty for an image without one.
+	Tree     string
+	TreeWant string
 }
 
 // Matches reports whether the image is labelled with the pin it is tagged with.
 func (i Image) Matches() bool { return i.Missing == "" && i.Label != "" && i.Label == i.Want }
 
+// describe says what was compared: a label against a pin, never the image
+// against what it was built from.
 func (i Image) describe() string {
 	if i.Missing != "" {
 		return fmt.Sprintf("`%s`: %s", i.Ref, i.Missing)
 	}
-	verdict := "matches the pin"
+	verdict := "the label matches the pin"
 	if !i.Matches() {
 		verdict = fmt.Sprintf("does NOT match the pin `%s`", or(i.Want, "none"))
 	}
-	label := "with no pin"
+	label := "with no label"
 	if i.Label != "" {
-		label = "`" + i.Label + "`"
+		label = "labelled `" + i.Label + "`"
 	}
-	return fmt.Sprintf("`%s` is `%s` on this machine, labelled %s, %s", i.Ref, or(i.ID, "no id"), label, verdict)
+	line := fmt.Sprintf("`%s` is `%s` on this machine, %s, %s", i.Ref, or(i.ID, "no id"), label, verdict)
+	switch {
+	case i.TreeWant == "":
+		return line
+	case i.Tree == i.TreeWant:
+		return fmt.Sprintf("%s; tree label `%s` matches ENFORCER_TREE", line, i.Tree)
+	case i.Tree == "":
+		return fmt.Sprintf("%s; no tree label, does NOT match ENFORCER_TREE `%s`", line, i.TreeWant)
+	}
+	return fmt.Sprintf("%s; tree label `%s` does NOT match ENFORCER_TREE `%s`", line, i.Tree, i.TreeWant)
 }
 
 func writeProvenance(out *writer, p Provenance) {
 	out.printf("## Provenance\n\n")
 	out.printf("- Lab: %s\n", or(p.Lab, "not recorded"))
+	out.printf("- Workspace: %s\n", or(p.Workspace, "not recorded"))
 	if len(p.Pins) == 0 {
 		out.printf("- Pins: not recorded\n")
 	}
@@ -70,7 +88,10 @@ func writeProvenance(out *writer, p Provenance) {
 }
 
 func provenanceProperties(p Provenance) []junitProperty {
-	properties := []junitProperty{{Name: "lab", Value: or(p.Lab, "not recorded")}}
+	properties := []junitProperty{
+		{Name: "lab", Value: or(p.Lab, "not recorded")},
+		{Name: "workspace", Value: or(p.Workspace, "not recorded")},
+	}
 	for _, pin := range p.Pins {
 		properties = append(properties, junitProperty{Name: "pin." + pin.Name, Value: pin.Value})
 	}
@@ -78,6 +99,9 @@ func provenanceProperties(p Provenance) []junitProperty {
 		value := image.Missing
 		if value == "" {
 			value = strings.TrimSpace(image.ID + " labelled=" + image.Label)
+			if image.TreeWant != "" {
+				value += " tree=" + image.Tree
+			}
 		}
 		properties = append(properties, junitProperty{Name: "image." + image.Ref, Value: value})
 	}

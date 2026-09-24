@@ -104,7 +104,7 @@ func (l lab) prepareGateway(
 	if err != nil {
 		return "", err
 	}
-	document, err := os.ReadFile(filepath.Join(l.root, plan.Policy)) // #nosec G304 -- a repository path the scenario names.
+	document, err := os.ReadFile(l.workspace.file(plan.Policy)) // #nosec G304 -- a workspace path the scenario names.
 	if err != nil {
 		return "", err
 	}
@@ -112,14 +112,14 @@ func (l lab) prepareGateway(
 	if err != nil {
 		return "", err
 	}
-	if err := l.signInto(ctx, filepath.Join(l.root, plan.Policy), dir); err != nil {
+	if err := l.signInto(ctx, l.workspace.file(plan.Policy), dir); err != nil {
 		return "", fmt.Errorf("signing %s: %w", plan.Policy, err)
 	}
 	overrides, err := l.overrides(plan.Unclassified)
 	if err != nil {
 		return "", err
 	}
-	partial, err := os.ReadFile(filepath.Join(l.root, plan.Config)) // #nosec G304 -- a repository path the scenario names.
+	partial, err := os.ReadFile(l.workspace.file(plan.Config)) // #nosec G304 -- a workspace path the scenario names.
 	if err != nil {
 		return "", err
 	}

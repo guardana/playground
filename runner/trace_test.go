@@ -29,6 +29,7 @@ func traceLab(t *testing.T, target func(runID string) string, found bool) (lab, 
 	withTrace := strings.Replace(strings.Replace(string(body), "profile: [core, enforcer]", "profile: [core, enforcer, trace]", 1), "expect:\n",
 		"trace: { contract: config/contracts/lab.yaml, ai_system: support-agent }\nexpect:\n  trace: { exit_code: 1, findings_include: [ { rule_id: "+contractFinding+", severity: HIGH } ] }\n", 1)
 	writeFile(scenario, withTrace)
+	writeFile(filepath.Join(subject.root, "config/contracts/lab.yaml"), "rules: []\n")
 	compose.agentTrace = `{"guardana_trace":3}` + "\n"
 	compose.inProfile = append(compose.inProfile, traceService)
 	compose.split = func(service, _ string, args []string) (Split, error) {

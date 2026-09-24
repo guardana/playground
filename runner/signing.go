@@ -89,17 +89,26 @@ func labKeysDir(lookup func(string) string) string {
 }
 
 // refuseKeysPlace refuses a key directory inside the clone, where it could be
-// committed, or inside the reports, which services write into and people share.
+// committed, inside the reports, which services write into and people share,
+// or inside a workspace, whose directories containers mount.
 func (l lab) refuseKeysPlace() error {
 	keys := resolved(l.keysDir)
-	for name, dir := range map[string]string{"the clone": l.root, "the reports directory": l.reports} {
+	places := map[string]string{"the clone": l.root, "the reports directory": l.reports}
+	if l.workspace.external {
+		places["the workspace"] = l.workspace.dir
+	}
+	for name, dir := range places {
 		if within(keys, resolved(dir)) {
-			return fmt.Errorf("LAB_KEYS_DIR %s is inside %s; keep the lab key outside both", l.keysDir, name)
+			return fmt.Errorf("LAB_KEYS_DIR %s is inside %s; keep the lab key outside the clone, the reports and the workspace",
+				l.keysDir, name)
 		}
 	}
 	return nil
 }
 
+// resolved is path made absolute with every link resolved. A path that does
+// not exist yet keeps its missing tail under its nearest existing directory,
+// resolved, so it compares with paths that do exist.
 func resolved(path string) string {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
@@ -108,7 +117,11 @@ func resolved(path string) string {
 	if evaluated, err := filepath.EvalSymlinks(absolute); err == nil {
 		return evaluated
 	}
-	return absolute
+	parent := filepath.Dir(absolute)
+	if parent == absolute {
+		return absolute
+	}
+	return filepath.Join(resolved(parent), filepath.Base(absolute))
 }
 
 func within(path, dir string) bool {

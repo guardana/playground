@@ -14,6 +14,7 @@ func (l lab) environment(spec labspec.Scenario, runID, runDir string) map[string
 		"LAB_RUN_ID":           runID,
 		"LAB_REPORTS_DIR":      containerReports,
 		"COMPOSE_PROJECT_NAME": projectName(runID),
+		workspaceVariable:      l.workspace.dir,
 	}
 	if absolute, err := filepath.Abs(runDir); err == nil {
 		env["LAB_RUN_HOST_DIR"] = absolute

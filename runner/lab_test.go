@@ -61,6 +61,8 @@ type fakeCompose struct {
 	reports   string
 	inProfile []string
 	status    []assertion.Service
+	buildErr  error
+	built     []string
 	upErr     error
 	gateway   Execution
 	victim    Execution
@@ -116,6 +118,14 @@ func (f *fakeCompose) Services(ctx context.Context, _ []string) ([]string, error
 		return nil, err
 	}
 	return f.inProfile, nil
+}
+
+func (f *fakeCompose) Build(ctx context.Context, profiles []string) error {
+	if err := f.called(ctx, "build"); err != nil {
+		return err
+	}
+	f.built = profiles
+	return f.buildErr
 }
 
 func (f *fakeCompose) Up(ctx context.Context, _, services []string) error {
@@ -218,9 +228,11 @@ func labUnderTest(t *testing.T, compose Compose) (lab, string) {
 	root := t.TempDir()
 	writeFile(filepath.Join(root, "scenarios/flow/flow-01.yaml"), scenarioFile)
 	writeFile(filepath.Join(root, "trajectories/flow-01.yaml"), trajectoryFile)
+	writeFile(filepath.Join(root, "config/scenarios/flow-01.yaml"), "verdicts: []\n")
 	reports := filepath.Join(root, "reports")
 	return lab{
 		root:      root,
+		workspace: workspace{dir: resolved(root)},
 		reports:   reports,
 		compose:   compose,
 		timeout:   defaultScenarioTimeout,
