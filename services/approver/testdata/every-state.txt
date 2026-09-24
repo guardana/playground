@@ -1,0 +1,84 @@
+5 records in {{DIR}}
+a plane holds this directory
+the readable fields below come from a projection and are not bound to the
+action digest beside them: the binding is over the authorized argument
+bytes, which no record holds
+
+approval ANSWERED
+  state          APPROVAL_STATE_APPROVED
+  resolution     pending
+  request        req-answered
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:16:36Z
+  answered by    duty-officer
+  answered at    2026-09-24T08:01:36Z
+  principal      user-1
+  agent          agent-1
+  action         refund
+  resource       payment pay-9
+  effect class   EFFECT_CLASS_TRANSACT
+  rule ids       rule-a, rule-b
+  requested      2026-09-24T08:01:36Z
+
+approval CLOSED
+  state          APPROVAL_STATE_PENDING
+  resolution     not_resumed
+  request        req-closed
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:16:36Z
+  principal      user-1
+  agent          agent-1
+  action         refund
+  resource       payment pay-9
+  effect class   EFFECT_CLASS_TRANSACT
+  rule ids       rule-a, rule-b
+  requested      2026-09-24T08:01:36Z
+
+approval SPENT
+  state          APPROVAL_STATE_APPROVED
+  resolution     consumed
+  request        req-spent
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:16:36Z
+  answered by    duty-officer
+  answered at    2026-09-24T08:01:36Z
+  principal      user-1
+  agent          agent-1
+  action         refund
+  resource       payment pay-9
+  effect class   EFFECT_CLASS_TRANSACT
+  rule ids       rule-a, rule-b
+  requested      2026-09-24T08:01:36Z
+
+approval STALE
+  state          APPROVAL_STATE_PENDING
+  resolution     pending
+  request        req-stale
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:00:36Z
+  principal      user-1
+  agent          agent-1
+  action         refund
+  resource       payment pay-9
+  effect class   EFFECT_CLASS_TRANSACT
+  rule ids       rule-a, rule-b
+  requested      2026-09-24T08:01:36Z
+
+approval WAITING
+  state          APPROVAL_STATE_PENDING
+  resolution     pending
+  request        req-waiting
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:16:36Z
+  principal      user-1
+  agent          agent-1
+  action         refund
+  resource       payment pay-9
+  effect class   EFFECT_CLASS_TRANSACT
+  rule ids       rule-a, rule-b
+  requested      2026-09-24T08:01:36Z

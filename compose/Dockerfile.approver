@@ -1,0 +1,32 @@
+# The approver: a lab-built service beside the enforcer's own control command.
+#
+# The build context is the repository root, because the service is a package in
+# this module. The command is copied from the enforcer image built at
+# ENFORCER_COMMIT, so the only writer of the approvals directory is the pinned
+# enforcer.
+ARG GO_BUILD_IMAGE
+ARG SERVICE_BASE_IMAGE
+ARG ENFORCER_IMAGE
+ARG ENFORCER_COMMIT
+
+FROM ${ENFORCER_IMAGE}:${ENFORCER_COMMIT} AS enforcer
+
+FROM ${GO_BUILD_IMAGE} AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -trimpath -ldflags="-s -w" -o /out/approver ./services/approver && \
+    go build -trimpath -ldflags="-s -w" -o /out/healthprobe ./compose/healthprobe
+
+FROM ${SERVICE_BASE_IMAGE}
+ARG ENFORCER_COMMIT
+LABEL org.opencontainers.image.revision="${ENFORCER_COMMIT}"
+COPY --from=enforcer /enforcer/control /enforcer/control
+COPY --from=build /out/approver /approver
+COPY --from=build /out/healthprobe /healthprobe
+# The uid the approvals volume is created for; the command refuses a directory
+# others can write.
+USER 65532:65532
+ENTRYPOINT ["/approver"]

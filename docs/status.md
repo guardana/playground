@@ -15,6 +15,7 @@ without notice · `planned` does not exist.
 | Stub gateway | experimental | replays the declared verdicts in `config/scenarios/`; it decides nothing. It lists an upstream's tools once at startup as well as on demand, so a victim counting its own listings is one ahead of the agent |
 | Victim tool servers | implemented | all six: crm, db, fs, shell, mail, web; each lies in the way its README states |
 | AuthZEN decision point double | experimental | `services/pdp-double`: HTTPS with a CA it makes in memory and scopes to its own names, answers scripted per scenario (allow, deny, obligation, timeout, 500, no echo, malformed, extra member; unscripted is denied), every question journalled. No scenario uses it yet |
+| Approver | experimental | `services/approver`: answers held approvals per scenario script through the enforcer's own `approvals` command, never while no plane holds the directory; every action and every outcome it cannot confirm journalled. No scenario uses it yet |
 | Scripted agent | implemented | `agents/scripted`; replays a trajectory and forwards each step's output into the next |
 | Scenario runner and assertions | implemented | `make scenario ID=...`; boot, topology, replay, decisions, effects and evidence checks |
 | Scenario catalogue | experimental | three scenarios, one `ALLOW`, one `DENY`, one `INDETERMINATE`; they have run only against the stub |

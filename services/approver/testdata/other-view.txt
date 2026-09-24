@@ -1,0 +1,14 @@
+1 record in {{DIR}}
+a plane holds this directory
+the readable fields below come from a projection and are not bound to the
+action digest beside them: the binding is over the authorized argument
+bytes, which no record holds
+
+approval WAITING
+  state          APPROVAL_STATE_PENDING
+  resolution     pending
+  request        req-waiting
+  action digest  sha256:a11641647189a89e5363f7c2346ca97d74c1954f4a3e97953bd6dab9f84230ea
+  bundle digest  sha256:2222222222222222222222222222222222222222222222222222222222222222
+  expires        2026-09-24T08:32:42Z
+  readable       none: the projection beside this record describes another approval

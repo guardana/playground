@@ -29,6 +29,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   external decision point: HTTPS only, a CA made in memory and scoped by
   critical name constraints to its own names, answers scripted per scenario,
   hostile by default, and every question journalled before it is answered.
+- `services/approver` answers held approvals the way a person would, through
+  the enforcer's own `approvals list|approve|reject`, per a scenario script:
+  approve, reject or leave, after a delay; never while no plane holds the
+  directory, never an unreadable record unless a rule names it. A command cut
+  short is journalled as unknown until the next listing shows what the record
+  says. `compose/Dockerfile.approver` puts it beside the pinned `/enforcer/control`.
 - Every run report opens with its provenance: the lab commit (untracked files
   count as uncommitted changes), each pin, each image on this machine with its
   ID and the pin its label names, and the machine.
