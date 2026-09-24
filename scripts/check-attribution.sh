@@ -9,6 +9,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The scans below read the list through a pipe that hides its exit status, so a
+# list that could not be made fails here rather than scanning nothing.
+scripts/repo-files.sh >/dev/null
+
 readonly ALLOWLIST=scripts/attribution-allowlist.txt
 readonly PATTERN='co-authored-by:|generated (with|by) |written (with|by) an? ai|ai[-_ ](generated|assisted|written)|with ai assistance|powered by claude|claude\.ai/code|claude-session|🤖|\b(claude|anthropic|chatgpt|copilot|codex)\b'
 

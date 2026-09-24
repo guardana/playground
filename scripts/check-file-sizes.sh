@@ -7,6 +7,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The scans below read the list through a pipe that hides its exit status, so a
+# list that could not be made fails here rather than scanning nothing.
+scripts/repo-files.sh >/dev/null
+
 status=0
 while IFS= read -r f; do
 	lines=$(grep -cve '^[[:space:]]*$' "$f")

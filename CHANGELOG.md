@@ -7,6 +7,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The gate's file list reads git only in the repository's own work tree and
+  refuses an empty list, so a copy inside another repository is scanned file by
+  file and no guard reports clean having read nothing.
 - `versions.env` pins the enforcer by commit (`ENFORCER_COMMIT`) and the
   verifier at 0.26.1, and every image the lab pulls by tag and the digest of
   its multi-arch index. `ENFORCER_TAG`, `ENFORCER_BRAND_ENDPOINT` and the Postgres,
