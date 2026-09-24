@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/guardana/playground/runner/check"
@@ -21,6 +22,12 @@ func (d dockerCompose) ContainerImage(ctx context.Context, profiles []string, se
 	return command(ctx, "docker", "inspect", "--format", "{{.Image}}", ids[0])
 }
 
+// treeLabel is where scripts/build-enforcer.sh records the tree it verified the
+// image's source against. Nothing else in the build sets it, so an image built
+// with the pinned build arguments by any other route carries none, unless it
+// sets the label by hand or builds FROM an image that carries it.
+const treeLabel = "io.guardana.playground.enforcer.tree"
+
 // readImages records which image the run's enforcer container ran and which
 // image the pin's tag names on this machine, with the commit it was built from.
 func (l lab) readImages(ctx context.Context, compose Compose, profiles []string, plane *check.Plane) {
@@ -30,6 +37,7 @@ func (l lab) readImages(ctx context.Context, compose Compose, profiles []string,
 		problems = append(problems, "the enforcer container: "+err.Error())
 	}
 	plane.RunningImage = running
+	problems = append(problems, l.readTree(ctx, plane)...)
 	switch {
 	case l.inspect == nil || l.enforcerImage == "":
 		problems = append(problems, "no pinned image to compare with")
@@ -43,4 +51,27 @@ func (l lab) readImages(ctx context.Context, compose Compose, profiles []string,
 		}
 	}
 	plane.ImageDetail = strings.Join(problems, "; ")
+}
+
+// readTree records the tree versions.env pins the enforcer's source at and the
+// tree label of the image the run's enforcer container runs.
+func (l lab) readTree(ctx context.Context, plane *check.Plane) []string {
+	var problems []string
+	pins, err := readPins(filepath.Join(l.root, versionFile))
+	if err != nil {
+		problems = append(problems, "the pins cannot be read: "+err.Error())
+	}
+	plane.TreePin = pinValue(pins, "ENFORCER_TREE")
+	if plane.RunningImage == "" || l.inspect == nil {
+		return problems
+	}
+	format := fmt.Sprintf(`{{index .Config.Labels %q}}`, treeLabel)
+	tree, err := l.inspect(ctx, "docker", "image", "inspect", "--format", format, plane.RunningImage)
+	if err != nil {
+		return append(problems, "the running image's tree label: "+err.Error())
+	}
+	if tree != "<no value>" {
+		plane.RunningTree = tree
+	}
+	return problems
 }

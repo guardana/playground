@@ -92,9 +92,8 @@ func enforcerLab(t *testing.T) (lab, *fakeCompose, string) {
 	subject.drainBound = 2 * time.Second
 	compose.image = func(string) (string, error) { return "sha256:aa", nil }
 	subject.enforcerImage = "lab-enforcer:" + testPin
-	subject.inspect = func(context.Context, string, ...string) (string, error) {
-		return "sha256:aa " + testPin, nil
-	}
+	writeFile(filepath.Join(root, versionFile), "ENFORCER_TREE="+testTree+"\n")
+	subject.inspect = inspectEnforcer(testTree)
 	return subject, compose, scenario
 }
 

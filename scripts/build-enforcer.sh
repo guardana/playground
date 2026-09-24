@@ -3,8 +3,9 @@
 # `git archive` from the clone ENFORCER_SOURCE names. The working tree of that
 # clone is never read, so an edit or a checkout beside the lab cannot reach a
 # run. The extracted archive must hash to the commit's own tree, or the build is
-# refused. The image is tagged with the commit and labelled with it; the runner
-# reads both back into every report.
+# refused, and so is a commit whose tree is not ENFORCER_TREE. The image is
+# tagged with the commit, labelled with it and with the tree it verified; the
+# runner reads them back and refuses an enforcer image without that tree.
 set -euo pipefail
 
 # Replacement objects would let every git call below read another object than
@@ -55,6 +56,9 @@ git -C "$ENFORCER_SOURCE" cat-file -e "${commit}^{commit}" 2>/dev/null ||
 replaced=$(git -C "$ENFORCER_SOURCE" for-each-ref --format='%(refname)' refs/replace/)
 [ -z "$replaced" ] || refuse "$ENFORCER_SOURCE carries replacement refs, remove them: $replaced"
 tree=$(git -C "$ENFORCER_SOURCE" rev-parse --verify "${commit}^{tree}")
+pinned_tree=$(pin ENFORCER_TREE)
+[ "$tree" = "$pinned_tree" ] ||
+	refuse "commit $commit has tree $tree, not the ENFORCER_TREE versions.env pins: $pinned_tree"
 
 image="$(pin ENFORCER_IMAGE):$commit"
 go_image=$(pin GO_BUILD_IMAGE)
@@ -77,6 +81,7 @@ docker build \
 	--build-arg "ENFORCER_COMMIT=$commit" \
 	--build-arg "ENFORCER_GATEWAY_BIN=$gateway_bin" \
 	--build-arg "ENFORCER_CONTROL_BIN=$control_bin" \
+	--label "io.guardana.playground.enforcer.tree=$extracted" \
 	--tag "$image" \
 	"$context"
 

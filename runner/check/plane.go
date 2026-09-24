@@ -3,6 +3,7 @@ package check
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/guardana/playground/internal/assertion"
 )
@@ -25,6 +26,11 @@ type Plane struct {
 	PinnedImage  string
 	PinnedLabel  string
 	ImageDetail  string
+	// TreePin is ENFORCER_TREE; RunningTree is the tree label of the image the
+	// container runs, which only scripts/build-enforcer.sh sets, after it
+	// checked the source against that tree.
+	TreePin     string
+	RunningTree string
 }
 
 // ID names the check in a report.
@@ -62,11 +68,13 @@ func (p Plane) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, 
 }
 
 // image grades the image the run's enforcer container ran against the image
-// tagged with the pin and the commit that image was built from.
+// tagged with the pin, the commit that image was built from, and the tree the
+// build script verified its source against.
 func (p Plane) image() assertion.Result {
 	result := assertion.Result{
-		Check:  "plane/image",
-		Want:   "the run's enforcer container runs the image tagged with the pin, built from commit " + p.Pin,
+		Check: "plane/image",
+		Want: "the run's enforcer container runs the image tagged with the pin, built from commit " + p.Pin +
+			" and labelled by scripts/build-enforcer.sh with tree " + spoken(p.TreePin),
 		Got:    p.RunningImage,
 		Source: p.Source,
 		Detail: p.ImageDetail,
@@ -80,8 +88,24 @@ func (p Plane) image() assertion.Result {
 	case p.RunningImage != p.PinnedImage:
 		result.Outcome = assertion.Fail
 		result.Detail = "the image tagged with the pin is " + p.PinnedImage
+	case p.TreePin == "":
+		result.Outcome = assertion.Fail
+		result.Detail = strings.TrimSuffix("versions.env pins no ENFORCER_TREE; "+p.ImageDetail, "; ")
+	case p.RunningTree == "" && p.ImageDetail != "":
+		result.Outcome = assertion.Fail
+		result.Detail = "the running image's tree label was not read: " + p.ImageDetail
+	case p.RunningTree != p.TreePin:
+		result.Outcome = assertion.Fail
+		result.Detail = "the running image carries " + treeFound(p.RunningTree) + ", so scripts/build-enforcer.sh did not build it"
 	default:
 		result.Outcome = assertion.Pass
 	}
 	return result
+}
+
+func treeFound(tree string) string {
+	if tree == "" {
+		return "no tree label"
+	}
+	return "tree label " + tree
 }

@@ -14,6 +14,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `versions.env` pins the tree of the enforcer's commit as `ENFORCER_TREE`.
+  `make enforcer-image` refuses a commit whose tree is not it and labels the
+  image `io.guardana.playground.enforcer.tree` with the tree it verified;
+  `plane/image` fails unless the enforcer container's own image carries that
+  label equal to the pin, and says which tree it found. An enforcer image
+  built before this change carries no such label and has to be rebuilt.
 - The gate's file list reads git only in the repository's own work tree and
   refuses an empty list, so a copy inside another repository is scanned file by
   file and no guard reports clean having read nothing.

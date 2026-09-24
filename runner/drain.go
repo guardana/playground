@@ -50,8 +50,8 @@ func (l lab) drainPlane(ctx context.Context, compose Compose, profiles []string,
 		fmt.Fprintf(&log, "brand unreadable: %v\n", err)
 	}
 	l.readImages(ctx, compose, profiles, &plane)
-	fmt.Fprintf(&log, "image running %s, pinned %s built from %s: %s\n",
-		plane.RunningImage, plane.PinnedImage, plane.PinnedLabel, plane.ImageDetail)
+	fmt.Fprintf(&log, "image running %s, pinned %s built from %s, tree label %q, ENFORCER_TREE %q: %s\n",
+		plane.RunningImage, plane.PinnedImage, plane.PinnedLabel, plane.RunningTree, plane.TreePin, plane.ImageDetail)
 	health, err := l.waitHandedOver(ctx, compose, profiles)
 	fmt.Fprintf(&log, "healthz %s\nhanded over: %v\n", strings.TrimSpace(health), err)
 	if err == nil {

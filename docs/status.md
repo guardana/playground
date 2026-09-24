@@ -55,10 +55,13 @@ the cause of `evidence-01`'s block and `evidence-02`'s unrecorded read, which
 only the enforcer's `/healthz` shows, and journal lines other than `served`. A
 principal with no tenant cannot be configured at the pin (the gateway fills in
 its own), so only the other one-sided tenant case is graded (`tenant-03`).
-The checks that the enforcer runs at its pin read the stamps the lab's own
-build writes, the version the image reports and its revision label, so an
-image built outside `make enforcer-image` with the pinned commit as its build
-argument would pass them. The lab binds the enforcer's agent listener on all
+`plane/image` requires the image the run's enforcer container runs to carry
+the `io.guardana.playground.enforcer.tree` label equal to `ENFORCER_TREE`.
+Only `make enforcer-image` sets it, after checking that the archive hashes to
+the commit's tree and that tree is the pinned one, so an image built by hand
+with the pinned build arguments fails the check. The label is still a claim
+the build makes about itself: an image that sets it by hand, or builds `FROM`
+an image that carries it, passes. The lab binds the enforcer's agent listener on all
 interfaces (`runner/gateway/config.go`), and the enforcer sits on four
 networks, so a container on `tool-net` could open a session as the configured
 principal; a call it made would fail `trails/opened` or the effects checks,

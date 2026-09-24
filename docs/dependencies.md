@@ -88,12 +88,15 @@ by Shopify.
 
 Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, taken
 from the clone `ENFORCER_SOURCE` names; it publishes no image to pull. The
-build refuses a clone with replacement refs and an archive that does not hash
-back to the commit's tree, which an export attribute or a filter would cause.
+build refuses a clone with replacement refs, a commit whose tree is not
+`ENFORCER_TREE`, and an archive that does not hash back to that tree, which
+an export attribute or a filter would cause.
 It uses `GO_BUILD_IMAGE` and `SERVICE_BASE_IMAGE`, stamps the commit into the
 binaries and the image's `org.opencontainers.image.revision` label, and every
 report prints the image ID and that label beside the pin. The label is a build
-argument, so it names the pin the image was built for, not what went into it.
+argument, so it names the pin the image was built for, not what went into it;
+the tree the build verified goes into `io.guardana.playground.enforcer.tree`,
+and the runner fails `plane/image` when the running image lacks it.
 Apache-2.0.
 
 ### The verifier
