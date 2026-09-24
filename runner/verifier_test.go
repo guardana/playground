@@ -115,6 +115,7 @@ func verifierUnderTest(t *testing.T) (lab, *fakeCompose, string) {
 	subject, _ := labUnderTest(t, compose)
 	scenario := filepath.Join(subject.root, "scenarios/verify/verify-01.yaml")
 	writeFile(scenario, verifierScenarioFile)
+	pinVerifierImage(t, &subject, "0.26.1")
 	return subject, compose, scenario
 }
 

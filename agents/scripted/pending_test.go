@@ -36,7 +36,7 @@ func heldStep(atMost int) labspec.Trajectory {
 func TestAHeldCallIsSentAgainUntilItIsNoLongerPending(t *testing.T) {
 	gateway := &fakeGateway{answers: []answer{pendingAnswer(), pendingAnswer(), {text: []string{"id,name"}}}}
 	var log bytes.Buffer
-	if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &log); err != nil {
+	if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 3 {
@@ -50,7 +50,7 @@ func TestAHeldCallIsSentAgainUntilItIsNoLongerPending(t *testing.T) {
 func TestRetriesStopAtTheirBound(t *testing.T) {
 	gateway := &fakeGateway{answers: []answer{pendingAnswer(), pendingAnswer(), pendingAnswer(), pendingAnswer()}}
 	var log bytes.Buffer
-	if err := replay(context.Background(), gateway, heldStep(2), "run-1", testNamespace, &log); err != nil {
+	if err := replay(context.Background(), gateway, heldStep(2), "run-1", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 3 {
@@ -77,7 +77,7 @@ func TestAnAnswerIsPendingOnlyUnderTheGatewaysMark(t *testing.T) {
 			change(&shaped)
 			gateway := &fakeGateway{answers: []answer{shaped, {text: []string{"ok"}}}}
 			var log bytes.Buffer
-			if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &log); err != nil {
+			if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &log, nil); err != nil {
 				t.Fatalf("replay: %v", err)
 			}
 			if len(gateway.sent) != 1 || strings.Contains(log.String(), `"outcome":"pending"`) {
@@ -90,7 +90,7 @@ func TestAnAnswerIsPendingOnlyUnderTheGatewaysMark(t *testing.T) {
 func TestADenialIsNotRetriedAndNeitherIsAStepThatAsksForNoRetry(t *testing.T) {
 	denied := answer{isError: true, text: []string{"RULE_DENY"}, structured: map[string]any{"reason_codes": []any{"RULE_DENY"}}}
 	gateway := &fakeGateway{answers: []answer{denied}}
-	if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &bytes.Buffer{}); err != nil {
+	if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &bytes.Buffer{}, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 1 {
@@ -99,7 +99,7 @@ func TestADenialIsNotRetriedAndNeitherIsAStepThatAsksForNoRetry(t *testing.T) {
 	noRetry := heldStep(5)
 	noRetry.Steps[0].RetryWhilePending = nil
 	gateway = &fakeGateway{answers: []answer{pendingAnswer()}}
-	if err := replay(context.Background(), gateway, noRetry, "run-1", testNamespace, &bytes.Buffer{}); err != nil {
+	if err := replay(context.Background(), gateway, noRetry, "run-1", testNamespace, &bytes.Buffer{}, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 1 {
@@ -113,7 +113,7 @@ func TestAStepWaitsBeforeItsCall(t *testing.T) {
 	trajectory.Steps[0].WaitBefore = labspec.Duration(300 * time.Millisecond)
 	gateway := &fakeGateway{answers: []answer{{text: []string{"ok"}}}}
 	started := time.Now()
-	if err := replay(context.Background(), gateway, trajectory, "run-1", testNamespace, &bytes.Buffer{}); err != nil {
+	if err := replay(context.Background(), gateway, trajectory, "run-1", testNamespace, &bytes.Buffer{}, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if elapsed := time.Since(started); elapsed < 300*time.Millisecond {
@@ -121,7 +121,7 @@ func TestAStepWaitsBeforeItsCall(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := replay(ctx, &fakeGateway{answers: []answer{{text: []string{"ok"}}}}, trajectory, "run-1", testNamespace, &bytes.Buffer{}); err == nil {
+	if err := replay(ctx, &fakeGateway{answers: []answer{{text: []string{"ok"}}}}, trajectory, "run-1", testNamespace, &bytes.Buffer{}, nil); err == nil {
 		t.Error("a wait under a cancelled context returned no error")
 	}
 }

@@ -43,9 +43,10 @@ type Inputs struct {
 
 // Upstream is one victim the gateway fronts.
 type Upstream struct {
-	Name     string `json:"name"`
-	Endpoint string `json:"endpoint"`
-	TenantID string `json:"tenant_id,omitempty"`
+	Name        string `json:"name"`
+	Endpoint    string `json:"endpoint"`
+	TenantID    string `json:"tenant_id,omitempty"`
+	Environment string `json:"environment,omitempty"`
 }
 
 // Override classifies one tool definition, pinned by its fingerprint.
@@ -76,6 +77,9 @@ func Assemble(in Inputs) ([]byte, error) {
 	}
 	upstreams, err := withTenants(in.Upstreams, in.UpstreamTenants)
 	if err != nil {
+		return nil, err
+	}
+	if upstreams, err = inEnvironment(upstreams, config["environment"]); err != nil {
 		return nil, err
 	}
 	listener, policy, evidence, err := sections(config)

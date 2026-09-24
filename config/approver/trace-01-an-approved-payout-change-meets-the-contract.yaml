@@ -1,0 +1,9 @@
+# Approves every held payout change on cus_4417 as soon as it is listed.
+schema_version: 1
+rules:
+  - match: {action: crm.update_bank_account, resource: customer cus_4417}
+    answer: approve
+    approver_id: lab-approver
+    reason: scripted
+  - match: {}
+    answer: leave

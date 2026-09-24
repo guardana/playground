@@ -35,7 +35,7 @@ func TestReplayThroughStreamableHTTP(t *testing.T) {
 		t.Fatalf("connect: %v", err)
 	}
 	var log bytes.Buffer
-	if err := replay(ctx, session, twoSteps(), "run-9", testNamespace, &log); err != nil {
+	if err := replay(ctx, session, twoSteps(), "run-9", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if err := session.Close(); err != nil {

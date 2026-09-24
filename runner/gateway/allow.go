@@ -27,7 +27,9 @@ func scenarioKeys() []string {
 	}
 }
 
-var tenantName = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+// identifier is the spelling a tenant or an environment the runner writes into
+// an upstream may take.
+var identifier = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 // refuseUnallowed walks the scenario's part and names every key it may not
 // set. A key holding a dot is refused wherever it sits: the enforcer reads
@@ -84,10 +86,29 @@ func withTenants(upstreams []Upstream, tenants map[string]string) ([]Upstream, e
 		switch {
 		case index < 0:
 			return nil, fmt.Errorf("%w: a tenant for %s, which the run does not front", ErrInvalid, name)
-		case !tenantName.MatchString(tenant):
+		case !identifier.MatchString(tenant):
 			return nil, fmt.Errorf("%w: the tenant of %s is %q, want letters, digits, _ or -", ErrInvalid, name, tenant)
 		}
 		placed[index].TenantID = tenant
+	}
+	return placed, nil
+}
+
+// inEnvironment puts every upstream in the plane's own environment, when the
+// scenario names one: the enforcer requires a resource's environment to decide
+// a write, a delete or a configuration change, and the victims run where the
+// plane does.
+func inEnvironment(upstreams []Upstream, environment any) ([]Upstream, error) {
+	if environment == nil {
+		return upstreams, nil
+	}
+	name, isString := environment.(string)
+	if !isString || !identifier.MatchString(name) {
+		return nil, fmt.Errorf("%w: environment is %v, want letters, digits, _ or -", ErrInvalid, environment)
+	}
+	placed := slices.Clone(upstreams)
+	for i := range placed {
+		placed[i].Environment = name
 	}
 	return placed, nil
 }

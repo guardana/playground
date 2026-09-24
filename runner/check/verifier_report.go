@@ -3,11 +3,11 @@ package check
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
 )
 
 // The report and pin versions this lab reads. A report of another version may
@@ -66,15 +66,10 @@ type verifierPin struct {
 	Tools         map[string]string `json:"tools"`
 }
 
+// readVerifierFile reads a file the verifier wrote into a directory it can
+// write, so a link or an endless file there is refused rather than followed.
 func readVerifierFile(path string, value any) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if info.Size() > maxVerifierFile {
-		return fmt.Errorf("%s is %d bytes, limit %d", path, info.Size(), maxVerifierFile)
-	}
-	body, err := os.ReadFile(path) // #nosec G304 -- a file in the run directory the runner made.
+	body, err := runfile.ReadRegular(path, maxVerifierFile)
 	if err != nil {
 		return err
 	}

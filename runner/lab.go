@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -104,6 +103,11 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
+	if spec.IsVerifier() || spec.Trace != nil {
+		if err := l.refuseVerifierImage(ctx); err != nil {
+			return imageRefused(spec.ID, runID, err, l.clock()), nil
+		}
+	}
 	env := l.environment(spec, runID, runDir)
 	if spec.UsesEnforcer() {
 		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
@@ -158,7 +162,7 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 		return boot
 	}
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
-		return name == agentService || name == verifierService
+		return name == agentService || name == verifierService || name == traceService
 	})
 	if err := compose.Up(ctx, spec.Profile, wanted); err != nil {
 		// Recorded rather than returned: what did come up is still a fact, and
@@ -212,34 +216,6 @@ func (l lab) probe(ctx context.Context, compose Compose, profiles []string, targ
 		return check.Probe{Target: target, Detail: err.Error()}
 	}
 	return readProbe(target, execution.Output)
-}
-
-// replay runs the trajectory by running the agent, and keeps what the agent
-// printed. The exit status is the record; the agent's own log is not read.
-func (l lab) replay(
-	ctx context.Context, compose Compose, spec labspec.Scenario, runID, runDir string,
-) check.Replay {
-	source := filepath.Join(runDir, "replay.log")
-	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, []string{
-		"-trajectory", inContainer(spec.Trajectory),
-		"-gateway", "http://" + gatewayHost(spec) + ":" + servicePort + "/mcp",
-		"-run-id", runID,
-		"-namespace", l.namespace,
-		"-out", path.Join(containerReports, runID, "agent", "agent.jsonl"),
-	})
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if writeErr := os.WriteFile(source, []byte(execution.Output), 0o600); writeErr != nil {
-		l.note("writing what the agent printed: %v", writeErr)
-	}
-	if err != nil {
-		return check.Replay{Detail: err.Error(), Source: source}
-	}
-	return check.Replay{
-		Ran:      true,
-		ExitCode: execution.ExitCode,
-		Detail:   lastLine(execution.Output),
-		Source:   source,
-	}
 }
 
 func (l lab) mint(id string) string {

@@ -27,6 +27,7 @@ type Scenario struct {
 	Verifier        []VerifierStep `json:"verifier,omitempty"`
 	Stub            Stub           `json:"stub,omitempty"`
 	Gateway         *Gateway       `json:"gateway,omitempty"`
+	Trace           *Trace         `json:"trace,omitempty"`
 	Gap             *Gap           `json:"gap,omitempty"`
 	Expect          Expect         `json:"expect"`
 	Tolerance       Tolerance      `json:"tolerance,omitempty"`
@@ -55,6 +56,8 @@ type Expect struct {
 	// Verifier grades a verifier scenario's steps, which make no call through
 	// the enforcer and so leave no decision or trail to grade.
 	Verifier map[int]VerifierExpectation `json:"verifier,omitempty"`
+	// Trace grades the verifier's analysis of the agent's own trace.
+	Trace *VerifierExpectation `json:"trace,omitempty"`
 }
 
 // DecisionExpectation is what one step's decision has to say. The reason codes
@@ -134,7 +137,7 @@ func (s Scenario) validateTrajectoryKind() error {
 	if s.Expect.Evidence == nil {
 		return fmt.Errorf("%w: expect.evidence is missing, so nothing states what the trail has to show", ErrInvalid)
 	}
-	if err := s.validateDecider(); err != nil {
+	if err := first(s.validateDecider(), s.validateTrace()); err != nil {
 		return err
 	}
 	if len(s.Expect.Verifier) > 0 {

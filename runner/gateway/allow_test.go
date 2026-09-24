@@ -116,3 +116,30 @@ func TestAssembleGivesAnUpstreamTheTenantTheScenarioNames(t *testing.T) {
 		}
 	}
 }
+
+func TestAssemblePutsEveryUpstreamInThePlanesEnvironment(t *testing.T) {
+	in := inputs(partial + "environment: development\n")
+	in.Upstreams = append(in.Upstreams, gateway.Upstream{Name: "victim-fs", Endpoint: "http://victim-fs:8080/mcp"})
+	for body, want := range map[string]string{partial + "environment: development\n": "development", partial: ""} {
+		in.Partial = []byte(body)
+		out, err := gateway.Assemble(in)
+		if err != nil {
+			t.Fatalf("Assemble: %v", err)
+		}
+		var got struct {
+			Upstreams []map[string]string `json:"upstreams"`
+		}
+		if err := yaml.Unmarshal(out, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.Upstreams[0]["environment"] != want || got.Upstreams[1]["environment"] != want {
+			t.Errorf("upstreams = %v, want each in environment %q", got.Upstreams, want)
+		}
+	}
+	for _, environment := range []string{"true", "\"dev\\nmode: OBSERVE\"", "\"\""} {
+		in.Partial = []byte(partial + "environment: " + environment + "\n")
+		if _, err := gateway.Assemble(in); !errors.Is(err, gateway.ErrInvalid) {
+			t.Errorf("environment %s was assembled: %v", environment, err)
+		}
+	}
+}

@@ -15,6 +15,26 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Trace scenarios: a trajectory scenario can name `trace: {contract, ai_system}`
+  and `expect.trace`, graded like one verifier step that names at least one
+  `contract.` rule. The scripted agent writes its own record of the run
+  (`-trace`) in the verifier's native trace dialect, with each call's effect and
+  approval (`unknown` while held, `granted`, `denied` or `timed_out` once the
+  hold ends, `not_requested` when never held; an upstream's error is an
+  `attempted` effect), and the pinned verifier's
+  `analyze-trace` grades it against a contract in `config/contracts/`. It runs
+  as the `trace-verifier` service (profile `trace`), alone on the internal
+  `trace-net`, with the run's `verifier/` directory and the contracts mounted
+  read-only. `trace-01` and `trace-02` in `scenarios/trace/` show the contract
+  holding for an approved payout change and a refused shell command, and broken
+  by a policy that lets the change run unapproved.
+- The runner refuses a trace or verifier run when the local verifier image is
+  not labelled with `VERIFIER_VERSION`, and compose never pulls it. What a
+  container printed is kept only under a path that did not exist, each stream
+  is bounded, and the agent's trace and a verifier's pin are read only as
+  regular files.
+- Every upstream the enforcer fronts carries the scenario's `environment`, which
+  the enforcer requires to decide a write, a delete or a configuration change.
 - Verifier scenarios: a scenario with `verifier` probe steps instead of a
   trajectory, graded on each step's exit code, the pin it wrote and the JSON
   report it printed (`expect.verifier`), and on every victim's journal. It runs

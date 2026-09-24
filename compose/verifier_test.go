@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"maps"
 	"os"
 	"reflect"
 	"slices"
@@ -11,6 +12,7 @@ import (
 
 type hardenedService struct {
 	Image       string   `json:"image"`
+	PullPolicy  string   `json:"pull_policy"`
 	User        string   `json:"user"`
 	ReadOnly    bool     `json:"read_only"`
 	CapDrop     []string `json:"cap_drop"`
@@ -51,6 +53,7 @@ func TestTheVerifierIsHardenedAndSeesOneRun(t *testing.T) {
 	}
 	for what, held := range map[string]bool{
 		"its image named by the pins": verifier.Image == "${VERIFIER_IMAGE}:${VERIFIER_VERSION}",
+		"no image pulled in its name": verifier.PullPolicy == "never",
 		"uid 65532":                   verifier.User == "65532:65532",
 		"a read-only root":            verifier.ReadOnly,
 		"no capability":               slices.Equal(verifier.CapDrop, []string{"ALL"}),
@@ -63,6 +66,50 @@ func TestTheVerifierIsHardenedAndSeesOneRun(t *testing.T) {
 	} {
 		if !held {
 			t.Errorf("the verifier does not have %s: %+v", what, verifier)
+		}
+	}
+}
+
+// readOnly is a bind mount with the same source and target that the container
+// cannot write through.
+func readOnly(mount map[string]any) map[string]any {
+	copied := maps.Clone(mount)
+	copied["read_only"] = true
+	return copied
+}
+
+// The trace verifier grades a file against a contract and calls nothing, so
+// it is the verifier with no peer and one more read-only directory.
+func TestTheTraceVerifierReachesNothing(t *testing.T) {
+	body, err := os.ReadFile("compose.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Services map[string]hardenedService `json:"services"`
+	}
+	if err := yaml.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("compose.yaml: %v", err)
+	}
+	tracer, declared := parsed.Services["trace-verifier"]
+	if !declared {
+		t.Fatal("compose.yaml declares no trace-verifier")
+	}
+	for what, held := range map[string]bool{
+		"the verifier's image":  tracer.Image == "${VERIFIER_IMAGE}:${VERIFIER_VERSION}",
+		"no image pulled":       tracer.PullPolicy == "never",
+		"uid 65532":             tracer.User == "65532:65532",
+		"a read-only root":      tracer.ReadOnly,
+		"no capability":         slices.Equal(tracer.CapDrop, []string{"ALL"}),
+		"no new privileges":     slices.Contains(tracer.SecurityOpt, "no-new-privileges:true"),
+		"trace-net alone":       slices.Equal(tracer.Networks, []string{"trace-net"}),
+		"its own profile alone": slices.Equal(tracer.Profiles, []string{"trace"}),
+		"the run's verifier directory and the contracts, read-only, alone": len(tracer.Volumes) == 2 &&
+			reflect.DeepEqual(tracer.Volumes[0], readOnly(runVerifierMount)) &&
+			tracer.Volumes[1] == "../config/contracts:/contracts:ro",
+	} {
+		if !held {
+			t.Errorf("the trace verifier does not have %s: %+v", what, tracer)
 		}
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -109,22 +110,44 @@ func (l lab) probeOnce(ctx context.Context, compose Compose, profiles []string, 
 		args = append(args, "--mcp-pin", containerPin(run.Probe.PinFrom))
 	}
 	split, err := compose.RunSplit(ctx, profiles, verifierService, "", args)
+	base := strings.TrimSuffix(run.Report, ".json")
+	if keepErr := keepNew(base+".stderr", split.Stderr, 0o600); keepErr != nil {
+		l.note("keeping what the verifier printed on standard error: %v", keepErr)
+	}
 	stdout := run.Report
 	if run.Probe.WritePin {
 		// A pin step prints a sentence, not a report; it is kept, not graded.
-		stdout = strings.TrimSuffix(run.Report, ".json") + ".stdout"
+		stdout = base + ".stdout"
 	}
-	for file, body := range map[string]string{stdout: split.Stdout, strings.TrimSuffix(run.Report, ".json") + ".stderr": split.Stderr} {
-		// #nosec G703 -- the path is inside the run directory the runner made.
-		if writeErr := os.WriteFile(file, []byte(body), 0o600); writeErr != nil {
-			l.note("writing what the verifier printed: %v", writeErr)
-		}
-	}
-	if err != nil {
+	keepErr := keepNew(stdout, split.Stdout, 0o600)
+	switch {
+	case err != nil:
 		run.Detail = err.Error()
 		return
+	case keepErr != nil && !run.Probe.WritePin:
+		run.Detail = "the report could not be kept: " + keepErr.Error()
+		return
+	case keepErr != nil:
+		l.note("keeping what the verifier printed: %v", keepErr)
 	}
 	run.Ran, run.ExitCode = true, split.ExitCode
+}
+
+// keepNew writes what a container printed to a path that must not exist yet.
+// The verifier writes into the same directory, so an existing file or link
+// there is refused rather than written through.
+func keepNew(path, body string, mode os.FileMode) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode) // #nosec G304,G703 -- inside the run directory the runner made.
+	if err != nil {
+		return err
+	}
+	// The umask narrows the mode at creation; a file a container's uid reads
+	// needs the mode as asked.
+	err = file.Chmod(mode)
+	if err == nil {
+		_, err = file.WriteString(body)
+	}
+	return errors.Join(err, file.Close())
 }
 
 func pinName(step int) string { return fmt.Sprintf("pin-%d.json", step) }

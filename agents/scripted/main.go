@@ -56,6 +56,7 @@ type options struct {
 	out        string
 	probe      string
 	namespace  string
+	trace      string
 	timeout    time.Duration
 }
 
@@ -84,6 +85,7 @@ func parse(args []string, out io.Writer) (options, error) {
 		"the enforcer's namespace, under which its gateway marks an answer it made itself, for example guardana.control")
 	set.StringVar(&settings.out, "out", "", "where to write the agent's own log, as JSON lines")
 	set.StringVar(&settings.probe, "probe", "", "dial host:port, exit zero only if a TCP connection was made")
+	set.StringVar(&settings.trace, "trace", "", "where to write the run in the verifier's native trace dialect")
 	set.DurationVar(&settings.timeout, "timeout", defaultTimeout, "how long the whole replay may take")
 	if err := set.Parse(args); err != nil {
 		return options{}, err
@@ -126,7 +128,22 @@ func runTrajectory(ctx context.Context, settings options) error {
 	}
 	defer func() { _ = session.Close() }()
 
-	return replay(ctx, session, trajectory, settings.runID, settings.namespace, log)
+	if settings.trace == "" {
+		return replay(ctx, session, trajectory, settings.runID, settings.namespace, log, nil)
+	}
+	tracer := &traceWriter{runID: settings.runID, namespace: settings.namespace}
+	replayed := replay(ctx, session, trajectory, settings.runID, settings.namespace, log, tracer)
+	return errors.Join(replayed, writeTrace(settings.trace, tracer, replayed == nil))
+}
+
+// writeTrace writes the run in the verifier's native dialect; a replay that
+// stopped early leaves the footer out, so the file reads as cut short.
+func writeTrace(path string, tracer *traceWriter, complete bool) error {
+	file, err := createLog(path)
+	if err != nil {
+		return err
+	}
+	return errors.Join(tracer.write(file, complete), file.Close())
 }
 
 // connect opens one MCP session to the gateway.

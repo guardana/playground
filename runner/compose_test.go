@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
+	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestComposeArgsCarryTheFileTheEnvFileAndEveryProfile(t *testing.T) {
@@ -115,5 +118,22 @@ func TestReadProbeTellsNoRouteApartFromNotHavingRun(t *testing.T) {
 				t.Errorf("the probe carries no reason: %+v", got)
 			}
 		})
+	}
+}
+
+// A container printing without end is stopped at the bound and the run is an
+// error, never a record cut at an arbitrary byte.
+func TestASplitRunRefusesAStreamPastItsBound(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := splitWithin(exec.CommandContext(ctx, "sh", "-c", "yes"), 1<<10); err == nil {
+		t.Error("an endless standard output was kept")
+	}
+	if _, err := splitWithin(exec.CommandContext(ctx, "sh", "-c", "yes >&2"), 1<<10); err == nil {
+		t.Error("an endless standard error was kept")
+	}
+	split, err := splitWithin(exec.CommandContext(ctx, "sh", "-c", "printf %01024d 0"), 1<<10)
+	if err != nil || len(split.Stdout) != 1<<10 {
+		t.Errorf("output at the bound gave %d bytes, %v", len(split.Stdout), err)
 	}
 }

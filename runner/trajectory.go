@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/guardana/playground/internal/assertion"
@@ -22,6 +24,9 @@ func (l lab) gradeTrajectory(
 		check.NetworkIsolation{Gateway: gateway, Victim: victim, Sealed: sealed, Source: probed},
 		replayed,
 	}
+	if spec.Trace != nil {
+		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
+	}
 	if spec.UsesEnforcer() {
 		checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir))
 	}
@@ -41,4 +46,36 @@ func (l lab) gradeTrajectory(
 		},
 	)...)
 	return graded, check.DecisionRows(spec, trajectory, records, trail)
+}
+
+// replay runs the trajectory by running the agent, and keeps what the agent
+// printed. The exit status is the record; the agent's own log is not read.
+func (l lab) replay(
+	ctx context.Context, compose Compose, spec labspec.Scenario, runID, runDir string,
+) check.Replay {
+	source := filepath.Join(runDir, "replay.log")
+	args := []string{
+		"-trajectory", inContainer(spec.Trajectory),
+		"-gateway", "http://" + gatewayHost(spec) + ":" + servicePort + "/mcp",
+		"-run-id", runID,
+		"-namespace", l.namespace,
+		"-out", path.Join(containerReports, runID, "agent", "agent.jsonl"),
+	}
+	if spec.Trace != nil {
+		args = append(args, "-trace", path.Join(containerReports, runID, "agent", traceFile))
+	}
+	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, args)
+	// #nosec G703 -- the path is inside the run directory the runner made.
+	if writeErr := os.WriteFile(source, []byte(execution.Output), 0o600); writeErr != nil {
+		l.note("writing what the agent printed: %v", writeErr)
+	}
+	if err != nil {
+		return check.Replay{Detail: err.Error(), Source: source}
+	}
+	return check.Replay{
+		Ran:      true,
+		ExitCode: execution.ExitCode,
+		Detail:   lastLine(execution.Output),
+		Source:   source,
+	}
 }

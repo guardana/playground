@@ -82,6 +82,8 @@ type fakeCompose struct {
 	downErr error
 	// collector is what the fake collector writes when the replay runs.
 	collector string
+	// agentTrace is what the fake agent writes when it is asked for a trace.
+	agentTrace string
 	// exec answers a command run inside a service; execs records each one.
 	exec    func(service string, args []string) Split
 	execs   [][]string
@@ -168,6 +170,9 @@ func (f *fakeCompose) writeRecords(args []string) {
 	}
 	if f.collector != "" {
 		writeFile(filepath.Join(directory, "collector", "otlp-logs.json"), f.collector)
+	}
+	if f.agentTrace != "" && slices.Contains(args, "-trace") {
+		writeFile(filepath.Join(directory, "agent", "trace.jsonl"), f.agentTrace)
 	}
 	for victim, body := range f.journals {
 		writeFile(filepath.Join(directory, "journals", victim+".jsonl"), stamp(body))

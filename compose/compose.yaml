@@ -274,6 +274,9 @@ services:
   # the mount is refused, so a hand-run never mounts reports/.
   verifier:
     image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
+    # Built here or refused: a registry image under the pin's name is not the
+    # verifier the lock names.
+    pull_policy: never
     <<: *hardened
     build:
       context: verifier
@@ -291,6 +294,25 @@ services:
         target: /lab-run
         bind:
           create_host_path: false
+
+  # The verifier again, grading the agent's own trace against a scenario's
+  # contract. It reads two files and calls nothing, so it reaches nothing: its
+  # network holds it alone, and it writes nowhere the runner reads.
+  trace-verifier:
+    image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
+    pull_policy: never
+    <<: *hardened
+    user: "65532:65532"
+    networks: [trace-net]
+    profiles: [trace]
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier
+        target: /lab-run
+        read_only: true
+        bind:
+          create_host_path: false
+      - ../config/contracts:/contracts:ro
 
   # Where the enforcer's trail lands. Nothing else may reach it: a victim that
   # could post its own log records here could forge evidence, so it is the
@@ -464,4 +486,7 @@ networks:
   # The approver alone: it needs no peer, only the volume, and a service with
   # no network would be put on the project's default one, which has a route out.
   approver-net:
+    internal: true
+  # The trace verifier alone, for the same reason.
+  trace-net:
     internal: true

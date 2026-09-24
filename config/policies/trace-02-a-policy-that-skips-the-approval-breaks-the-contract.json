@@ -1,0 +1,7 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-trace-02", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "payout-change-allowed", "effect": "ALLOW", "when": {"action": {"name": ["crm.update_bank_account"]}}}
+  ]
+}

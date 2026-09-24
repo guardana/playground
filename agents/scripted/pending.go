@@ -36,16 +36,18 @@ func isPending(result *mcp.CallToolResult, namespace string) bool {
 // logged, so a person reading a red run sees how long the agent waited.
 func callWhilePending(
 	ctx context.Context, caller toolCaller, number int, step labspec.Step, params *mcp.CallToolParams, log *stepLog,
-) (*mcp.CallToolResult, error) {
+) (*mcp.CallToolResult, bool, error) {
+	pended := false
 	for retries := 0; ; retries++ {
 		result, err := caller.CallTool(ctx, params)
+		pended = pended || (err == nil && isPending(result, log.namespace))
 		if err != nil || step.RetryWhilePending == nil || !isPending(result, log.namespace) ||
 			retries >= step.RetryWhilePending.AtMost {
-			return result, err
+			return result, pended, err
 		}
 		log.record(number, step, pendingOutcome, 0, nil)
 		if err := pause(ctx, time.Duration(step.RetryWhilePending.Every)); err != nil {
-			return nil, err
+			return nil, pended, err
 		}
 	}
 }

@@ -62,6 +62,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"pdp-double":     {runDir + "/journals", "../config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
 		"approver":       {runDir + "/journals", "../config/approver", "approvals"},
 		"collector":      {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector"},
+		"trace-verifier": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", "../config/contracts"},
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki", "spool", "approvals", "holds"},
 	}
@@ -100,7 +101,7 @@ func members(t *testing.T, belongs func(networks []string, volumes []string) boo
 }
 
 // The agent reaches one gateway, the decision point double only the
-// enforcer, and the approver nothing; the approvals directory is the plane's
+// enforcer, and the approver and the trace verifier nothing; the approvals directory is the plane's
 // and the approver's alone.
 func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
 	on := func(network string) func([]string, []string) bool {
@@ -110,6 +111,7 @@ func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
 		"agent-net":    {"enforcer", "scripted-agent", "stub-gateway"},
 		"pdp-net":      {"enforcer", "pdp-double"},
 		"approver-net": {"approver"},
+		"trace-net":    {"trace-verifier"},
 	} {
 		if got := members(t, on(what)); !slices.Equal(got, want) {
 			t.Errorf("%s holds %v, want %v", what, got, want)

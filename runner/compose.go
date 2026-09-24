@@ -145,10 +145,22 @@ func (d dockerCompose) Exec(ctx context.Context, profiles []string, service stri
 }
 
 func (d dockerCompose) split(command *exec.Cmd) (Split, error) {
-	var out, problems strings.Builder
-	command.Stdout, command.Stderr = &out, &problems
+	return splitWithin(command, maxStreamBytes)
+}
+
+// maxStreamBytes bounds each stream a split run keeps: a container that prints
+// without end would otherwise hold the runner's memory, and a report cut at an
+// arbitrary byte is not the report the container wrote.
+const maxStreamBytes = 16 << 20
+
+func splitWithin(command *exec.Cmd, limit int) (Split, error) {
+	out, problems := &boundedBuffer{limit: limit}, &boundedBuffer{limit: limit}
+	command.Stdout, command.Stderr = out, problems
 	err := command.Run()
 	split := Split{Stdout: out.String(), Stderr: problems.String()}
+	if out.over || problems.over {
+		return split, fmt.Errorf("the container printed more than %d bytes on one stream", limit)
+	}
 	var exit *exec.ExitError
 	switch {
 	case err == nil:
@@ -158,6 +170,22 @@ func (d dockerCompose) split(command *exec.Cmd) (Split, error) {
 		return split, err
 	}
 	return split, nil
+}
+
+// boundedBuffer refuses a write past its limit, which stops the copy and
+// closes the pipe the process writes into.
+type boundedBuffer struct {
+	strings.Builder
+	limit int
+	over  bool
+}
+
+func (b *boundedBuffer) Write(p []byte) (int, error) {
+	if b.Len()+len(p) > b.limit {
+		b.over = true
+		return 0, errors.New("stream past its bound")
+	}
+	return b.Builder.Write(p)
 }
 
 func (d dockerCompose) Stop(ctx context.Context, profiles []string, service string) error {

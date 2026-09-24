@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -87,6 +89,42 @@ func images(ctx context.Context, run lookup, pins []report.Pin) []report.Image {
 	return []report.Image{
 		inspectImage(ctx, run, pinValue(pins, "ENFORCER_IMAGE"), pinValue(pins, "ENFORCER_COMMIT"), revisionLabel),
 		inspectImage(ctx, run, pinValue(pins, "VERIFIER_IMAGE"), pinValue(pins, "VERIFIER_VERSION"), versionLabel),
+	}
+}
+
+// refuseVerifierImage refuses a run the verifier grades when the local image
+// under the pin's tag was not built from VERIFIER_VERSION: compose never pulls
+// it, and a tag alone says nothing about what was installed behind it.
+func (l lab) refuseVerifierImage(ctx context.Context) error {
+	if l.inspect == nil {
+		return errors.New("nothing reads the verifier's image")
+	}
+	pins, err := readPins(filepath.Join(l.root, versionFile))
+	if err != nil {
+		return fmt.Errorf("the pins cannot be read: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
+	defer cancel()
+	want := pinValue(pins, "VERIFIER_VERSION")
+	image := inspectImage(ctx, l.inspect, pinValue(pins, "VERIFIER_IMAGE"), want, versionLabel)
+	switch {
+	case image.Missing != "":
+		return fmt.Errorf("%s: %s", image.Ref, image.Missing)
+	case image.Label != want:
+		return fmt.Errorf("%s carries %s %q, want %q", image.Ref, versionLabel, image.Label, want)
+	}
+	return nil
+}
+
+// imageRefused is the report of a run refused over the verifier's image.
+func imageRefused(id, runID string, cause error, at time.Time) assertion.Report {
+	return assertion.Report{
+		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
+		Results: []assertion.Result{{
+			Check: "verifier/image", Outcome: assertion.Fail,
+			Want: "the verifier's image built from VERIFIER_VERSION",
+			Got:  "the run was refused before anything was brought up", Detail: cause.Error(),
+		}},
 	}
 }
 

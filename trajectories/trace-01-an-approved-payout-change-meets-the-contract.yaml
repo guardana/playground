@@ -1,0 +1,25 @@
+# A payout change sent, then sent again until the gateway's answer is no
+# longer that it waits for an approval, then a command the support agent has no
+# business running. The agent writes its own trace of every call; both trace
+# scenarios replay it under different policies.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: payout_change
+    call:
+      server: victim-crm
+      tool: crm.update_bank_account
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417", account: "GB29 0000 0000 0000 9001" }
+  - label: payout_change_retried
+    retry_while_pending: { every: 500ms, at_most: 20 }
+    call:
+      server: victim-crm
+      tool: crm.update_bank_account
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417", account: "GB29 0000 0000 0000 9001" }
+  - label: shell_attempt
+    call:
+      server: victim-shell
+      tool: shell.exec
+      args: { command: "echo payout" }

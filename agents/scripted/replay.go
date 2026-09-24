@@ -43,6 +43,7 @@ const (
 // reason a step could not be sent at all.
 func replay(
 	ctx context.Context, caller toolCaller, trajectory labspec.Trajectory, runID, namespace string, log io.Writer,
+	tracer *traceWriter,
 ) error {
 	outputs := make(map[int]string, len(trajectory.Steps))
 	journal := &stepLog{to: log, runID: runID, namespace: namespace}
@@ -58,7 +59,7 @@ func replay(
 			journal.record(number, step, failed, 0, err)
 			return fmt.Errorf("step %d: %w", number, err)
 		}
-		result, err := callWhilePending(ctx, caller, number, step, &mcp.CallToolParams{
+		result, pended, err := callWhilePending(ctx, caller, number, step, &mcp.CallToolParams{
 			Name:      step.Call.Tool,
 			Arguments: arguments,
 			Meta:      mcp.Meta{metaStep: number, metaRunID: runID},
@@ -76,6 +77,11 @@ func replay(
 		}
 		outputs[number] = output
 		journal.record(number, step, statusOf(result, namespace), len(output), nil)
+		if tracer != nil {
+			if err := tracer.record(number, step, arguments, result, pended); err != nil {
+				return fmt.Errorf("step %d: tracing: %w", number, err)
+			}
+		}
 	}
 	return journal.err
 }

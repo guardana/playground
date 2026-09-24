@@ -69,7 +69,7 @@ func TestReplaySendsEachStepWithItsStepNumberAndRunID(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 2 {
@@ -100,7 +100,7 @@ func TestReplayCarriesOnPastADenialAndFailsWhereTheDataIsMissing(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log)
+	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log, nil)
 	if err == nil {
 		t.Fatal("a step reading a denied step's output ran anyway")
 	}
@@ -119,7 +119,7 @@ func TestReplayStopsWhenAStepCouldNotBeSent(t *testing.T) {
 	gateway := &fakeGateway{answers: []answer{{err: errors.New("connection reset")}}}
 	var log bytes.Buffer
 
-	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log)
+	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log, nil)
 	if err == nil {
 		t.Fatal("a transport failure did not stop the run")
 	}
@@ -138,7 +138,7 @@ func TestReplayLogIsJSONLinesAndCarriesNoContent(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	lines := strings.Split(strings.TrimSuffix(log.String(), "\n"), "\n")
@@ -174,7 +174,7 @@ func TestReplayTakesOnlyTextContentAsAStepOutput(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log, nil); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if body := gateway.sent[1].Arguments.(map[string]any)["body"]; body != "the private rows" {
