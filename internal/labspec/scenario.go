@@ -84,13 +84,16 @@ type DecisionExpectation struct {
 	Trail              []string          `json:"trail,omitempty"`
 }
 
-// EffectExpectation is what one victim served, read back from the journal that
-// victim wrote. CallsServed is exhaustive: a call the map does not name is a
-// call the scenario did not expect, and it fails the run. An empty map is the
-// assertion that the victim served nothing, which is what a working DENY looks
-// like from the far side of the gateway.
+// EffectExpectation is what one victim served and refused, read back from the
+// journal that victim wrote. Both maps are exhaustive: a journal line of this
+// run whose status and tool the maps do not name is a call the scenario did not
+// expect, and it fails the run. An empty CallsServed is the assertion that the
+// victim served nothing, which is what a working DENY looks like from the far
+// side of the gateway; an absent CallsRefused is the assertion that it refused
+// nothing.
 type EffectExpectation struct {
-	CallsServed map[string]int `json:"calls_served"`
+	CallsServed  map[string]int `json:"calls_served"`
+	CallsRefused map[string]int `json:"calls_refused,omitempty"`
 }
 
 // EvidenceExpectation is what the trail itself has to show, separately from
@@ -124,6 +127,9 @@ func (s Scenario) validate(fileName string) error {
 	}
 	if len(s.Profile) == 0 {
 		return fmt.Errorf("%w: profile is empty", ErrInvalid)
+	}
+	if err := s.validateEffectCounts(); err != nil {
+		return err
 	}
 	if s.IsVerifier() {
 		return s.validateVerifier()

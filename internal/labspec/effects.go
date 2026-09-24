@@ -3,6 +3,7 @@ package labspec
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // The journals the two doubles write, named as expect.effects names them.
@@ -46,6 +47,25 @@ func validateEffects(s Scenario, t Trajectory) error {
 		case !slices.Contains(s.Profile, profile):
 			return fmt.Errorf("%w: expect.effects names %s and profile %s, which brings it up, is not in the profile",
 				ErrInvalid, server, profile)
+		}
+	}
+	return nil
+}
+
+// validateEffectCounts refuses a calls_refused entry that states nothing: a
+// count below one says no more than leaving the tool out, or counts lines no
+// journal can hold, and a tool with no name matches no line.
+func (s Scenario) validateEffectCounts() error {
+	for _, journal := range sortedKeys(s.Expect.Effects) {
+		refused := s.Expect.Effects[journal].CallsRefused
+		for _, tool := range sortedKeys(refused) {
+			if strings.TrimSpace(tool) == "" {
+				return fmt.Errorf("%w: expect.effects.%s.calls_refused names a tool with no name", ErrInvalid, journal)
+			}
+			if refused[tool] < 1 {
+				return fmt.Errorf("%w: expect.effects.%s.calls_refused.%s is %d, want at least 1 or the tool left out",
+					ErrInvalid, journal, tool, refused[tool])
+			}
 		}
 	}
 	return nil

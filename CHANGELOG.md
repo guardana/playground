@@ -14,6 +14,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `expect.effects` accounts for every journal line of the run, not only the
+  served ones: an entry takes an optional `calls_refused: {tool: n}` beside
+  `calls_served`, and a line whose status and tool the scenario does not name,
+  or whose status the lab does not know, fails the effects check with the line
+  quoted. The victims' journals and both doubles' are graded alike. The format
+  stays `schema_version: 1`; a scenario that names no refusal asserts none.
 - `versions.env` pins the tree of the enforcer's commit as `ENFORCER_TREE`.
   `make enforcer-image` refuses a commit whose tree is not it and labels the
   image `io.guardana.playground.enforcer.tree` with the tree it verified;

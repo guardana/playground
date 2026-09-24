@@ -1,5 +1,5 @@
 // Package journal is the record a victim tool server keeps of the calls it
-// actually served.
+// received: those it served and those it refused.
 //
 // A scenario grades effects from this file and never from what the agent said
 // it did. That is the whole reason the file exists: when the gateway denies a
@@ -31,6 +31,10 @@ const (
 	// arguments, an unknown tool, a path outside its sandbox.
 	Refused Status = "refused"
 )
+
+// Known reports whether a writer in this package accepts status, and so
+// whether a reader can say what a line carrying it means.
+func (s Status) Known() bool { return s == Served || s == Refused }
 
 // MaxLineBytes is the longest journal line this package will read. A server
 // writing past it makes its whole journal unreadable, and an effect assertion
@@ -94,7 +98,7 @@ func (w *Writer) Record(entry Entry) error {
 	if entry.Tool == "" {
 		return fmt.Errorf("%w: no tool", ErrInvalidEntry)
 	}
-	if entry.Status != Served && entry.Status != Refused {
+	if !entry.Status.Known() {
 		return fmt.Errorf("%w: status is %q, want %q or %q", ErrInvalidEntry, entry.Status, Served, Refused)
 	}
 	entry.Server = w.server
@@ -158,8 +162,7 @@ func ReadFile(path string) ([]Entry, error) {
 	return entries, nil
 }
 
-// CountsByTool counts the calls a server served, by tool. A refused call is not
-// counted: the scenario asks what the victim did, not what it was asked to do.
+// CountsByTool counts the calls a server served, by tool.
 func CountsByTool(entries []Entry) map[string]int {
 	counts := make(map[string]int)
 	for _, entry := range entries {

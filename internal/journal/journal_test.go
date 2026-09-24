@@ -69,6 +69,18 @@ func TestRecordRefusesAnUnknownStatus(t *testing.T) {
 	}
 }
 
+// A reader grading a journal knows the statuses a writer accepts and no other,
+// so a line it cannot read a meaning into is reported rather than counted.
+func TestStatusKnownIsWhatTheWriterAccepts(t *testing.T) {
+	for status, want := range map[journal.Status]bool{
+		"served": true, "refused": true, "maybe": false, "": false, "Served": false,
+	} {
+		if got := status.Known(); got != want {
+			t.Errorf("Status(%q).Known() = %v, want %v", status, got, want)
+		}
+	}
+}
+
 // A tool server handles calls concurrently. Two lines interleaved into one is a
 // journal that undercounts, which is the direction that hides a call.
 func TestWriterIsSafeForConcurrentUse(t *testing.T) {

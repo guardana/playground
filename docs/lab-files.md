@@ -109,16 +109,22 @@ three are checked when the files load:
 
 - **`decisions` covers every step.** A step with no stated expectation is a step
   nobody grades.
-- **`effects` is exhaustive, per victim and per tool.** The counts are read from
-  the journal each victim writes about the calls it served, not from anything
-  the agent reported. A tool the map does not name is a call the scenario did
-  not expect, and it fails the run. `calls_served: {}` is the assertion that the
-  victim served nothing, which is what a working denial looks like from the far
-  side of the gateway. `effects` may also name `pdp-double` (with profile
-  `pdp`) or `approver` (with profile `approvals`), graded from that double's
-  journal the same way: the questions the decision point double was asked, by
-  action; the approver's answers (`approve`, `reject`, `leave`, `wait`,
-  `unknown`, `no-plane`). Either is optional.
+- **`effects` is exhaustive, per victim, per tool and per status.** The counts
+  are read from the journal each victim writes about every call it received,
+  not from anything the agent reported. `calls_served` counts the calls the
+  victim ran; `calls_refused`, optional, counts the calls it received and
+  turned away (bad arguments, an unknown tool, a path outside its sandbox).
+  Absent is the assertion that it refused nothing. Every line of the run has to
+  be named: a status and tool the maps do not name, a count that differs, or a
+  status the lab does not know fails the run, and the check quotes the line.
+  Lines another run wrote are not counted. A count in `calls_refused` is at
+  least 1. `calls_served: {}` is the assertion that the victim served nothing,
+  which is what a working denial looks like from the far side of the gateway.
+  `effects` may also name `pdp-double` (with profile `pdp`) or `approver` (with
+  profile `approvals`), graded from that double's journal the same way: the
+  questions the decision point double was asked, by action; the approver's
+  answers (`approve`, `reject`, `leave`, `wait`, `unknown`, `no-plane`). Either
+  is optional.
 - **`evidence` is stated.** All three keys are read, and `false` is an
   assertion, so a scenario without the block would assert without saying so.
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
@@ -458,7 +464,7 @@ point double scripts its own timeouts and malformed answers.
   whose attributes disagree with it, collapses a redelivered event and refuses
   two different events under one id, and orders each trail by its links. A trail
   whose events leave its request, project or tenant is refused as broken.
-- `internal/journal` reads what each victim recorded about the calls it served.
+- `internal/journal` reads what each victim recorded about the calls it received.
 - `internal/assertion` is the check interface. The zero value of an outcome is
   `indeterminate`, so a check that returned nothing, a report with no results
   and a service that never started all say the same thing: nothing was

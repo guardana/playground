@@ -69,8 +69,10 @@ func TestEffectsCountWhatTheVictimRecorded(t *testing.T) {
 			detail:   "victim-shell",
 		},
 		{
-			name:   "a refused call is not a served call",
-			expect: map[string]labspec.EffectExpectation{"victim-fs": {CallsServed: map[string]int{}}},
+			name: "a refused call is not a served call",
+			expect: map[string]labspec.EffectExpectation{"victim-fs": {
+				CallsServed: map[string]int{}, CallsRefused: map[string]int{"fs.read": 1},
+			}},
 			journals: map[string][]journal.Entry{"victim-fs": {{
 				OccurredAt: time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC),
 				Server:     "victim-fs",
