@@ -1,0 +1,10 @@
+# Stands in for the payouts duty lead: approves a held payout account change
+# on cus_4419 as soon as it is listed, and answers nothing else.
+schema_version: 1
+rules:
+  - match: {action: crm.update_bank_account, resource: customer cus_4419}
+    answer: approve
+    approver_id: payouts-duty-lead
+    reason: confirmed with the customer by phone
+  - match: {}
+    answer: leave

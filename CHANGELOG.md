@@ -64,6 +64,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to a directory a container mounts, is not a directory, is set and empty, or
   lacks a file a scenario names. Every report names the workspace, and its
   commit when it is the top of a git checkout.
+- `examples/helpdesk-payouts/`: a worked example laid out as a workspace, the
+  way a team deploying the enforcer would write it (its own principal, agent,
+  policy, approver and security contract) against the lab's victims. Copy it
+  out of the clone and run it with `LAB_WORKSPACE`; its README shows the
+  commands and what a deliberate failure looks like. A test loads every
+  directory under `examples/` as a workspace.
 - Chaos: a scenario the enforcer decides can name `chaos:` faults, applied
   after boot and lifted before the drain, each graded as `chaos/fault-<n>` from
   a record showing it in place: a `latency` or `hang` toxic on one victim's

@@ -1,0 +1,12 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "helpdesk-assistant", "version": "3", "serial": 3, "maxStaleSeconds": 900},
+  "rules": [
+    {"id": "assistant-reads-customer-records", "effect": "ALLOW",
+     "when": {"agent": {"id": ["helpdesk-assistant"]}, "action": {"name": ["crm.read_customer"]}}},
+    {"id": "payout-account-change-needs-a-person", "effect": "REQUIRE_APPROVAL",
+     "when": {"action": {"name": ["crm.update_bank_account"]}}},
+    {"id": "no-mail-to-an-untrusted-destination", "effect": "DENY",
+     "when": {"action": {"effect": ["COMMUNICATE"]}, "destination": {"trustZone": ["UNTRUSTED_EXTERNAL"]}}}
+  ]
+}

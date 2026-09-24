@@ -1,0 +1,20 @@
+# The helpdesk team's part of the enforcer's configuration. The lab adds the
+# listener address, the signed bundle and its key, the spool, the collector,
+# the upstreams, the classification and the approvals directories.
+mode: ENFORCE
+project_id: helpdesk
+tenant_id: tenant_a
+environment: staging
+listener:
+  kind: stateless_http
+  principal:
+    id: desk-operator-17
+    type: human
+    tenant_id: tenant_a
+  agent:
+    id: helpdesk-assistant
+    framework: scripted
+approvals:
+  provider: file
+  ttl: 5m
+  retry_after: 1s
