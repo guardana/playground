@@ -17,7 +17,7 @@ import (
 )
 
 // WriteJUnit writes the report as one JUnit suite, one testcase per result.
-func WriteJUnit(w io.Writer, r assertion.Report) error {
+func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 	results := r.Results
 	if len(results) == 0 {
 		// An empty suite is green to every reader of JUnit, and a report with
@@ -35,10 +35,10 @@ func WriteJUnit(w io.Writer, r assertion.Report) error {
 		Name:      r.Scenario,
 		Timestamp: r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		Time:      seconds(r),
-		Properties: []junitProperty{
+		Properties: append([]junitProperty{
 			{Name: "run-id", Value: r.RunID},
 			{Name: "outcome", Value: r.Outcome().String()},
-		},
+		}, provenanceProperties(p)...),
 	}
 	for _, result := range results {
 		suite.Cases = append(suite.Cases, testCase(r.Scenario, result))

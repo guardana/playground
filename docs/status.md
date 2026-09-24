@@ -8,7 +8,7 @@ without notice · `planned` does not exist.
 | Component | Status | Notes |
 |---|---|---|
 | Repository rules and quality gate | implemented | `make quality` |
-| Pinned versions of the systems under test | implemented | `versions.env` |
+| Pinned versions of the systems under test | implemented | `versions.env`, every pulled image by tag and index digest; `make images` builds the enforcer from `git archive` of its commit, refused unless the archive hashes to that commit's tree, and the verifier from its hash-locked release; every report prints the pins, the machine, and each image on this machine with its ID and the pin its label names. No service runs these two images yet |
 | Trajectory and scenario file formats | implemented | `internal/labspec`; an unknown key is refused and the two files cross-validate |
 | Evidence, journal and assertion readers | implemented | `internal/evidence`, `internal/journal`, `internal/assertion` |
 | Compose topology | implemented | `compose/`; ten services on two networks, `tool-net` with no route out |

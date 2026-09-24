@@ -1,0 +1,24 @@
+# The verifier, installed from its exact release with every dependency locked
+# to the hashes of its published files. The build context is compose/verifier.
+ARG PYTHON_IMAGE
+
+FROM ${PYTHON_IMAGE}
+COPY requirements.lock /tmp/requirements.lock
+# Wheels only: an sdist would run its own build code at install time. Once the
+# lock is installed the image keeps no installer and no setuid or setgid file.
+RUN python -m pip install --no-cache-dir --disable-pip-version-check --no-deps \
+        --require-hashes --only-binary=:all: -r /tmp/requirements.lock && \
+    rm /tmp/requirements.lock && \
+    python -m pip uninstall --yes --disable-pip-version-check pip && \
+    rm -rf "$(python -c 'import ensurepip, os; print(os.path.dirname(ensurepip.__file__))')" && \
+    ! python -c 'import ensurepip' 2>/dev/null && \
+    find / -xdev -perm /6000 -type f -exec chmod a-s {} + && \
+    test -z "$(find / -xdev -perm /6000 -type f)"
+ARG VERIFIER_CLI
+# A fixed lab name for the command, so compose and the runner never spell the
+# verifier's own.
+RUN test -n "${VERIFIER_CLI}" && ln -s "$(command -v "${VERIFIER_CLI}")" /usr/local/bin/verifier
+ARG VERIFIER_VERSION
+LABEL org.opencontainers.image.version="${VERIFIER_VERSION}"
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/verifier"]

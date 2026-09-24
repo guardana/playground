@@ -185,13 +185,13 @@ func refused(id, runID, scenarioPath string, cause error, at time.Time) assertio
 	}
 }
 
-func writeReports(runDir string, graded assertion.Report, rows []check.DecisionRow) error {
+func writeReports(runDir string, graded assertion.Report, rows []check.DecisionRow, provenance report.Provenance) error {
 	return errors.Join(
 		write(filepath.Join(runDir, "junit.xml"), func(file *os.File) error {
-			return report.WriteJUnit(file, graded)
+			return report.WriteJUnit(file, graded, provenance)
 		}),
 		write(filepath.Join(runDir, "report.md"), func(file *os.File) error {
-			return report.WriteMarkdown(file, graded, rows)
+			return report.WriteMarkdown(file, graded, rows, provenance)
 		}),
 	)
 }

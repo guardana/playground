@@ -1,0 +1,43 @@
+# The enforcement plane, built from one commit of its own repository.
+#
+# The build context is a `git archive` of ENFORCER_COMMIT, never a working tree:
+# scripts/build-enforcer.sh makes it and is the only supported way to build this
+# file. The named context `lab` is compose/healthprobe and nothing else, so no
+# other file of this repository can reach the image.
+#
+# The binaries land under fixed lab names, so compose files and scripts never
+# spell the enforcer's own command names; versions.env does, once.
+ARG GO_BUILD_IMAGE
+ARG SERVICE_BASE_IMAGE
+
+FROM ${GO_BUILD_IMAGE} AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ARG ENFORCER_COMMIT
+ARG ENFORCER_GATEWAY_BIN
+ARG ENFORCER_CONTROL_BIN
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
+# The version the binaries report is the commit they were built from; an
+# unstamped build would report "dev" and a stale tag would go unnoticed.
+RUN test -n "${ENFORCER_COMMIT}" && test -n "${ENFORCER_GATEWAY_BIN}" && test -n "${ENFORCER_CONTROL_BIN}" && \
+    go build -trimpath -ldflags="-s -w -X main.version=${ENFORCER_COMMIT}" -o /out/gateway ./cmd/${ENFORCER_GATEWAY_BIN} && \
+    go build -trimpath -ldflags="-s -w -X main.version=${ENFORCER_COMMIT}" -o /out/control ./cmd/${ENFORCER_CONTROL_BIN}
+
+# The probe imports only the standard library, so it builds as a module of its
+# own without the lab's go.mod.
+FROM ${GO_BUILD_IMAGE} AS probe
+WORKDIR /probe
+COPY --from=lab . ./
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
+RUN go mod init healthprobe && go build -trimpath -ldflags="-s -w" -o /out/healthprobe .
+
+FROM ${SERVICE_BASE_IMAGE}
+ARG ENFORCER_COMMIT
+LABEL org.opencontainers.image.revision="${ENFORCER_COMMIT}"
+COPY --from=build /out/gateway /enforcer/gateway
+COPY --from=build /out/control /enforcer/control
+COPY --from=probe /out/healthprobe /healthprobe
+USER nonroot:nonroot
+ENTRYPOINT ["/enforcer/gateway"]

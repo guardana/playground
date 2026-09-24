@@ -65,7 +65,7 @@ func parseJUnit(t *testing.T, document string) junitDocument {
 
 func TestJUnitWritesIndeterminateAsAFailureAndNeverAsSkipped(t *testing.T) {
 	var out strings.Builder
-	if err := report.WriteJUnit(&out, mixed()); err != nil {
+	if err := report.WriteJUnit(&out, mixed(), report.Provenance{}); err != nil {
 		t.Fatalf("WriteJUnit: %v", err)
 	}
 	document := out.String()
@@ -101,7 +101,7 @@ func TestJUnitWritesIndeterminateAsAFailureAndNeverAsSkipped(t *testing.T) {
 
 func TestJUnitCountsEveryResultAsATestcase(t *testing.T) {
 	var out strings.Builder
-	if err := report.WriteJUnit(&out, mixed()); err != nil {
+	if err := report.WriteJUnit(&out, mixed(), report.Provenance{}); err != nil {
 		t.Fatalf("WriteJUnit: %v", err)
 	}
 	parsed := parseJUnit(t, out.String())
@@ -119,7 +119,7 @@ func TestJUnitRefusesToWriteAnEmptySuiteAsGreen(t *testing.T) {
 	empty := assertion.Report{Scenario: "flow-02", RunID: "run-1"}
 
 	var out strings.Builder
-	if err := report.WriteJUnit(&out, empty); err != nil {
+	if err := report.WriteJUnit(&out, empty, report.Provenance{}); err != nil {
 		t.Fatalf("WriteJUnit: %v", err)
 	}
 	document := out.String()
@@ -149,7 +149,7 @@ func TestJUnitEscapesWhatAServiceSaid(t *testing.T) {
 			hostile.Results[1].Detail = payload
 
 			var out strings.Builder
-			if err := report.WriteJUnit(&out, hostile); err != nil {
+			if err := report.WriteJUnit(&out, hostile, report.Provenance{}); err != nil {
 				t.Fatalf("WriteJUnit: %v", err)
 			}
 			document := out.String()
@@ -202,7 +202,7 @@ func TestMarkdownShowsEveryStepAndWhereItWasRead(t *testing.T) {
 	}
 
 	var out strings.Builder
-	if err := report.WriteMarkdown(&out, mixed(), rows); err != nil {
+	if err := report.WriteMarkdown(&out, mixed(), rows, report.Provenance{}); err != nil {
 		t.Fatalf("WriteMarkdown: %v", err)
 	}
 	page := out.String()
@@ -224,7 +224,7 @@ func TestMarkdownShowsEveryStepAndWhereItWasRead(t *testing.T) {
 
 func TestMarkdownSaysWhenNoStepWasGraded(t *testing.T) {
 	var out strings.Builder
-	if err := report.WriteMarkdown(&out, mixed(), nil); err != nil {
+	if err := report.WriteMarkdown(&out, mixed(), nil, report.Provenance{}); err != nil {
 		t.Fatalf("WriteMarkdown: %v", err)
 	}
 	if !strings.Contains(out.String(), "No step was graded") {

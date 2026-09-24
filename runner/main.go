@@ -36,13 +36,13 @@ const (
 )
 
 func main() {
-	if err := run(context.Background(), os.Args[1:], os.Stdout); err != nil {
+	if err := run(context.Background(), os.Args[1:], os.Environ(), os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "runner: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, args []string, out io.Writer) error {
+func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	chosen, err := parse(args, out)
 	switch {
 	case errors.Is(err, flag.ErrHelp):
@@ -54,11 +54,14 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if err := refuseOverriddenPins(root, environ); err != nil {
+		return err
+	}
 	scenarios, err := locate(root, chosen)
 	if err != nil {
 		return err
 	}
-	return executeAll(ctx, newLab(root, chosen, out), scenarios, out)
+	return executeAll(ctx, newLab(root, chosen, environ, out), scenarios, out)
 }
 
 func parse(args []string, out io.Writer) (settings, error) {
@@ -77,7 +80,7 @@ func parse(args []string, out io.Writer) (settings, error) {
 	return chosen, nil
 }
 
-func newLab(root string, chosen settings, out io.Writer) lab {
+func newLab(root string, chosen settings, environ []string, out io.Writer) lab {
 	return lab{
 		root:    root,
 		reports: chosen.reports,
@@ -85,14 +88,15 @@ func newLab(root string, chosen settings, out io.Writer) lab {
 			file:      composeFile,
 			envFile:   versionFile,
 			directory: root,
-			env:       os.Environ(),
+			env:       environ,
 			log:       out,
 		},
-		timeout: chosen.timeout,
-		keep:    chosen.keep,
-		clock:   time.Now,
-		suffix:  randomSuffix,
-		log:     out,
+		timeout:  chosen.timeout,
+		keep:     chosen.keep,
+		clock:    time.Now,
+		suffix:   randomSuffix,
+		log:      out,
+		describe: describeHost(root, command),
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/report"
 )
 
 // What the runner and the compose topology agree on. The runner is the only
@@ -52,6 +53,9 @@ type lab struct {
 	clock   func() time.Time
 	suffix  func() string
 	log     io.Writer
+	// describe reads what produced the run for the report header; nil records
+	// that nothing was read.
+	describe func(context.Context) report.Provenance
 }
 
 // execute runs one scenario and writes its reports. It returns an error only
@@ -69,16 +73,17 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 		return assertion.Report{}, err
 	}
 
+	provenance := l.provenance(ctx)
 	spec, trajectory, err := load(l.root, scenarioPath)
 	if err != nil {
 		// Nothing has been brought up, and nothing will be: a pair that does
 		// not validate cannot be graded, and a run that cannot be graded is a
 		// failure rather than a silence.
 		graded := refused(id, runID, scenarioPath, err, l.clock())
-		return graded, writeReports(runDir, graded, nil)
+		return graded, writeReports(runDir, graded, nil, provenance)
 	}
 	graded, rows := l.runScenario(ctx, spec, trajectory, runID, runDir)
-	return graded, writeReports(runDir, graded, rows)
+	return graded, writeReports(runDir, graded, rows, provenance)
 }
 
 func (l lab) runScenario(

@@ -61,6 +61,18 @@ make bootstrap    install and verify the pinned toolchain
 make quality      the full gate; CI runs exactly this
 ```
 
+## Build the systems under test
+
+The enforcer publishes no image, so the lab builds one from the commit
+`versions.env` pins, taken from your clone with `git archive`. The verifier is
+installed from its pinned release.
+
+```
+git clone https://github.com/guardana/control
+export ENFORCER_SOURCE=$PWD/control
+make images
+```
+
 ## Contributing
 
 `CONTRIBUTING.md` has the short version, `AGENTS.md` the same rules written for

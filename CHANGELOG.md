@@ -5,8 +5,26 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+
+- `versions.env` pins the enforcer by commit (`ENFORCER_COMMIT`) and the
+  verifier at 0.26.1, and every image the lab pulls by tag and the digest of
+  its multi-arch index. `ENFORCER_TAG`, `ENFORCER_BRAND_ENDPOINT` and the Postgres,
+  toxiproxy, collector, Jaeger and OPA images are gone until something reads
+  them; a test in `compose/` fails on a variable nothing reads.
+
 ### Added
 
+- `make enforcer-image` builds the enforcer from `git archive` of its pinned
+  commit in the clone `ENFORCER_SOURCE` names, never from a working tree, and
+  refuses when the archive does not hash to that commit's tree or the clone
+  carries replacement refs. `make verifier-image` installs the verifier from a
+  hash-locked requirement file, then removes pip and every setuid or setgid bit.
+- Every run report opens with its provenance: the lab commit (untracked files
+  count as uncommitted changes), each pin, each image on this machine with its
+  ID and the pin its label names, and the machine.
+- The runner refuses to start when the environment sets a variable
+  `versions.env` pins, since compose would use that value instead of the pin.
 - Repository rules, hygiene guards and the quality gate CI runs.
 - Pinned versions of the systems under test in `versions.env`.
 - Trajectory and scenario file formats in `internal/labspec`, with the evidence,

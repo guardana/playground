@@ -4,9 +4,9 @@ SHELL := /usr/bin/env bash
 GO ?= go
 SOURCES = scripts/repo-files.sh | grep '\.go$$'
 
-.PHONY: bootstrap fmt fmt-check vet lint test test-race security \
+.PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	check-sizes check-attribution check-hygiene check-actions-pinned \
-	up down scenario scenarios quality-quick quality
+	enforcer-image verifier-image images up down scenario scenarios quality-quick quality
 
 # The compose profile a target brings up, and where a run writes its records.
 PROFILE ?= core
@@ -57,6 +57,16 @@ check-actions-pinned:
 
 docs-check:
 	$(GO) test -count=1 ./internal/docscheck/
+
+# The systems under test, built from their pins in versions.env. The enforcer
+# needs ENFORCER_SOURCE, a clone of its repository holding ENFORCER_COMMIT.
+enforcer-image:
+	scripts/build-enforcer.sh
+
+verifier-image:
+	scripts/build-verifier.sh
+
+images: enforcer-image verifier-image
 
 # The lab itself. `up` and `down` are for working on a scenario by hand; a
 # scenario run brings up what it needs and takes it down again.

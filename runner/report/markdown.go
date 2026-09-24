@@ -12,13 +12,14 @@ import (
 // WriteMarkdown writes the report a person opens after a red run. Every row
 // names the file the value was read from, because the next thing that reader
 // does is open it.
-func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow) error {
+func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p Provenance) error {
 	out := &writer{to: w}
 	out.printf("# %s\n\n", or(r.Scenario, "an unnamed scenario"))
 	out.printf("- Run: `%s`\n", or(r.RunID, "unnamed"))
 	out.printf("- Outcome: **%s**\n", r.Outcome().String())
 	out.printf("- Started: %s, took %ss\n\n", r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"), seconds(r))
 
+	writeProvenance(out, p)
 	writeDecisions(out, rows)
 	writeResults(out, r.Results)
 	return out.err

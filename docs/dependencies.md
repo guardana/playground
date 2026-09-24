@@ -54,6 +54,32 @@ secret scanning, `osv-scanner` for advisories, `syft` for bills of materials.
 
 The container images the lab runs are pinned separately in `versions.env`,
 because they are the subject of the experiment rather than part of the build.
+Each image the lab pulls is pinned by tag and by the digest of its multi-arch
+index; the digest is what Docker resolves.
+
+## The systems under test
+
+### The enforcement plane
+
+Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, taken
+from the clone `ENFORCER_SOURCE` names; it publishes no image to pull. The
+build refuses a clone with replacement refs and an archive that does not hash
+back to the commit's tree, which an export attribute or a filter would cause.
+It uses `GO_BUILD_IMAGE` and `SERVICE_BASE_IMAGE`, stamps the commit into the
+binaries and the image's `org.opencontainers.image.revision` label, and every
+report prints the image ID and that label beside the pin. The label is a build
+argument, so it names the pin the image was built for, not what went into it.
+Apache-2.0.
+
+### The verifier
+
+`guardana-cli` from PyPI at `VERIFIER_VERSION`, built by `make verifier-image`
+on `PYTHON_IMAGE`. `compose/verifier/requirements.lock` pins it and the twelve
+packages it imports to exact versions and file hashes, and pip installs wheels
+only with `--require-hashes`, so a file that changed on the index under a
+version fails the build instead of entering the lab. pip is removed afterwards
+and no file in the image keeps a setuid or setgid bit. Apache-2.0; its
+dependencies are under MIT, BSD-2-Clause, ISC or the PSF licence.
 
 ## Adding one
 
