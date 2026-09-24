@@ -1,10 +1,12 @@
 # The lab's world: six victim tool servers, a page that attacks them, a mail
-# sink, the gateway, the agent and the verifier.
+# sink, the gateway, the agent, the verifier and the collector the enforcer's
+# trail lands on.
 #
-# Two networks, both internal, and one service on both. Nothing in the lab has a
-# route out; the agent sits on `agent-net` and can reach the gateway and nothing
-# else. That is the property every scenario depends on, and the runner proves it
-# from inside `agent-net` on every run rather than trusting this file.
+# Three networks, all internal, agent-net and tool-net sharing one service and
+# evidence-net holding only the collector. Nothing in the lab has a route out;
+# the agent sits on `agent-net` and can reach the gateway and nothing else. That
+# is the property every scenario depends on, and the runner proves it from
+# inside `agent-net` on every run rather than trusting this file.
 #
 # Every image name and tag is a variable from versions.env. A tag written here
 # would be a second place to change when an upstream moves.
@@ -283,6 +285,26 @@ services:
         bind:
           create_host_path: false
 
+  # Where the enforcer's trail lands. Nothing else may reach it: a victim that
+  # could post its own log records here could forge evidence, so it is the
+  # only service on evidence-net and evidence-net carries nothing else (the
+  # enforcer joins it once a service runs that image). It decides nothing and
+  # holds no key, so a compromise of it forges no verdict, only the record of
+  # one.
+  collector:
+    image: ${OTEL_COLLECTOR_IMAGE}
+    <<: *hardened
+    command: ["--config=/etc/otelcol/config.yaml"]
+    networks: [evidence-net]
+    profiles: [enforcer]
+    volumes:
+      - ./otel/collector.yaml:/etc/otelcol/config.yaml:ro
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector
+        target: /lab-run
+        bind:
+          create_host_path: false
+
 networks:
   # Both networks are sealed. The agent replays the attack payloads, so it is
   # the last thing in the lab that should be able to reach anything outside it:
@@ -296,4 +318,9 @@ networks:
   tool-net:
     # No route out, for anything, ever. The attack payloads and the canary
     # tokens live behind this line.
+    internal: true
+  evidence-net:
+    # Sealed the same way, for the opposite reason: nothing on it should ever
+    # need a route out, because the only thing meant to reach it is the
+    # enforcer posting its own trail.
     internal: true

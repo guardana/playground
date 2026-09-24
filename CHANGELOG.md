@@ -30,6 +30,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   refuses when the archive does not hash to that commit's tree or the clone
   carries replacement refs. `make verifier-image` installs the verifier from a
   hash-locked requirement file, then removes pip and every setuid or setgid bit.
+- `compose/otel/collector.yaml` and a `collector` service (profile `enforcer`,
+  network `evidence-net`, an internal network no other service is on) run the
+  pinned OpenTelemetry Collector with only its file exporter (`append: true`,
+  so a restart does not truncate what it already wrote), so the enforcer's
+  OTLP export lands somewhere the runner can read it and nothing else on the
+  lab's networks can reach. `runner/otlp.go` decodes that file with
+  `internal/evidence.DecodeOTLP` and writes it out as the run's
+  `evidence.jsonl`, one event per line, refusing an empty or eventless export
+  rather than writing an empty one; a decode error never leaves a partial
+  trail in its place. Neither is wired into a scenario run yet.
 - `internal/evidence` reads the enforcer's trail from its OTLP/HTTP JSON log
   export: the body of each record is the event, its attributes must agree, a
   redelivered event collapses, and each trail is ordered by its links within one

@@ -1,0 +1,28 @@
+# The enforcer's only export target: OTLP/HTTP log records on :4318. gRPC and
+# every other receiver stay off, since a port this file does not open is a
+# port evidence-net does not need to be internal to defend.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+# The file exporter writes one ExportLogsServiceRequest per delivery, which is
+# the shape internal/evidence.DecodeOTLP reads. The path is the one directory
+# the compose service mounts writable. append keeps a restart (the enforcer's
+# collector-down scenario) from truncating what an earlier delivery already
+# wrote to the same run directory.
+exporters:
+  file:
+    path: /lab-run/otlp-logs.json
+    append: true
+    flush_interval: 1s
+
+service:
+  telemetry:
+    metrics:
+      level: none
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [file]

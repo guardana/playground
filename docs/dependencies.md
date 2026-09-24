@@ -57,6 +57,17 @@ because they are the subject of the experiment rather than part of the build.
 Each image the lab pulls is pinned by tag and by the digest of its multi-arch
 index; the digest is what Docker resolves.
 
+### OpenTelemetry Collector
+
+`OTEL_COLLECTOR_IMAGE`. The one place the enforcer's OTLP/HTTP log export
+lands, so `internal/evidence.DecodeOTLP` reads back what the plane actually
+sent rather than what the lab's own stub gateway wrote to a file directly. The
+core distribution carries the file exporter (`docker run --rm
+otel/opentelemetry-collector:<tag> components` lists it), so writing an
+OTLP/HTTP receiver by hand to avoid one dependency would make every finding a
+question about the lab's receiver instead of the enforcer's export.
+Apache-2.0, maintained by the OpenTelemetry project.
+
 ## The systems under test
 
 ### The enforcement plane
