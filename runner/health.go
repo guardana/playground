@@ -19,6 +19,7 @@ type planeHealth struct {
 		Truncated          *int64 `json:"truncated"`
 	} `json:"spool"`
 	Exporter *struct {
+		Acknowledged    *int64  `json:"acknowledged"`
 		Quarantined     *int64  `json:"quarantined"`
 		PartialRejected *int64  `json:"partial_rejected"`
 		Refused         *int64  `json:"refused"`
@@ -62,6 +63,15 @@ func (h planeHealth) losses() []count {
 		{"exporter.quarantined", h.Exporter.Quarantined}, {"exporter.partial_rejected", h.Exporter.PartialRejected},
 		{"exporter.refused", h.Exporter.Refused},
 	}
+}
+
+// acknowledged is how many records the collector has acknowledged, and
+// whether the answer said.
+func (h planeHealth) acknowledged() (int64, bool) {
+	if h.Exporter == nil || h.Exporter.Acknowledged == nil {
+		return 0, false
+	}
+	return *h.Exporter.Acknowledged, true
 }
 
 // unacknowledged is what the spool still holds for the collector.

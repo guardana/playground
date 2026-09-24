@@ -1,0 +1,37 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   upstream.call_timeout bounds a call to an upstream: docs/reference/configuration.md:89.
+#   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
+#   A run call's trail, proposed, decided, started, completed:
+#     docs/concepts/evidence-and-the-spool.md:25-39,65.
+#   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
+# The toxic delays victim-fs's answers by 1.5s, inside the 5s bound. The chaos
+# check holds the toxic to the trail: the fs.list result took at least 1.5s
+# from start to end, which a call that bypassed the proxy would not.
+schema_version: 1
+id: chaos-01-a-slow-victim-within-the-call-timeout-still-runs
+title: A victim slower than usual but inside the call timeout is answered and recorded
+profile: [core, enforcer, chaos]
+enforcement_mode: enforce
+trajectory: trajectories/chaos-01-a-slow-victim-within-the-call-timeout-still-runs.yaml
+gateway:
+  config: config/gateway/scenarios/chaos-01-a-slow-victim-within-the-call-timeout-still-runs.yaml
+  policy: config/policies/chaos-01-a-slow-victim-within-the-call-timeout-still-runs.json
+chaos:
+  - toxic: { victim: victim-fs, type: latency, latency: 1500ms }
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-fs: { calls_served: { fs.list: 1 } }
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

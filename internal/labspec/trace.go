@@ -67,3 +67,18 @@ func (v VerifierExpectation) validateTrace() error {
 const contractRulePrefix = "contract."
 
 func isContractRule(rule string) bool { return strings.HasPrefix(rule, contractRulePrefix) }
+
+// validateTracedSteps refuses a step the replay may go on past in a traced
+// run: the agent traces only a call it got a result for, so the verifier would
+// grade a trace with that call left out.
+func validateTracedSteps(s Scenario, t Trajectory) error {
+	if s.Trace == nil {
+		return nil
+	}
+	for i, step := range t.Steps {
+		if step.OnError != "" {
+			return fmt.Errorf("%w: steps[%d].on_error in a traced scenario; the step would be missing from the trace", ErrInvalid, i+1)
+		}
+	}
+	return nil
+}

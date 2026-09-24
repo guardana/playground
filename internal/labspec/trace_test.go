@@ -58,3 +58,17 @@ func TestATraceExpectationNamesTheContractItGrades(t *testing.T) {
 		}
 	}
 }
+
+// The agent traces a call it got a result for, so a step the replay goes on
+// past would be missing from the trace the verifier grades.
+func TestAStepThatMayErrorIsRefusedInATracedScenario(t *testing.T) {
+	s, tr := loadPair(t, goodScenario)
+	tr.Steps[1].OnError = labspec.OnErrorContinue
+	if err := labspec.Validate(s, tr); err != nil {
+		t.Fatalf("on_error without a trace was refused: %v", err)
+	}
+	s.Trace = &labspec.Trace{Contract: "config/contracts/lab.yaml", AISystem: "support-agent"}
+	if err := labspec.Validate(s, tr); !errors.Is(err, labspec.ErrInvalid) || !strings.Contains(err.Error(), "steps[2].on_error") {
+		t.Fatalf("err = %v, want steps[2].on_error refused", err)
+	}
+}

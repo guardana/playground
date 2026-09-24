@@ -1,0 +1,8 @@
+[
+  {"name": "victim-crm", "listen": "0.0.0.0:8101", "upstream": "victim-crm:8080", "enabled": true},
+  {"name": "victim-db", "listen": "0.0.0.0:8102", "upstream": "victim-db:8080", "enabled": true},
+  {"name": "victim-fs", "listen": "0.0.0.0:8103", "upstream": "victim-fs:8080", "enabled": true},
+  {"name": "victim-shell", "listen": "0.0.0.0:8104", "upstream": "victim-shell:8080", "enabled": true},
+  {"name": "victim-mail", "listen": "0.0.0.0:8105", "upstream": "victim-mail:8080", "enabled": true},
+  {"name": "victim-web", "listen": "0.0.0.0:8106", "upstream": "victim-web:8080", "enabled": true}
+]

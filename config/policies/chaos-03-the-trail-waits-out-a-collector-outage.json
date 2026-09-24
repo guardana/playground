@@ -1,0 +1,5 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-chaos-03", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [{"id": "reads-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["READ"]}}}]
+}

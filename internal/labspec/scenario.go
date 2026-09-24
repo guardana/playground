@@ -28,6 +28,7 @@ type Scenario struct {
 	Stub            Stub           `json:"stub,omitempty"`
 	Gateway         *Gateway       `json:"gateway,omitempty"`
 	Trace           *Trace         `json:"trace,omitempty"`
+	Chaos           []Fault        `json:"chaos,omitempty"`
 	Gap             *Gap           `json:"gap,omitempty"`
 	Expect          Expect         `json:"expect"`
 	Tolerance       Tolerance      `json:"tolerance,omitempty"`
@@ -140,7 +141,7 @@ func (s Scenario) validateTrajectoryKind() error {
 	if s.Expect.Evidence == nil {
 		return fmt.Errorf("%w: expect.evidence is missing, so nothing states what the trail has to show", ErrInvalid)
 	}
-	if err := first(s.validateDecider(), s.validateTrace()); err != nil {
+	if err := first(s.validateDecider(), s.validateTrace(), s.validateChaos()); err != nil {
 		return err
 	}
 	if len(s.Expect.Verifier) > 0 {
@@ -178,7 +179,7 @@ func Validate(s Scenario, t Trajectory) error {
 	if err := validateShapes(s, len(t.Steps)); err != nil {
 		return err
 	}
-	if err := validateEffects(s, t); err != nil {
+	if err := first(validateEffects(s, t), validateTracedSteps(s, t)); err != nil {
 		return err
 	}
 	return validateTolerance(s, t)

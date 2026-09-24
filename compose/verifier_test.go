@@ -12,6 +12,7 @@ import (
 
 type hardenedService struct {
 	Image       string   `json:"image"`
+	Build       any      `json:"build"`
 	PullPolicy  string   `json:"pull_policy"`
 	User        string   `json:"user"`
 	ReadOnly    bool     `json:"read_only"`
@@ -54,6 +55,7 @@ func TestTheVerifierIsHardenedAndSeesOneRun(t *testing.T) {
 	for what, held := range map[string]bool{
 		"its image named by the pins": verifier.Image == "${VERIFIER_IMAGE}:${VERIFIER_VERSION}",
 		"no image pulled in its name": verifier.PullPolicy == "never",
+		"no image built by compose":   verifier.Build == nil,
 		"uid 65532":                   verifier.User == "65532:65532",
 		"a read-only root":            verifier.ReadOnly,
 		"no capability":               slices.Equal(verifier.CapDrop, []string{"ALL"}),
@@ -98,6 +100,7 @@ func TestTheTraceVerifierReachesNothing(t *testing.T) {
 	for what, held := range map[string]bool{
 		"the verifier's image":  tracer.Image == "${VERIFIER_IMAGE}:${VERIFIER_VERSION}",
 		"no image pulled":       tracer.PullPolicy == "never",
+		"no image built":        tracer.Build == nil,
 		"uid 65532":             tracer.User == "65532:65532",
 		"a read-only root":      tracer.ReadOnly,
 		"no capability":         slices.Equal(tracer.CapDrop, []string{"ALL"}),

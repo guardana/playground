@@ -1,0 +1,17 @@
+# The scenario's part of the enforcer's configuration; the runner adds the
+# listener address, the signed bundle and its key, the spool, the collector,
+# the upstreams and the classification. The enforcer reads block YAML only.
+# A bound the held answer will pass.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+upstream:
+  call_timeout: 3s

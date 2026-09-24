@@ -47,13 +47,21 @@ type Session struct {
 // systems under test.
 //
 // WaitBefore pauses before the call; RetryWhilePending resends it while the
-// gateway answers that the request is held for an approval.
+// gateway answers that the request is held for an approval. OnError
+// "continue" carries on past a call the gateway answered with a protocol
+// error, as it does when an upstream never answers in time; the step is
+// graded from the trail like any other, and a later step reading its output
+// is refused.
 type Step struct {
 	Label             string   `json:"label,omitempty"`
 	WaitBefore        Duration `json:"wait_before,omitempty"`
 	RetryWhilePending *Retry   `json:"retry_while_pending,omitempty"`
+	OnError           string   `json:"on_error,omitempty"`
 	Call              Call     `json:"call"`
 }
+
+// OnErrorContinue is the one value on_error takes.
+const OnErrorContinue = "continue"
 
 // Call is the tool call itself, addressed to a server by the name compose gives
 // it. The agent sends it to the gateway, never to the server directly.
@@ -99,6 +107,7 @@ func (s Step) validate(number int) error {
 		required(fmt.Sprintf("steps[%d].call.server", number), s.Call.Server),
 		required(fmt.Sprintf("steps[%d].call.tool", number), s.Call.Tool),
 		s.validateTiming(number),
+		s.validateOnError(number),
 	); err != nil {
 		return err
 	}
@@ -110,6 +119,13 @@ func (s Step) validate(number int) error {
 		}
 	}
 	return nil
+}
+
+func (s Step) validateOnError(number int) error {
+	if s.OnError == "" {
+		return nil
+	}
+	return oneOf(fmt.Sprintf("steps[%d].on_error", number), s.OnError, OnErrorContinue)
 }
 
 // Reference is one ${step[n].output} found in a step's arguments, with the

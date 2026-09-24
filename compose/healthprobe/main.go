@@ -11,6 +11,7 @@
 //
 //	healthprobe [-ca <pem>] <url>        exit 0 on a 2xx answer
 //	healthprobe [-ca <pem>] -show <url>  print the status and at most 1 MiB of the body
+//	healthprobe -tools <url>             list an MCP server's tools once, one JSON line each
 //
 // -ca trusts exactly the certificates in that file, for a service that serves
 // https under a CA it made itself.
@@ -18,6 +19,10 @@
 // -show is how the runner reads the enforcer's /healthz and /brand from inside
 // its container: the health listener stays on the lab's networks, and the
 // runner never needs a route into them.
+//
+// -tools is how a chaos scenario lists a victim's tools a second time from
+// inside that victim's container, so a victim that changes a tool on a later
+// listing does it while the enforcer's session to it is open.
 package main
 
 import (
@@ -56,8 +61,10 @@ func main() {
 		err = probe(client, args[0])
 	case len(args) == 2 && args[0] == "-show":
 		err = show(client, args[1], os.Stdout)
+	case len(args) == 2 && args[0] == "-tools":
+		err = listTools(args[1], os.Stdout)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: healthprobe [-ca <pem>] [-show] <url>")
+		fmt.Fprintln(os.Stderr, "usage: healthprobe [-ca <pem>] [-show] <url> | -tools <url>")
 		os.Exit(2)
 	}
 	if err != nil {

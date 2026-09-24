@@ -26,8 +26,8 @@ func TestAOneShotRunBuildsItsImageFirst(t *testing.T) {
 	}
 }
 
-// A split run is built by a separate command first: compose prints build
-// progress on standard output, which a split run keeps as a record.
+// A split run builds nothing, so the verifier image the runner checked is the
+// one that runs.
 func TestASplitRunNamesItsEntrypointBeforeTheService(t *testing.T) {
 	got := strings.Join(runSplitArgs("verifier", "python", []string{"-c", "x"}), " ")
 	if want := "run --rm --no-TTY --entrypoint python verifier -c x"; got != want {

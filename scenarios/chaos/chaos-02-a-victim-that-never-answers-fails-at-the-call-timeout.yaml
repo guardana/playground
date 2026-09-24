@@ -1,0 +1,45 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   upstream.call_timeout bounds a call to an upstream: docs/reference/configuration.md:89.
+#   A call whose result failed upstream closes ACTION_FAILED:
+#     docs/concepts/mcp-gateway.md:203, docs/concepts/evidence-and-the-spool.md:38,66.
+#     The docs name no other closing record for a call the bound cut off, so
+#     that is the one asserted; the answer the agent gets is not graded.
+#   The result's status RESULT_STATUS_TIMEOUT is listed at docs/reference/wire/result.md:49;
+#     that a call cut off at upstream.call_timeout closes with it was observed at the pin, not
+#     documented. The chaos check requires it on the held call, closed between the 3s
+#     call_timeout its gateway configuration sets and one second after; that window is the
+#     lab's reading of "bounds a call" (docs/reference/configuration.md:89).
+#   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
+#   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
+# The toxic holds victim-fs's answers and closes nothing, so the request
+# reaches the victim and is served, and the answer never comes back: the
+# effect happened and the trail says the call failed. The next call, to a
+# victim reached directly, shows the plane still serves.
+schema_version: 1
+id: chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout
+title: A victim whose answer never arrives is cut off at the call timeout and recorded as failed
+profile: [core, enforcer, chaos]
+enforcement_mode: enforce
+trajectory: trajectories/chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout.yaml
+gateway:
+  config: config/gateway/scenarios/chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout.yaml
+  policy: config/policies/chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout.json
+chaos:
+  - toxic: { victim: victim-fs, type: hang }
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-fs: { calls_served: { fs.list: 1 } }
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

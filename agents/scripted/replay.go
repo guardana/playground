@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -66,6 +68,9 @@ func replay(
 		}, journal)
 		if err != nil {
 			journal.record(number, step, failed, 0, err)
+			if answeredWithError(step, err) {
+				continue
+			}
 			return fmt.Errorf("step %d: %s on %s: %w", number, step.Call.Tool, step.Call.Server, err)
 		}
 		// A denied call is recorded as an empty output rather than left out, so
@@ -84,6 +89,31 @@ func replay(
 		}
 	}
 	return journal.err
+}
+
+// The codes the SDK gives the errors it makes itself when a call never got an
+// answer: the connection closing on either side, and a request the transport
+// could not deliver (a refused connection, an HTTP status in place of a
+// JSON-RPC answer). They arrive as the same error type a gateway's answer does.
+const (
+	codeClientClosing = -32003
+	codeServerClosing = -32004
+	codeRejected      = -32005
+)
+
+// answeredWithError reports whether the step lets the replay go on past this
+// error: the gateway answered with a protocol error, and the step said it
+// may. A call that never got an answer still ends the replay.
+func answeredWithError(step labspec.Step, err error) bool {
+	var wire *jsonrpc.Error
+	if step.OnError != labspec.OnErrorContinue || !errors.As(err, &wire) {
+		return false
+	}
+	switch wire.Code {
+	case codeClientClosing, codeServerClosing, codeRejected:
+		return false
+	}
+	return true
 }
 
 func statusOf(result *mcp.CallToolResult, namespace string) outcome {

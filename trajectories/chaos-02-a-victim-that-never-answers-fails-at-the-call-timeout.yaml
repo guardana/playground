@@ -1,0 +1,18 @@
+# A read whose answer the proxy holds, then one to a victim reached directly.
+# The enforcer answers the held call with an error, and the replay carries on.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: held_listing
+    on_error: continue
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }
+  - label: direct_read
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }

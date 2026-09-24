@@ -61,7 +61,11 @@ func (l lab) prepareEnforcer(ctx context.Context, spec labspec.Scenario, runDir 
 			return err
 		}
 	}
-	_, err := l.prepareGateway(ctx, spec.Gateway, runDir)
+	routes, err := l.routedUpstreams(spec.Proxied())
+	if err != nil {
+		return err
+	}
+	_, err = l.prepareGateway(ctx, spec.Gateway, routes, runDir)
 	return err
 }
 
@@ -82,7 +86,9 @@ func unprepared(id, runID string, cause error, at time.Time) assertion.Report {
 // prepareGateway writes the run's gateway directory: the bundle signed for
 // this run and the configuration assembled around it. It returns the
 // directory, which compose mounts read-only into the enforcer.
-func (l lab) prepareGateway(ctx context.Context, plan *labspec.Gateway, runDir string) (string, error) {
+func (l lab) prepareGateway(
+	ctx context.Context, plan *labspec.Gateway, routes []gateway.Upstream, runDir string,
+) (string, error) {
 	if err := l.refuseKeysPlace(); err != nil {
 		return "", err
 	}
@@ -119,7 +125,7 @@ func (l lab) prepareGateway(ctx context.Context, plan *labspec.Gateway, runDir s
 	}
 	assembled, err := gateway.Assemble(gateway.Inputs{
 		Partial: partial, Key: key, BundleID: bundleID, BundleFile: gatewayMount + "/policy.bundle",
-		SpoolDir: enforcerSpoolDir, Collector: collectorLogs, Upstreams: upstreams(), Overrides: overrides,
+		SpoolDir: enforcerSpoolDir, Collector: collectorLogs, Upstreams: routes, Overrides: overrides,
 		UsesPDP: plan.PDPScript != "", UpstreamTenants: plan.UpstreamTenants,
 	})
 	if err != nil {
@@ -141,12 +147,4 @@ func (l lab) overrides(unclassified []string) ([]gateway.Override, error) {
 		}
 	}
 	return gateway.Overrides(classes, prints, unclassified)
-}
-
-func upstreams() []gateway.Upstream {
-	listed := make([]gateway.Upstream, 0, len(victims()))
-	for _, name := range victims() {
-		listed = append(listed, gateway.Upstream{Name: name, Endpoint: "http://" + name + ":" + servicePort + "/mcp"})
-	}
-	return listed
 }

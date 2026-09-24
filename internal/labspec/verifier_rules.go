@@ -38,6 +38,7 @@ func (s Scenario) validateVerifier() error {
 		{"expect.decisions", len(s.Expect.Decisions) > 0},
 		{"expect.evidence", s.Expect.Evidence != nil},
 		{"trace", s.Trace != nil || s.Expect.Trace != nil},
+		{"chaos", len(s.Chaos) > 0},
 	} {
 		if set.set {
 			return fmt.Errorf("%w: %s is set in a verifier scenario, which has nothing to grade it by", ErrInvalid, set.field)

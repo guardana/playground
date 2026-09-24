@@ -79,6 +79,8 @@ type fakeCompose struct {
 	// undated names the docker calls that arrived with no deadline, and
 	// downErr is what the teardown's own context said when it was called.
 	undated []string
+	// calls is every docker call in the order it was made.
+	calls   []string
 	downErr error
 	// collector is what the fake collector writes when the replay runs.
 	collector string
@@ -100,6 +102,7 @@ func (f *fakeCompose) called(ctx context.Context, call string) error {
 	if _, ok := ctx.Deadline(); !ok {
 		f.undated = append(f.undated, call)
 	}
+	f.calls = append(f.calls, call)
 	return ctx.Err()
 }
 
@@ -120,6 +123,7 @@ func (f *fakeCompose) Up(ctx context.Context, _, services []string) error {
 		return err
 	}
 	f.broughtUp = services
+	f.calls[len(f.calls)-1] = "up " + strings.Join(services, " ")
 	return f.upErr
 }
 

@@ -1,12 +1,12 @@
 # The lab's world: six victim tool servers, a page that attacks them, a mail
 # sink, a gateway (the stub or the enforcer), the agent, the verifier, the
-# collector the enforcer's trail lands on, the decision point double and the
-# approver.
+# collector the enforcer's trail lands on, the decision point double, the
+# approver and the proxy chaos scenarios put in front of a victim.
 #
-# Five networks, all internal: agent-net holds the agent and one gateway;
+# Six networks, all internal: agent-net holds the agent and one gateway;
 # tool-net the gateway, the victims and what they reach; evidence-net the
 # collector and the enforcer; pdp-net the enforcer and the double;
-# approver-net the approver alone. Nothing in the lab has a route out; the
+# approver-net the approver alone; trace-net the trace verifier alone. Nothing in the lab has a route out; the
 # agent can reach the gateway and nothing else. That is the property every
 # scenario depends on, and the runner proves it from inside `agent-net` on
 # every run rather than trusting this file.
@@ -274,17 +274,11 @@ services:
   # the mount is refused, so a hand-run never mounts reports/.
   verifier:
     image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
-    # Built here or refused: a registry image under the pin's name is not the
-    # verifier the lock names.
+    # Built by `make verifier-image` alone, and never pulled: a registry image
+    # under the pin's name is not the verifier the lock names, and an image
+    # compose rebuilt after the runner checked it is not the image it checked.
     pull_policy: never
     <<: *hardened
-    build:
-      context: verifier
-      dockerfile: ../Dockerfile.verifier
-      args:
-        PYTHON_IMAGE: ${PYTHON_IMAGE}
-        VERIFIER_CLI: ${VERIFIER_CLI}
-        VERIFIER_VERSION: ${VERIFIER_VERSION}
     user: "65532:65532"
     networks: [tool-net]
     profiles: [verifier]
@@ -333,6 +327,35 @@ services:
         target: /lab-run
         bind:
           create_host_path: false
+
+  # The proxy a chaos scenario sends one victim's traffic through, so a toxic
+  # can slow or hold that victim's answers to the enforcer. It holds one proxy
+  # per victim from the file it starts with; the runner points the enforcer's
+  # upstream for a named victim at that proxy and leaves the rest direct. Its
+  # control API listens on loopback inside the container and is driven only by
+  # `compose exec`, so nothing on tool-net can add or lift a fault.
+  toxiproxy-tools:
+    image: ${TOXIPROXY_IMAGE}
+    <<: *hardened
+    user: "65532:65532"
+    command: ["-host=127.0.0.1", "-config=/etc/toxiproxy/proxies.json"]
+    networks: [tool-net]
+    profiles: [chaos]
+    volumes:
+      - ./toxiproxy/proxies.json:/etc/toxiproxy/proxies.json:ro
+    healthcheck:
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+    depends_on:
+      victim-crm: {condition: service_healthy}
+      victim-db: {condition: service_healthy}
+      victim-fs: {condition: service_healthy}
+      victim-shell: {condition: service_healthy}
+      victim-mail: {condition: service_healthy}
+      victim-web: {condition: service_healthy}
 
   # The enforcement plane under test, from the image `make enforcer-image`
   # builds out of its pinned commit. It is told nothing the lab decided about
@@ -383,6 +406,7 @@ services:
       victim-web: {condition: service_healthy}
       collector: {condition: service_started}
       pdp-double: {condition: service_healthy, required: false}
+      toxiproxy-tools: {condition: service_healthy, required: false}
 
   # The external decision point double (services/pdp-double), on a network
   # it shares with the enforcer alone. It makes its CA in memory and writes

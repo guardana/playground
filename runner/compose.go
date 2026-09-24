@@ -32,7 +32,9 @@ type Compose interface {
 	RunOnce(ctx context.Context, profiles []string, service string, args []string) (Execution, error)
 	// RunSplit is RunOnce for a service whose standard output is a record: it
 	// comes back apart from standard error, which carries compose's own
-	// progress. A non-empty entrypoint replaces the image's.
+	// progress. A non-empty entrypoint replaces the image's. It builds
+	// nothing: the verifier services it runs are built by `make
+	// verifier-image` alone, so the image the runner checked is the one that runs.
 	RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error)
 	// Exec runs a command inside a running service's container, its output
 	// kept apart from compose's own.
@@ -132,11 +134,6 @@ func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service s
 func (d dockerCompose) RunSplit(
 	ctx context.Context, profiles []string, service, entrypoint string, args []string,
 ) (Split, error) {
-	// Built apart from the run: compose prints build progress on standard
-	// output, which here is the record.
-	if _, err := d.capture(ctx, profiles, "build", service); err != nil {
-		return Split{}, err
-	}
 	return d.split(d.command(ctx, profiles, runSplitArgs(service, entrypoint, args)...))
 }
 

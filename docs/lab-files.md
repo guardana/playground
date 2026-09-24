@@ -62,6 +62,17 @@ it makes itself; the namespace is `ENFORCER_NAMESPACE` in `versions.env`. An
 upstream result shaped like a pending answer is not retried. Durations are
 strings; a bare number is refused.
 
+`on_error: continue` lets the replay go on past a call the gateway answered
+with a JSON-RPC error instead of a result. At the enforcer's pinned commit
+that is the answer observed for an upstream that does not answer within
+`upstream.call_timeout`; the enforcer's docs do not state it. An error the
+agent's own MCP client made for a call no gateway answered (a refused or
+closed connection, an HTTP status in place of a JSON-RPC answer) still ends
+the replay. The step is graded from its trail like any other, and a later
+step reading its output is refused. The agent traces only calls it got a
+result for, so a scenario with `trace:` refuses a trajectory using
+`on_error`.
+
 ## `scenarios/<class>/<id>.yaml`
 
 The identifier is the file name. A scenario copied to a new file and left with
@@ -381,6 +392,60 @@ A run the enforcer decides is also graded on `evidence/enforcement-mode`
 `ACTION_COMPLETED` carries an `executedActionDigest` equal to its request's
 `POLICY_DECIDED` `actionDigest`; an absent one fails, because the enforcer's
 contract says the comparison then did not run).
+
+### Chaos
+
+A scenario the enforcer decides can break part of the lab for the replay:
+
+```yaml
+profile: [core, enforcer, chaos]
+chaos:
+  - toxic: { victim: victim-fs, type: latency, latency: 1500ms }
+  - collector: down
+  - relist: victim-fs
+```
+
+The runner applies each fault after the lab boots and before the replay, in
+order, and lifts it after the replay and before the trail is drained. A fault
+states no outcome: what the enforcer did under it is graded from the trail and
+the journals. Each fault is also graded as `chaos/fault-<n>`, from a record
+that shows it was in place, whose `Got` says what was read, and recorded step
+by step in the run's `chaos.log`.
+
+- `toxic` routes one victim through the proxy (`toxiproxy-tools`, profile
+  `chaos`, `TOXIPROXY_IMAGE`): the runner points the enforcer's upstream for
+  that victim at the victim's proxy listener in `compose/toxiproxy/proxies.json`
+  and leaves the others direct. `latency` (1ms to 10m, whole milliseconds)
+  delays each of the victim's answers; `hang` lets none through until the
+  fault is lifted, while the requests still reach the victim. The toxic is in
+  place only when the proxy lists it, lifted only when the proxy lists it no
+  more. A latency also has to show on the trail: every call to that victim
+  that closed took at least the latency between its result's `startedAt` and
+  `endedAt`, and one did. So does a hang: every call to that victim closed
+  with `RESULT_STATUS_TIMEOUT`, taking at least the `upstream.call_timeout` the
+  scenario's gateway configuration sets and less than one second more, and one
+  did; a hang in a scenario whose configuration sets no call timeout fails.
+  The proxy's API listens on loopback inside its container and is driven by
+  `compose exec`; the agent is probed unable to reach the proxy listener.
+- `collector: down` stops the collector the enforcer exports to. After the
+  replay the enforcer's `/healthz` has to show records unacknowledged while it
+  is down. The runner then starts it again, and it is lifted when compose
+  reports its container running and the enforcer's `/healthz` shows more
+  records acknowledged (`exporter.acknowledged`) than while it was down. The
+  drain then requires every record handed over with nothing lost.
+- `relist` has the victim list its own tools once more, through its own
+  listener, as a client the enforcer does not know. `victim-fs` changes
+  `fs.read` on its second listing and announces the change to every open
+  session. The fault is in place only when the listing it printed describes a
+  tool otherwise than `config/gateway/tools/<victim>.json`, the snapshot the
+  enforcer's classification is pinned to. Nothing undoes a listing, so it is
+  graded without a lift and its check says so.
+
+The profile `chaos` comes exactly with a `toxic`, one fault per victim's path,
+the collector at most once, and a scenario the stub decides takes no chaos.
+There is no proxy on `evidence-net` or `pdp-net`: a proxy reachable from
+`tool-net` there would let a victim post into the collector, and the decision
+point double scripts its own timeouts and malformed answers.
 
 ## What a runner reads
 

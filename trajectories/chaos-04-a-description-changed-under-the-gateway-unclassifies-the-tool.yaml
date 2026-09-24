@@ -1,0 +1,19 @@
+# fs.read after victim-fs has described it again, then fs.list, whose
+# definition did not change. The wait gives the changed-list notice time to
+# reach the enforcer.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: drifted_read
+    wait_before: 3s
+    call:
+      server: victim-fs
+      tool: fs.read
+      args: { path: "/data/public/status.txt" }
+  - label: unchanged_listing
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

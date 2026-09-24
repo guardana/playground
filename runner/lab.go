@@ -191,9 +191,13 @@ func (l lab) probes(
 ) (check.Probe, check.Probe, []check.Probe, string) {
 	gateway := l.probe(ctx, compose, spec.Profile, gatewayHost(spec)+":"+servicePort)
 	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
+	proxies, unnamed := l.sealedProxies(spec)
 	var sealed []check.Probe
-	for _, target := range sealedFromAgent(spec) {
+	for _, target := range append(sealedFromAgent(spec), proxies...) {
 		sealed = append(sealed, l.probe(ctx, compose, spec.Profile, target))
+	}
+	if unnamed != nil {
+		sealed = append(sealed, check.Probe{Target: proxyService, Detail: unnamed.Error()})
 	}
 
 	source := filepath.Join(runDir, "probes.log")

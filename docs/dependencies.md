@@ -19,6 +19,12 @@ project is moving from; maintained by the protocol's own authors.
 The annotations this SDK carries on a tool — `readOnlyHint` and the rest — are
 the field the victims lie in. It models them as hints, which is what they are.
 
+The scripted agent tells an error the gateway sent from one the SDK made itself
+by the SDK's own codes for a call it could not deliver (-32003, -32004, -32005
+at the version `go.mod` pins); an upgrade that adds another such code has to be
+added there, or `on_error: continue` would go on past a call that never
+reached the gateway.
+
 ### sigs.k8s.io/yaml
 
 Reads the trajectory and scenario files. The standard library has no YAML
@@ -67,6 +73,14 @@ otel/opentelemetry-collector:<tag> components` lists it), so writing an
 OTLP/HTTP receiver by hand to avoid one dependency would make every finding a
 question about the lab's receiver instead of the enforcer's export.
 Apache-2.0, maintained by the OpenTelemetry project.
+
+### Toxiproxy
+
+`TOXIPROXY_IMAGE`. The TCP proxy a chaos scenario puts between the enforcer and
+one victim, to delay or hold that victim's answers with a toxic the runner adds
+and removes through the proxy's own command line. A proxy written for the lab
+would make every chaos result a question about the lab's proxy. MIT, maintained
+by Shopify.
 
 ## The systems under test
 

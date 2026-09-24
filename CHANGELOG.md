@@ -13,11 +13,31 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `versions.env` pins the enforcer by commit (`ENFORCER_COMMIT`) and the
   verifier at 0.26.1, and every image the lab pulls by tag and the digest of
   its multi-arch index. `ENFORCER_TAG`, `ENFORCER_BRAND_ENDPOINT` and the Postgres,
-  toxiproxy, collector, Jaeger and OPA images are gone until something reads
-  them; a test in `compose/` fails on a variable nothing reads.
+  Jaeger and OPA images are gone until something reads them, and the collector
+  and toxiproxy images came back with the services that read them; a test in
+  `compose/` fails on a variable nothing reads.
+- The verifier image is built by `make verifier-image` alone: the `verifier`
+  service carries no `build:` and the runner builds nothing before a verifier
+  or trace run, so the image it checked against `VERIFIER_VERSION` is the one
+  that runs.
 
 ### Added
 
+- Chaos: a scenario the enforcer decides can name `chaos:` faults, applied
+  after boot and lifted before the drain, each graded as `chaos/fault-<n>` from
+  a record showing it in place: a `latency` or `hang` toxic on one victim's
+  answers through `toxiproxy-tools` (profile `chaos`, pinned as
+  `TOXIPROXY_IMAGE`, alone on `tool-net`, its API on loopback), held to the
+  trail (a hang closes `RESULT_STATUS_TIMEOUT` at the scenario's
+  `upstream.call_timeout`); `collector: down`, lifted once compose reports the
+  collector running and the enforcer's exporter acknowledges records again;
+  and `relist`, a second listing of a victim's tools from inside it
+  (`healthprobe -tools`) that describes a tool otherwise than its listing
+  snapshot. A trajectory step can say `on_error: continue` to carry on past a
+  JSON-RPC error the gateway answered, never past a call no gateway answered,
+  and not in a scenario with `trace:`. `chaos-01`..`04` grade a slow victim, a
+  victim that never answers, a collector outage and a tool description changed
+  under the running gateway.
 - A catalogue against the enforcer at its pinned commit: rules and a stale
   policy, an unclassified tool, tenancy, approvals held, resumed, reused,
   mutated, rejected and expired, the external decision point and its failures,

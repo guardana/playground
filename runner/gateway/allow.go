@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
+
+	"sigs.k8s.io/yaml"
 )
 
 // scenarioKeys are the only settings a scenario's part may carry, as the
@@ -111,4 +114,26 @@ func inEnvironment(upstreams []Upstream, environment any) ([]Upstream, error) {
 		placed[i].Environment = name
 	}
 	return placed, nil
+}
+
+// CallTimeout is the upstream.call_timeout the scenario's part sets, or zero
+// when it sets none. The lab does not supply the enforcer's default: a bound a
+// check holds a run to is one the scenario wrote down.
+func CallTimeout(partial []byte) (time.Duration, error) {
+	var config struct {
+		Upstream struct {
+			CallTimeout string `json:"call_timeout"`
+		} `json:"upstream"`
+	}
+	if err := yaml.Unmarshal(partial, &config); err != nil {
+		return 0, fmt.Errorf("%w: the scenario's gateway configuration: %w", ErrInvalid, err)
+	}
+	if config.Upstream.CallTimeout == "" {
+		return 0, nil
+	}
+	bound, err := time.ParseDuration(config.Upstream.CallTimeout)
+	if err != nil || bound <= 0 {
+		return 0, fmt.Errorf("%w: upstream.call_timeout is %q, want a positive duration", ErrInvalid, config.Upstream.CallTimeout)
+	}
+	return bound, nil
 }

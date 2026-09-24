@@ -18,12 +18,11 @@ func (l lab) gradeTrajectory(
 	boot assertion.Boot, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
 	gateway, victim, sealed, probed := l.probes(ctx, compose, spec, trajectory, runDir)
-	replayed := l.replay(ctx, compose, spec, runID, runDir)
 	checks := []assertion.Check{
 		check.Boot{Source: filepath.Join(runDir, "boot.json")},
 		check.NetworkIsolation{Gateway: gateway, Victim: victim, Sealed: sealed, Source: probed},
-		replayed,
 	}
+	checks = append(checks, l.replayUnderChaos(ctx, compose, spec, trajectory, runID, runDir)...)
 	if spec.Trace != nil {
 		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
 	}
@@ -47,6 +46,21 @@ func (l lab) gradeTrajectory(
 		},
 	)...)
 	return graded, check.DecisionRows(spec, trajectory, records, trail)
+}
+
+// replayUnderChaos applies the scenario's faults, replays the trajectory and
+// lifts the faults again, all before anything drains the trail.
+func (l lab) replayUnderChaos(
+	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
+) []assertion.Check {
+	if len(spec.Chaos) == 0 {
+		return []assertion.Check{l.replay(ctx, compose, spec, runID, runDir)}
+	}
+	run := l.applyChaos(ctx, compose, spec)
+	replayed := l.replay(ctx, compose, spec, runID, runDir)
+	graded := l.liftChaos(ctx, compose, spec, run, runDir)
+	graded.Scenario, graded.Trajectory = spec, trajectory
+	return []assertion.Check{replayed, graded}
 }
 
 // replay runs the trajectory by running the agent, and keeps what the agent
