@@ -1,0 +1,38 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   NO_MATCHING_RULE, DENY, when no rule matches and there is no implicit
+#     allow: docs/reference/reason-codes.md:29.
+#   RULE_ALLOW: docs/reference/reason-codes.md:30.
+#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:59.
+#   The trail of a stopped call ends in ACTION_BLOCKED carrying the kernel's
+#     decision: docs/concepts/evidence-and-the-spool.md:30,67.
+# A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
+# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# the principal's own tenant.
+schema_version: 1
+id: rule-02-denied-when-no-rule-matches
+title: A command no rule allows is denied, and the read the policy allows runs
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/rule-02-denied-when-no-rule-matches.yaml
+gateway:
+  config: config/gateway/scenarios/rule-02-denied-when-no-rule-matches.yaml
+  policy: config/policies/rule-02-denied-when-no-rule-matches.json
+  upstream_tenants: { victim-shell: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: DENY
+      reason_codes_include: [NO_MATCHING_RULE]
+      blocked: { verdict: DENY, reason_codes_include: [NO_MATCHING_RULE] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-fs: { calls_served: { fs.list: 1 } }
+    victim-shell: { calls_served: {} }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

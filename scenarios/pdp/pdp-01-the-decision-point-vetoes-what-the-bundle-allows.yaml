@@ -1,0 +1,67 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   victim-mail sits in the principal's tenant, since a material call naming a tenant on one side
+#     only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
+#   An answer only vetoes; every grant comes from a bundle rule:
+#     docs/guides/let-a-decision-point-veto.md:15-16, docs/adr/0017-an-external-decision-point-can-veto.md:38-43.
+#   An allowing answer is ALLOW with RULE_ALLOW and PDP_ALLOW: docs/guides/let-a-decision-point-veto.md:67-68.
+#   A denying answer is PDP_DENY, DENY: docs/reference/policy-format.md:120, docs/reference/reason-codes.md:69.
+#   True with an obligation is OBLIGATION_NOT_UNDERSTOOD, DENY:
+#     docs/adr/0017-an-external-decision-point-can-veto.md:116-120,143-145,154, docs/reference/policy-format.md:121.
+#   A call no veto rule covers is never sent: docs/guides/let-a-decision-point-veto.md:50-51,
+#     docs/concepts/mcp-gateway.md:157-160.
+#   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
+#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:67.
+#   A decision that consulted the decision point names its configured identifier in pdp_instance,
+#     one that consulted none leaves it empty: docs/contracts.md:589-591,
+#     docs/reference/policy-format.md:128-129.
+#   The double journals every question it is asked, by action (services/pdp-double/README.md), so
+#     the four covered calls are asked once each and fs.list never.
+schema_version: 1
+id: pdp-01-the-decision-point-vetoes-what-the-bundle-allows
+title: The decision point takes away what the bundle allows and never hears about a call no veto covers
+profile: [core, enforcer, pdp]
+enforcement_mode: enforce
+trajectory: trajectories/pdp-01-the-decision-point-vetoes-what-the-bundle-allows.yaml
+gateway:
+  config: config/gateway/scenarios/pdp-01-the-decision-point-vetoes-what-the-bundle-allows.yaml
+  policy: config/policies/pdp-01-the-decision-point-vetoes-what-the-bundle-allows.json
+  upstream_tenants: { victim-mail: tenant_a }
+  pdp_script: pdp-01-the-decision-point-vetoes-what-the-bundle-allows.yaml
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW, PDP_ALLOW]
+      pdp_instance: 'https://pdp-double:8443'
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: DENY
+      reason_codes_include: [PDP_DENY]
+      pdp_instance: 'https://pdp-double:8443'
+      blocked: { verdict: DENY, reason_codes_include: [PDP_DENY] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    3:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      pdp_instance: none
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    4:
+      verdict: DENY
+      reason_codes_include: [OBLIGATION_NOT_UNDERSTOOD]
+      pdp_instance: 'https://pdp-double:8443'
+      blocked: { verdict: DENY, reason_codes_include: [OBLIGATION_NOT_UNDERSTOOD] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    5:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW, PDP_ALLOW]
+      pdp_instance: 'https://pdp-double:8443'
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+    victim-fs: { calls_served: { fs.list: 1 } }
+    victim-mail: { calls_served: { mail.send: 1 } }
+    pdp-double: { calls_served: { crm.read_customer: 1, mail.send: 3 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

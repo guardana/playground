@@ -24,12 +24,17 @@ var (
 //
 // It answers whether the trail is well formed, not whether it is true:
 // prevEventId is an ordering link, so a gap shows and an altered record does
-// not. The order it accepts, a bracketed group being optional:
+// not. The order it accepts is the enforcer's own state diagram of a trail
+// (docs/concepts/evidence-and-the-spool.md at the pin), a bracketed group being
+// optional and a starred one repeated:
 //
 //	ACTION_PROPOSED -> POLICY_DECIDED
-//	  -> [APPROVAL_REQUESTED -> (APPROVAL_DECIDED | APPROVAL_EXPIRED)]
+//	  -> [ APPROVAL_REQUESTED (APPROVAL_EXPIRED APPROVAL_REQUESTED)*
+//	       -> ( APPROVAL_DECIDED | APPROVAL_EXPIRED -> ACTION_BLOCKED ) ]
 //	  -> ( ACTION_STARTED -> (ACTION_COMPLETED | ACTION_FAILED) )
 //	   | ACTION_BLOCKED
+//
+// An expired approval is followed by a new request or a block, never by a run.
 //
 // FINDING_RAISED is accepted anywhere after ACTION_PROPOSED, because a detector
 // finishing is not this request progressing. POLICY_RELOADED is accepted
@@ -109,7 +114,8 @@ const (
 	chainProposed
 	chainDecided
 	chainApprovalRequested
-	chainApprovalResolved
+	chainApprovalDecided
+	chainApprovalExpired
 	chainStarted
 	chainClosed
 )
@@ -126,8 +132,10 @@ func (s chainState) String() string {
 		return string(KindPolicyDecided)
 	case chainApprovalRequested:
 		return string(KindApprovalRequested)
-	case chainApprovalResolved:
-		return "a resolved approval"
+	case chainApprovalDecided:
+		return string(KindApprovalDecided)
+	case chainApprovalExpired:
+		return string(KindApprovalExpired)
 	case chainStarted:
 		return string(KindActionStarted)
 	case chainClosed:
@@ -156,15 +164,17 @@ func (s chainState) step(kind Kind) (chainState, stepResult) {
 	case KindPolicyDecided:
 		return chainDecided, allow(s == chainProposed)
 	case KindApprovalRequested:
-		return chainApprovalRequested, allow(s == chainDecided)
-	case KindApprovalDecided, KindApprovalExpired:
-		return chainApprovalResolved, allow(s == chainApprovalRequested)
+		return chainApprovalRequested, allow(s.mayRequest())
+	case KindApprovalDecided:
+		return chainApprovalDecided, allow(s == chainApprovalRequested)
+	case KindApprovalExpired:
+		return chainApprovalExpired, allow(s == chainApprovalRequested)
 	case KindActionStarted:
-		return chainStarted, allow(s.afterDecision())
+		return chainStarted, allow(s.mayRun())
 	case KindActionCompleted, KindActionFailed:
 		return chainClosed, allow(s == chainStarted)
 	case KindActionBlocked:
-		return chainClosed, allow(s.afterDecision())
+		return chainClosed, allow(s.mayBlock())
 	case KindFindingRaised:
 		return s, allow(s != chainStart)
 	case KindPolicyReloaded:
@@ -178,11 +188,22 @@ func (s chainState) step(kind Kind) (chainState, stepResult) {
 	}
 }
 
-// afterDecision reports whether a verdict is recorded, nothing has run yet, and
-// any approval it called for is resolved. It is the one state two different
-// kinds may follow, which is why it has a name.
-func (s chainState) afterDecision() bool {
-	return s == chainDecided || s == chainApprovalResolved
+// mayRequest reports whether an approval may be asked for: after the verdict
+// called for one, or again after the last one expired.
+func (s chainState) mayRequest() bool {
+	return s == chainDecided || s == chainApprovalExpired
+}
+
+// mayRun reports whether a verdict is recorded, nothing has run yet, and any
+// approval it called for was granted.
+func (s chainState) mayRun() bool {
+	return s == chainDecided || s == chainApprovalDecided
+}
+
+// mayBlock reports whether the gateway may still refuse the call: where it
+// could run, and after its approval expired.
+func (s chainState) mayBlock() bool {
+	return s.mayRun() || s == chainApprovalExpired
 }
 
 func allow(ok bool) stepResult {

@@ -1,0 +1,18 @@
+# The first call waits past the staleness budget, so both are decided on a
+# bundle older than the enforcer accepts.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: stale_allowed_read
+    wait_before: 3s
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }
+  - label: stale_denied_read
+    call:
+      server: victim-fs
+      tool: fs.read
+      args: { path: "/data/public/handbook.md" }

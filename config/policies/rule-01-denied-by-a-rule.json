@@ -1,0 +1,8 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-rule-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "mail-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["COMMUNICATE"]}}},
+    {"id": "bulk-mail-denied", "effect": "DENY", "when": {"action": {"name": ["mail.send_bulk"]}}}
+  ]
+}

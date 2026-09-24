@@ -12,6 +12,10 @@ import (
 // attempt resumed; the held trail is graded on the step that opened it.
 const OpensNone = "none"
 
+// PDPInstanceNone is the `pdp_instance` of a decision that consulted no
+// decision point, which the wire carries as an empty field.
+const PDPInstanceNone = "none"
+
 // TrailKinds are the event kinds a `trail` list may name, written without the
 // EVENT_KIND_ prefix the wire carries.
 var TrailKinds = []string{
@@ -52,6 +56,10 @@ func (d DecisionExpectation) validate(step int) error {
 			return err
 		}
 	}
+	if d.PDPInstance != "" && d.PDPInstance != PDPInstanceNone && !strings.HasPrefix(d.PDPInstance, "https://") {
+		return fmt.Errorf("%w: %s.pdp_instance is %q, want %q or the decision point's https identifier",
+			ErrInvalid, field, d.PDPInstance, PDPInstanceNone)
+	}
 	return validateTrail(field, d)
 }
 
@@ -68,7 +76,7 @@ func (d DecisionExpectation) validateShape(field string) error {
 		return fmt.Errorf("%w: %s opens a trail and states no verdict", ErrInvalid, field)
 	case d.Resumes == 0:
 		return nil
-	case d.Verdict != "" || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0:
+	case d.Verdict != "" || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0 || d.PDPInstance != "":
 		return fmt.Errorf("%w: %s resumes a trail and states a verdict, which only re-reads the opening step's POLICY_DECIDED",
 			ErrInvalid, field)
 	case d.Blocked == nil && len(d.Trail) == 0:
@@ -83,7 +91,7 @@ func (d DecisionExpectation) validateOpensNone(field string) error {
 		return fmt.Errorf("%w: %s.opens is %q, want %q", ErrInvalid, field, d.Opens, OpensNone)
 	case d.Resumes != 0:
 		return fmt.Errorf("%w: %s both resumes a trail and opens none", ErrInvalid, field)
-	case d.Graded() || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0:
+	case d.Graded() || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0 || d.PDPInstance != "":
 		return fmt.Errorf("%w: %s opens no trail, so there is no record to grade what it states", ErrInvalid, field)
 	}
 	return nil

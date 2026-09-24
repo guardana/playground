@@ -1,0 +1,8 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-pdp-03", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "reads-allowed", "effect": "ALLOW", "when": {"action": {"name": ["crm.read_customer", "db.query"]}}},
+    {"id": "reads-vetoed", "effect": "DENY", "when": {"action": {"name": ["crm.read_customer", "db.query"]}, "external": {"denies": true}}}
+  ]
+}

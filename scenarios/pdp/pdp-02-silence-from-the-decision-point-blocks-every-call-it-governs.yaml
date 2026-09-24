@@ -1,0 +1,64 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   victim-mail sits in the principal's tenant, since a material call naming a tenant on one side
+#     only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
+#   Silence leaves the veto rule undetermined: INDETERMINATE, blocking every effect class in every
+#     enforcing mode, and fail_open_read never opens a read on it:
+#     docs/adr/0017-an-external-decision-point-can-veto.md:57-62, docs/reference/policy-format.md:127-128.
+#   A read timing out under fail_open_read: INDETERMINATE, Block, RULE_UNDETERMINED and PDP_TIMEOUT:
+#     docs/guides/let-a-decision-point-veto.md:57-66, docs/concepts/mcp-gateway.md:172-174.
+#   A status other than 200 is PDP_UNAVAILABLE: docs/adr/0017-an-external-decision-point-can-veto.md:150.
+#   A 200 it will not read is PDP_ANSWER_REFUSED: no X-Request-ID echo, a structure it refuses, a
+#     member outside decision and context on an allow:
+#     docs/adr/0017-an-external-decision-point-can-veto.md:105-106,110-120,151,
+#     docs/guides/let-a-decision-point-veto.md:27-29.
+#   Codes and usual verdicts: docs/reference/reason-codes.md:45,61,67,68.
+#   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
+#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:67.
+#   Every step's question reaches the double, which journals it before it answers, so silence is
+#     told apart from a question never sent (services/pdp-double/README.md).
+schema_version: 1
+id: pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs
+title: A decision point that times out, fails or answers unreadably blocks every call it governs, reads under fail-open too
+profile: [core, enforcer, pdp]
+enforcement_mode: enforce
+trajectory: trajectories/pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs.yaml
+gateway:
+  config: config/gateway/scenarios/pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs.yaml
+  policy: config/policies/pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs.json
+  upstream_tenants: { victim-mail: tenant_a }
+  pdp_script: pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs.yaml
+expect:
+  decisions:
+    1:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_TIMEOUT]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_TIMEOUT] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    2:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_UNAVAILABLE]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_UNAVAILABLE] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    3:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_ANSWER_REFUSED]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_ANSWER_REFUSED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    4:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_ANSWER_REFUSED]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_ANSWER_REFUSED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    5:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_ANSWER_REFUSED]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_ANSWER_REFUSED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-crm: { calls_served: {} }
+    victim-mail: { calls_served: {} }
+    pdp-double: { calls_served: { crm.read_customer: 3, mail.send: 2 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

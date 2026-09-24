@@ -1,0 +1,36 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   TENANT_UNDETERMINED, INDETERMINATE, when a tenant is named on one side of
+#     the comparison only: docs/reference/reason-codes.md:62; a cause in the
+#     request on a material class only: docs/concepts/how-a-call-is-decided.md:27,52.
+#   A cause in the request blocks every class: docs/concepts/how-a-call-is-decided.md:86,99;
+#     the kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:67.
+#   The read is decided by the bundle: docs/reference/reason-codes.md:30.
+# The principal's tenant is listener.principal.tenant_id
+# (docs/reference/configuration.md:45); no upstreams.N.tenant_id is set.
+schema_version: 1
+id: tenant-03-material-call-to-an-untenanted-server-is-undetermined
+title: A send to a server that names no tenant is undetermined and blocked, and a read is not
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/tenant-03-material-call-to-an-untenanted-server-is-undetermined.yaml
+gateway:
+  config: config/gateway/scenarios/tenant-03-material-call-to-an-untenanted-server-is-undetermined.yaml
+  policy: config/policies/tenant-03-material-call-to-an-untenanted-server-is-undetermined.json
+expect:
+  decisions:
+    1:
+      verdict: INDETERMINATE
+      reason_codes_include: [TENANT_UNDETERMINED]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [TENANT_UNDETERMINED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-mail: { calls_served: {} }
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

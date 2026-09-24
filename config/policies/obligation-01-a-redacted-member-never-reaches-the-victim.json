@@ -1,0 +1,10 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-obligation-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "read-redacted", "effect": "ALLOW_WITH_OBLIGATIONS", "when": {"action": {"name": ["crm.read_customer"]}},
+      "obligations": [{"type": "redact_fields", "params": {"fields": "debug_trace"}}]},
+    {"id": "listing-rate-capped", "effect": "ALLOW_WITH_OBLIGATIONS", "when": {"action": {"name": ["fs.list"]}},
+      "obligations": [{"type": "cap_rate", "params": {"per_minute": "10"}}]}
+  ]
+}

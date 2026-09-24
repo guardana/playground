@@ -1,0 +1,25 @@
+# Every victim tool refuses a member its schema does not declare. So a call
+# carrying one is served only if the gateway removed that member before it
+# left: the victim's journal is the record of the bytes it received. Step 2
+# spells the member in another case, which the redaction folds together.
+# Step 3 carries an obligation nothing in this build applies.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_412, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: read_with_a_member_to_redact
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417", debug_trace: "on" }
+  - label: read_with_the_member_in_another_case
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4418", DEBUG_TRACE: "on" }
+  - label: listing_under_an_obligation_nothing_applies
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

@@ -1,0 +1,24 @@
+# A mail to a partner nobody answers, the same call again while it is still held,
+# and again after its approval ran out of time.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: mail_to_partner
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }
+  - label: mail_to_partner_while_held
+    wait_before: 1s
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }
+  - label: mail_to_partner_after_expiry
+    wait_before: 5s
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }

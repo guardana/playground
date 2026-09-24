@@ -1,0 +1,15 @@
+# The operator's staleness budget is one second, far under the bundle's own:
+# the smaller of the two applies, and nothing reloads the bundle during a run.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+policy:
+  max_stale: 1s

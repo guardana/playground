@@ -1,0 +1,38 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   A REQUIRE_APPROVAL rule decides with APPROVAL_REQUIRED: docs/reference/policy-format.md:55,
+#     docs/reference/reason-codes.md:32; the mail upstream is put in the principal's tenant, since a
+#     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
+#   A retry that finds the approver said no closes the held trail with APPROVAL_DECIDED, then
+#     ACTION_BLOCKED with DENY and APPROVAL_REJECTED, and nothing runs:
+#     docs/concepts/approvals-and-the-held-call.md:178,184,198; docs/reference/reason-codes.md:58;
+#     docs/concepts/evidence-and-the-spool.md:31,34.
+#   The approver answers each hold it lists once, as its script says, and journals the answer
+#     (services/approver/README.md); a retry before an answer is told the same approval_id and
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+schema_version: 1
+id: approval-04-rejected-send-never-runs
+title: A mail the approver rejects is closed on its held trail and never sent
+profile: [core, enforcer, approvals]
+enforcement_mode: enforce
+trajectory: trajectories/approval-04-rejected-send-never-runs.yaml
+gateway:
+  config: config/gateway/scenarios/approval-04-rejected-send-never-runs.yaml
+  policy: config/policies/approval-04-rejected-send-never-runs.json
+  approver_script: approval-04-rejected-send-never-runs.yaml
+  upstream_tenants: { victim-mail: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+    2:
+      resumes: 1
+      blocked: { verdict: DENY, reason_codes_include: [APPROVAL_REJECTED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-mail: { calls_served: {} }
+    approver: { calls_served: { reject: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

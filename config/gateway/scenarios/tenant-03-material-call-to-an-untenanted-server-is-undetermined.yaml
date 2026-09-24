@@ -1,0 +1,13 @@
+# The listener's principal belongs to tenant_a and no server is given a tenant,
+# so every call names a tenant on the principal's side only.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent

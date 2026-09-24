@@ -1,0 +1,17 @@
+# The send is material, the read is not; neither server says which tenant it
+# belongs to.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: material_send
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@northwind.example", subject: "Renewal call", body: "Confirming the call on the 14th." }
+  - label: untenanted_read
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }

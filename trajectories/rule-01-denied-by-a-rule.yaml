@@ -1,0 +1,17 @@
+# Both calls send mail, which the policy allows in general. The bulk send is
+# denied by a rule that names it, so its denial can come from nothing else.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: bulk_send
+    call:
+      server: victim-mail
+      tool: mail.send_bulk
+      args: { to: ["customers@northwind.example", "billing@northwind.example"], subject: "Plan changes", body: "Your plan changes next month." }
+  - label: single_send
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@northwind.example", subject: "Renewal call", body: "Confirming the call on the 14th." }

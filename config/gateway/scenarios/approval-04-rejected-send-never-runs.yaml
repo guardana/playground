@@ -1,0 +1,17 @@
+# The scenario's part of the enforcer's configuration; the runner adds the
+# listener address, the signed bundle and its key, the spool, the collector,
+# the upstreams, the classification and the approvals directories.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+approvals:
+  provider: file
+  retry_after: 1s

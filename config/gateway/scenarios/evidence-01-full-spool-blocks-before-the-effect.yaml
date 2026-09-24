@@ -1,0 +1,19 @@
+# Every trail's ACTION_STARTED reserves closing_reserve bytes, here the whole
+# budget, so the spool takes a proposal and a decision and refuses every start:
+# full before any effect, whatever the exporter has drained.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+evidence:
+  max_bytes: 64KiB
+  segment_bytes: 64KiB
+  closing_reserve: 64KiB
+  on_unwritable: block

@@ -1,0 +1,13 @@
+# The listener's principal belongs to tenant_a; the scenario puts victim-crm
+# in tenant_b, so every call to it names two different tenants.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent

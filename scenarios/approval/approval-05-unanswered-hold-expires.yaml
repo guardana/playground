@@ -1,0 +1,48 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   A REQUIRE_APPROVAL rule decides with APPROVAL_REQUIRED: docs/reference/policy-format.md:55,
+#     docs/reference/reason-codes.md:32; the mail upstream is put in the principal's tenant, since a
+#     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
+#   A hold nobody answered before expires_at (approvals.ttl) is closed with APPROVAL_EXPIRED, then
+#     ACTION_BLOCKED with DENY and APPROVAL_EXPIRED, written by the next call that opens a trail;
+#     that call, a retry after the expiry, is a new request with a new hold:
+#     docs/concepts/approvals-and-the-held-call.md:177,183,197,231;
+#     docs/reference/reason-codes.md:41; docs/concepts/evidence-and-the-spool.md:32,36.
+#   The identical call a second after the first, before expires_at, is told the same approval
+#     again and writes no trail of its own, and nothing is sent:
+#     docs/concepts/approvals-and-the-held-call.md:175,232; docs/concepts/mcp-gateway.md:189-190.
+#     Graded: no trail of its own, no new hold for the approver and nothing sent; which answer
+#     the agent got is not.
+#   The approver answers each hold it lists once, as its script says, and journals the answer
+#     (services/approver/README.md); a retry before an answer is told the same approval_id and
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+schema_version: 1
+id: approval-05-unanswered-hold-expires
+title: A held mail nobody answers expires, is closed when the next call arrives, and that call is held anew
+profile: [core, enforcer, approvals]
+enforcement_mode: enforce
+trajectory: trajectories/approval-05-unanswered-hold-expires.yaml
+gateway:
+  config: config/gateway/scenarios/approval-05-unanswered-hold-expires.yaml
+  policy: config/policies/approval-05-unanswered-hold-expires.json
+  approver_script: approval-05-unanswered-hold-expires.yaml
+  upstream_tenants: { victim-mail: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+      blocked: { verdict: DENY, reason_codes_include: [APPROVAL_EXPIRED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_EXPIRED, ACTION_BLOCKED]
+    2:
+      opens: none
+    3:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED]
+  effects:
+    victim-mail: { calls_served: {} }
+    approver: { calls_served: { leave: 2 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

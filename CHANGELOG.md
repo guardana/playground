@@ -15,6 +15,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A catalogue against the enforcer at its pinned commit: rules and a stale
+  policy, an unclassified tool, tenancy, approvals held, resumed, reused,
+  mutated, rejected and expired, the external decision point and its failures,
+  obligations, `OBSERVE` and `LOCKDOWN`, a full spool, and the toxic-flow gap.
+  `mode-01` is red by design, on a contradiction in the enforcer recorded as a
+  finding.
+- Scenarios can grade the decision point double's and the approver's journals
+  in `expect.effects`, and the decision point a decision names
+  (`pdp_instance`, `none` or an identifier). A run the enforcer decides is
+  graded on the enforcement mode every event records and on the executed digest
+  of every completion. A catalogue check refuses a scenario naming a double's
+  script that does not exist.
+- The trail order follows the enforcer's state diagram: an approval that
+  expired is followed by a new request or a block, never by a run.
 - Trace scenarios: a trajectory scenario can name `trace: {contract, ai_system}`
   and `expect.trace`, graded like one verifier step that names at least one
   `contract.` rule. The scripted agent writes its own record of the run

@@ -1,0 +1,10 @@
+schema_version: 1
+rules:
+  - match: { action: crm.read_customer, resource_id: cus_4417 }
+    answer: allow
+  - match: { action: mail.send, resource_id: billing@partner-ledger.example }
+    answer: deny
+  - match: { action: mail.send, resource_id: audit@partner-ledger.example }
+    answer: allow_obligation
+  - match: { action: mail.send, resource_id: support@partner-ledger.example }
+    answer: allow

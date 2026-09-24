@@ -1,0 +1,34 @@
+# Five covered calls, reads and sends, each meeting a different kind of
+# silence from the decision point double. The bundle allows all of them, and
+# the scenario turns fail_open_read on, so nothing but the missing answer can
+# explain a block.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_412, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: read_met_by_a_timeout
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: send_met_by_a_500
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "billing@partner-ledger.example", subject: "Ticket 4418", body: "Escalated to billing." }
+  - label: read_met_by_an_allow_without_the_request_id
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4419" }
+  - label: send_met_by_truncated_json
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "audit@partner-ledger.example", subject: "Ticket 4420", body: "Escalated to billing." }
+  - label: read_met_by_an_allow_with_an_unknown_member
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4418" }

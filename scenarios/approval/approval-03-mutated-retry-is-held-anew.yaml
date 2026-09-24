@@ -1,0 +1,42 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   A REQUIRE_APPROVAL rule decides with APPROVAL_REQUIRED: docs/reference/policy-format.md:55,
+#     docs/reference/reason-codes.md:32; the mail upstream is put in the principal's tenant, since a
+#     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
+#   A retry whose binding differs (another action digest: other arguments) is a new request,
+#     held anew with a new approval: docs/concepts/approvals-and-the-held-call.md:144,161,244-246;
+#     docs/concepts/mcp-gateway.md:191-192. It opens a trail and stands at its request.
+#   The identical retry still resumes the first hold and runs once:
+#     docs/concepts/approvals-and-the-held-call.md:176,195.
+#   The approver answers each hold it lists once, as its script says, and journals the answer
+#     (services/approver/README.md); a retry before an answer is told the same approval_id and
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+schema_version: 1
+id: approval-03-mutated-retry-is-held-anew
+title: A mail altered after its approval is held anew and is not sent on that approval
+profile: [core, enforcer, approvals]
+enforcement_mode: enforce
+trajectory: trajectories/approval-03-mutated-retry-is-held-anew.yaml
+gateway:
+  config: config/gateway/scenarios/approval-03-mutated-retry-is-held-anew.yaml
+  policy: config/policies/approval-03-mutated-retry-is-held-anew.json
+  approver_script: approval-03-mutated-retry-is-held-anew.yaml
+  upstream_tenants: { victim-mail: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+    2:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED]
+    3:
+      resumes: 1
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-mail: { calls_served: { mail.send: 1 } }
+    approver: { calls_served: { approve: 2 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

@@ -59,7 +59,7 @@ func enforcerLab(t *testing.T) (lab, *fakeCompose, string) {
 	compose := workingCompose("")
 	compose.trail = ""
 	unstamped := strings.NewReplacer(`"runId":"${RUN_ID}",`, "", `"runId":"${RUN_ID}"`, "").Replace(evidenceFile)
-	compose.collector = otlpOf(t, unstamped)
+	compose.collector = otlpOf(t, asEnforced(unstamped))
 	compose.exec = func(_ string, args []string) Split {
 		switch {
 		case strings.HasSuffix(args[len(args)-1], "/brand"):
@@ -98,6 +98,18 @@ func enforcerLab(t *testing.T) (lab, *fakeCompose, string) {
 	return subject, compose, scenario
 }
 
+// asEnforced adds what the enforcer writes and the stub does not: the mode on
+// every event, the decision's action digest, and the executed digest on the
+// completion.
+func asEnforced(trail string) string {
+	const digest = `"sha256:1111111111111111111111111111111111111111111111111111111111111111"`
+	return strings.NewReplacer(
+		`"tenantId":"tenant-1",`, `"tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE",`,
+		`"decision":{"requestId":"r1",`, `"decision":{"requestId":"r1","actionDigest":`+digest+`,`,
+		`"prevEventId":"e3"}`, `"prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":`+digest+`}}`,
+	).Replace(trail)
+}
+
 func results(graded assertion.Report) map[string]assertion.Result {
 	found := map[string]assertion.Result{}
 	for _, result := range graded.Results {
@@ -119,7 +131,10 @@ func TestARunTheEnforcerDecidesIsGradedFromTheCollectorsTrail(t *testing.T) {
 		t.Fatalf("the run is %s", graded.Outcome())
 	}
 	found := results(graded)
-	for _, name := range []string{"plane/version", "plane/drained", "evidence/run-id", "decisions/step-1"} {
+	for _, name := range []string{
+		"plane/version", "plane/drained", "evidence/run-id", "decisions/step-1",
+		"evidence/enforcement-mode", "evidence/executed-digest",
+	} {
 		if found[name].Outcome != assertion.Pass {
 			t.Errorf("%s is %s", name, found[name].Outcome)
 		}

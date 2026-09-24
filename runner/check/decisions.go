@@ -95,7 +95,8 @@ func gradeStep(spec labspec.Scenario, records assertion.Records, file string, pa
 		}
 		return row
 	}
-	if want.Resumes != 0 && (want.Verdict != "" || len(want.ReasonCodesInclude) > 0 || len(want.ObligationsInclude) > 0) {
+	if want.Resumes != 0 && (want.Verdict != "" || len(want.ReasonCodesInclude) > 0 || len(want.ObligationsInclude) > 0 ||
+		want.PDPInstance != "") {
 		row.Outcome = assertion.Fail
 		row.Detail = fmt.Sprintf("step %d resumes step %d and states a verdict, which only re-reads step %d's %s",
 			step, want.Resumes, want.Resumes, evidence.KindPolicyDecided)

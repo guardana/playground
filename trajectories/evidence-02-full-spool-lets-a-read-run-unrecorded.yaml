@@ -1,0 +1,18 @@
+# A command and a read, both allowed, against a spool that has no room for the
+# record that would say either of them started.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: allowed_command
+    call:
+      server: victim-shell
+      tool: shell.exec
+      args: { command: "echo unrecorded" }
+  - label: allowed_read
+    wait_before: 2s
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

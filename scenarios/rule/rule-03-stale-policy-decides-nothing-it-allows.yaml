@@ -1,0 +1,37 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   POLICY_STALE, INDETERMINATE, past the staleness budget:
+#     docs/reference/reason-codes.md:43; the budget is the smaller of the
+#     bundle's and the operator's, and evaluation goes on, so a stale DENY is
+#     still a DENY: docs/concepts/how-a-call-is-decided.md:30,54,144.
+#   policy.max_stale is the operator's budget: docs/reference/configuration.md:54.
+#   A stale snapshot is a cause in the policy's availability, and a read under
+#     it blocks with fail-open reads off, the default:
+#     docs/concepts/how-a-call-is-decided.md:88,100, docs/reference/configuration.md:55.
+#   The kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:67.
+schema_version: 1
+id: rule-03-stale-policy-decides-nothing-it-allows
+title: A bundle past its staleness budget allows nothing, and what it denies stays denied
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/rule-03-stale-policy-decides-nothing-it-allows.yaml
+gateway:
+  config: config/gateway/scenarios/rule-03-stale-policy-decides-nothing-it-allows.yaml
+  policy: config/policies/rule-03-stale-policy-decides-nothing-it-allows.json
+expect:
+  decisions:
+    1:
+      verdict: INDETERMINATE
+      reason_codes_include: [POLICY_STALE]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [POLICY_STALE] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    2:
+      verdict: DENY
+      reason_codes_include: [RULE_DENY, POLICY_STALE]
+      blocked: { verdict: DENY, reason_codes_include: [RULE_DENY, POLICY_STALE] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-fs: { calls_served: {} }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

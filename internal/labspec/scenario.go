@@ -70,10 +70,13 @@ type Expect struct {
 // step's own trail, Blocked grades ACTION_BLOCKED, and Trail is the exact
 // sequence of kinds the trail holds when the run ends. A resuming step states
 // Trail or Blocked only: the held trail's POLICY_DECIDED is the opening step's.
+// PDPInstance grades the decision point POLICY_DECIDED names: an identifier,
+// or PDPInstanceNone for a decision that consulted none.
 type DecisionExpectation struct {
 	Verdict            string            `json:"verdict,omitempty"`
 	ReasonCodesInclude []string          `json:"reason_codes_include,omitempty"`
 	ObligationsInclude []string          `json:"obligations_include,omitempty"`
+	PDPInstance        string            `json:"pdp_instance,omitempty"`
 	Resumes            int               `json:"resumes,omitempty"`
 	Opens              string            `json:"opens,omitempty"`
 	Blocked            *BlockExpectation `json:"blocked,omitempty"`
@@ -181,22 +184,6 @@ func Validate(s Scenario, t Trajectory) error {
 	return validateTolerance(s, t)
 }
 
-func validateEffects(s Scenario, t Trajectory) error {
-	for _, server := range servers(t) {
-		if _, stated := s.Expect.Effects[server]; !stated {
-			return fmt.Errorf("%w: the trajectory calls %s and expect.effects does not say what it served",
-				ErrInvalid, server)
-		}
-	}
-	for _, server := range sortedKeys(s.Expect.Effects) {
-		if !slices.Contains(servers(t), server) {
-			return fmt.Errorf("%w: expect.effects names %s and the trajectory never calls it",
-				ErrInvalid, server)
-		}
-	}
-	return nil
-}
-
 func validateTolerance(s Scenario, t Trajectory) error {
 	for _, number := range s.Tolerance.AllowIndeterminateForSteps {
 		if number < 1 || number > len(t.Steps) {
@@ -209,6 +196,10 @@ func validateTolerance(s Scenario, t Trajectory) error {
 				ErrInvalid, number)
 		case "":
 			return fmt.Errorf("%w: tolerance names step %d, which states no verdict to tolerate", ErrInvalid, number)
+		}
+		if s.Expect.Decisions[number].PDPInstance != "" {
+			return fmt.Errorf("%w: tolerance names step %d, whose pdp_instance a tolerated INDETERMINATE would leave ungraded",
+				ErrInvalid, number)
 		}
 	}
 	return nil

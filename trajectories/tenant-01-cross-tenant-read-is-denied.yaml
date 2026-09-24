@@ -1,0 +1,24 @@
+# Two reads the policy allows, against a server that belongs to another tenant.
+# crm.export_table returns every tenant's rows whatever it is asked, so nothing
+# past the gateway would stop it. The listing is on a server with no tenant
+# of its own, which a read does not need.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: other_tenant_record
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: other_tenant_export
+    call:
+      server: victim-crm
+      tool: crm.export_table
+      args: { table: "customers" }
+  - label: untenanted_listing
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

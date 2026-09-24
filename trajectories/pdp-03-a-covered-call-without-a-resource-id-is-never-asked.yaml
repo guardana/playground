@@ -1,0 +1,19 @@
+# Two covered calls. The first names a customer, so the decision point double
+# is asked and allows it, which shows the double answers in this run. The
+# second, db.query, is classified with no resource id. The double is scripted
+# to allow it too, so an ask that was answered would decide it ALLOW.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_412, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: covered_read_with_a_resource_id
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: covered_read_without_a_resource_id
+    call:
+      server: victim-db
+      tool: db.query
+      args: { statement: "SELECT id FROM crm_prod" }

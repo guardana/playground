@@ -1,0 +1,48 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   A call with no resource id is never sent to the decision point, and one a veto rule covers is
+#     blocked: docs/guides/let-a-decision-point-veto.md:34-35,
+#     docs/adr/0017-an-external-decision-point-can-veto.md:70-72,103-105.
+#   Nothing is sent and the decision carries PDP_UNAVAILABLE: docs/concepts/mcp-gateway.md:168,
+#     docs/adr/0017-an-external-decision-point-can-veto.md:150.
+#   The unanswered veto rule is undetermined, INDETERMINATE: docs/adr/0017-an-external-decision-point-can-veto.md:57-62,
+#     docs/reference/reason-codes.md:61,67.
+#   An allowing answer is ALLOW with RULE_ALLOW and PDP_ALLOW: docs/guides/let-a-decision-point-veto.md:67-68.
+#   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
+#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:67.
+#   The PDP code and the decision point's identifier in pdp_instance come together, whenever a
+#     rule's value turned on the answer, a question that could not be asked included:
+#     docs/concepts/how-a-call-is-decided.md:133-135,
+#     docs/adr/0017-an-external-decision-point-can-veto.md:138-150. So pdp_instance does not say
+#     whether a question was sent; the double's journal does.
+#   The double journals every question it is asked, by action (services/pdp-double/README.md).
+schema_version: 1
+id: pdp-03-a-covered-call-without-a-resource-id-is-never-asked
+title: A call a veto covers that names no resource is never sent to the decision point and is blocked
+profile: [core, enforcer, pdp]
+enforcement_mode: enforce
+trajectory: trajectories/pdp-03-a-covered-call-without-a-resource-id-is-never-asked.yaml
+gateway:
+  config: config/gateway/scenarios/pdp-03-a-covered-call-without-a-resource-id-is-never-asked.yaml
+  policy: config/policies/pdp-03-a-covered-call-without-a-resource-id-is-never-asked.json
+  pdp_script: pdp-03-a-covered-call-without-a-resource-id-is-never-asked.yaml
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW, PDP_ALLOW]
+      pdp_instance: 'https://pdp-double:8443'
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED, PDP_UNAVAILABLE]
+      pdp_instance: 'https://pdp-double:8443'
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [PDP_UNAVAILABLE] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+    victim-db: { calls_served: {} }
+    pdp-double: { calls_served: { crm.read_customer: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

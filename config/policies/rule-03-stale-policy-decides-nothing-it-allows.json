@@ -1,0 +1,8 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-rule-03", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "listing-allowed", "effect": "ALLOW", "when": {"action": {"name": ["fs.list"]}}},
+    {"id": "file-reads-denied", "effect": "DENY", "when": {"action": {"name": ["fs.read"]}}}
+  ]
+}

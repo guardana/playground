@@ -1,0 +1,11 @@
+# Approves every held mail to accounts@partner.example, the altered one included:
+# the scenario shows the altered mail needed an approval of its own, not that it
+# was refused one.
+schema_version: 1
+rules:
+  - match: {action: mail.send, resource: recipient accounts@partner.example}
+    answer: approve
+    approver_id: lab-approver
+    reason: scripted
+  - match: {}
+    answer: leave

@@ -103,7 +103,11 @@ three are checked when the files load:
   the agent reported. A tool the map does not name is a call the scenario did
   not expect, and it fails the run. `calls_served: {}` is the assertion that the
   victim served nothing, which is what a working denial looks like from the far
-  side of the gateway.
+  side of the gateway. `effects` may also name `pdp-double` (with profile
+  `pdp`) or `approver` (with profile `approvals`), graded from that double's
+  journal the same way: the questions the decision point double was asked, by
+  action; the approver's answers (`approve`, `reject`, `leave`, `wait`,
+  `unknown`, `no-plane`). Either is optional.
 - **`evidence` is stated.** All three keys are read, and `false` is an
   assertion, so a scenario without the block would assert without saying so.
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
@@ -204,6 +208,13 @@ A step opens a trail unless it says otherwise:
   opens a trail has to state a verdict.
 - `blocked` grades the trail's `ACTION_BLOCKED`: the block a mode or the
   gateway made, which `POLICY_DECIDED` does not show.
+- `pdp_instance` grades the decision point the trail's `POLICY_DECIDED` names:
+  `none` for a decision that consulted none (an empty field on the wire), or
+  the identifier, such as `https://pdp-double:8443`. It is stated only beside a
+  verdict, never on a step whose `INDETERMINATE` is tolerated. The enforcer
+  names the decision point whenever a rule turned on its answer, a question it
+  could not send included, so whether a question was sent is graded from the
+  double's journal in `effects`.
 - `trail` is the exact sequence of event kinds the trail holds when the run
   ends, in the order its links give.
 - `resumes: n` grades step n's held trail instead of a trail of its own. It
@@ -363,6 +374,13 @@ expect:
 - `trace` and `expect.trace` come together, and so do `trace` and the
   profile `trace`. The contract is a `.yaml` file directly in
   `config/contracts/`, because the verifier is handed it by its base name.
+
+A run the enforcer decides is also graded on `evidence/enforcement-mode`
+(every event's own `enforcementMode` is the scenario's `enforcement_mode`) and
+`evidence/executed-digest`, when the run has a completion (every
+`ACTION_COMPLETED` carries an `executedActionDigest` equal to its request's
+`POLICY_DECIDED` `actionDigest`; an absent one fails, because the enforcer's
+contract says the comparison then did not run).
 
 ## What a runner reads
 

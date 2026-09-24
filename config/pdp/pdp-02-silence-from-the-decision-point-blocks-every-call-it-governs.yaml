@@ -1,0 +1,12 @@
+schema_version: 1
+rules:
+  - match: { action: crm.read_customer, resource_id: cus_4417 }
+    answer: timeout
+  - match: { action: mail.send, resource_id: billing@partner-ledger.example }
+    answer: status_500
+  - match: { action: crm.read_customer, resource_id: cus_4419 }
+    answer: no_echo
+  - match: { action: mail.send, resource_id: audit@partner-ledger.example }
+    answer: malformed
+  - match: { action: crm.read_customer, resource_id: cus_4418 }
+    answer: extra_member

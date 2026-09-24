@@ -41,8 +41,27 @@ func grade(row DecisionRow, want labspec.DecisionExpectation, decision *evidence
 		row.Detail = "the decision does not carry obligation " + strings.Join(missing, ", ")
 		return row
 	}
+	if want.PDPInstance != "" {
+		instance := pdpInstanceName(decision.PdpInstance)
+		row.Got += ", pdp_instance " + instance
+		if instance != want.PDPInstance {
+			row.Outcome = assertion.Fail
+			row.Detail = fmt.Sprintf("the decision names decision point %s and the scenario expects %s",
+				instance, want.PDPInstance)
+			return row
+		}
+	}
 	row.Outcome = assertion.Pass
 	return row
+}
+
+// pdpInstanceName spells the empty field the way a scenario does: a decision
+// that consulted no decision point.
+func pdpInstanceName(recorded string) string {
+	if recorded == "" {
+		return labspec.PDPInstanceNone
+	}
+	return recorded
 }
 
 // gradeBlock reads the one ACTION_BLOCKED on the request: the block a mode or
@@ -118,6 +137,9 @@ func describeExpectation(want labspec.DecisionExpectation) string {
 	}
 	if want.Verdict != "" {
 		parts = append(parts, describeDecision(want.Verdict, want.ReasonCodesInclude, want.ObligationsInclude))
+	}
+	if want.PDPInstance != "" {
+		parts = append(parts, "pdp_instance "+want.PDPInstance)
 	}
 	if want.Blocked != nil {
 		parts = append(parts, "blocked "+describeDecision(want.Blocked.Verdict, want.Blocked.ReasonCodesInclude, nil))

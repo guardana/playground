@@ -1,0 +1,48 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   OBSERVE runs every verdict with the proposed bytes and records the kernel's
+#     decision untouched: docs/concepts/enforcement-modes.md:12-17,55-60;
+#     it takes a call nothing classifies: docs/concepts/enforcement-modes.md:62-65,76.
+#   RULE_DENY and RULE_ALLOW: docs/reference/reason-codes.md:30-31.
+#   The unclassified call's decision is INDETERMINATE, a refused request
+#     (docs/concepts/mcp-gateway.md:128,132, docs/contracts.md:340-343,
+#     docs/concepts/how-a-call-is-decided.md:22-23,48); no refusal code is asserted.
+#   A call the adapter does not send is started and then closed ACTION_FAILED:
+#     docs/concepts/evidence-and-the-spool.md:37-38,66.
+# A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
+# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# the principal's own tenant.
+schema_version: 1
+id: mode-01-observe-runs-what-it-records
+title: Under OBSERVE a denied send and an unclassified command run and are recorded
+profile: [core, enforcer]
+enforcement_mode: observe
+trajectory: trajectories/mode-01-observe-runs-what-it-records.yaml
+gateway:
+  config: config/gateway/scenarios/mode-01-observe-runs-what-it-records.yaml
+  policy: config/policies/mode-01-observe-runs-what-it-records.json
+  upstream_tenants: { victim-shell: tenant_a, victim-mail: tenant_a }
+  unclassified: [victim-shell/shell.exec]
+expect:
+  decisions:
+    1:
+      verdict: INDETERMINATE
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: DENY
+      reason_codes_include: [RULE_DENY]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    3:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    4:
+      verdict: INDETERMINATE
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+  effects:
+    victim-shell: { calls_served: { shell.exec: 1 } }
+    victim-mail: { calls_served: { mail.send_bulk: 1 } }
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

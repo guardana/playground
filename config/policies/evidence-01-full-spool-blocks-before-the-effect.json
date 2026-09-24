@@ -1,0 +1,8 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-evidence-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "diagnostics-allowed", "effect": "ALLOW", "when": {"action": {"name": ["shell.exec"]}}},
+    {"id": "listing-allowed", "effect": "ALLOW", "when": {"action": {"name": ["fs.list"]}}}
+  ]
+}

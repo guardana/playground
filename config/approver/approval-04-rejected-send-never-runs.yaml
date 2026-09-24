@@ -1,0 +1,9 @@
+# Rejects every held mail to accounts@partner.example as soon as it is listed.
+schema_version: 1
+rules:
+  - match: {action: mail.send, resource: recipient accounts@partner.example}
+    answer: reject
+    approver_id: lab-approver
+    reason: scripted
+  - match: {}
+    answer: leave

@@ -1,0 +1,7 @@
+# Allowing db.query makes an answered ask visible as an ALLOW on step 2.
+schema_version: 1
+rules:
+  - match: { action: crm.read_customer, resource_id: cus_4417 }
+    answer: allow
+  - match: { action: db.query }
+    answer: allow

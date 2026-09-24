@@ -1,0 +1,43 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   An ACTION_STARTED reserves closing_reserve, and an append past max_bytes,
+#     reservations included, is refused: docs/concepts/evidence-and-the-spool.md:96-99,115-116,
+#     docs/reference/configuration.md:73-75.
+#   A refused ACTION_STARTED blocks the call before anything runs, with
+#     EVIDENCE_UNAVAILABLE, and the block itself is not recorded:
+#     docs/concepts/evidence-and-the-spool.md:79, docs/concepts/enforcement-modes.md:80,
+#     docs/reference/reason-codes.md:64, docs/reference/mcp-coverage.md:105.
+#   Under on_unwritable: block a read is blocked like a material call:
+#     docs/concepts/enforcement-modes.md:80, docs/reference/configuration.md:78.
+# EVIDENCE_UNAVAILABLE itself is in no record this scenario reads: the block is
+# unrecorded by design and counted only in /healthz. What is graded is the trail
+# stopping at the decision and the servers serving nothing.
+# A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
+# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# the principal's own tenant.
+schema_version: 1
+id: evidence-01-full-spool-blocks-before-the-effect
+title: With no room to record a start, neither a command nor a read runs
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/evidence-01-full-spool-blocks-before-the-effect.yaml
+gateway:
+  config: config/gateway/scenarios/evidence-01-full-spool-blocks-before-the-effect.yaml
+  policy: config/policies/evidence-01-full-spool-blocks-before-the-effect.json
+  upstream_tenants: { victim-shell: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED]
+  effects:
+    victim-shell: { calls_served: {} }
+    victim-fs: { calls_served: {} }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

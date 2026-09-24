@@ -1,0 +1,27 @@
+# One call per row of the LOCKDOWN column: a material call the policy allows,
+# a read it allows, a read it denies, and a read it holds for an approval.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: allowed_command
+    call:
+      server: victim-shell
+      tool: shell.exec
+      args: { command: "echo lockdown" }
+  - label: allowed_read
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }
+  - label: denied_read
+    call:
+      server: victim-fs
+      tool: fs.read
+      args: { path: "/data/public/handbook.md" }
+  - label: held_read
+    call:
+      server: victim-crm
+      tool: crm.export_table
+      args: { table: "customers" }

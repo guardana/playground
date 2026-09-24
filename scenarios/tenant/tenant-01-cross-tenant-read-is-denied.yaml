@@ -1,0 +1,43 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   TENANT_MISMATCH, DENY, when the principal's tenant is not the resource's:
+#     docs/reference/reason-codes.md:34; the kernel checks tenants before the
+#     bundle, whatever the effect class: docs/concepts/how-a-call-is-decided.md:27,52.
+#   One side naming a tenant is a cause only on a material class, so the read on
+#     the server with no tenant is decided by the bundle:
+#     docs/concepts/how-a-call-is-decided.md:52, docs/reference/reason-codes.md:30.
+#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:59.
+# The upstream's tenant is upstreams.N.tenant_id (docs/reference/configuration.md:94),
+# set here through gateway.upstream_tenants.
+schema_version: 1
+id: tenant-01-cross-tenant-read-is-denied
+title: A read of a server in another tenant is denied, even where the policy allows the read
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/tenant-01-cross-tenant-read-is-denied.yaml
+gateway:
+  config: config/gateway/scenarios/tenant-01-cross-tenant-read-is-denied.yaml
+  policy: config/policies/tenant-01-cross-tenant-read-is-denied.json
+  upstream_tenants: { victim-crm: tenant_b }
+expect:
+  decisions:
+    1:
+      verdict: DENY
+      reason_codes_include: [TENANT_MISMATCH]
+      blocked: { verdict: DENY, reason_codes_include: [TENANT_MISMATCH] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    2:
+      verdict: DENY
+      reason_codes_include: [TENANT_MISMATCH]
+      blocked: { verdict: DENY, reason_codes_include: [TENANT_MISMATCH] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    3:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-crm: { calls_served: {} }
+    victim-fs: { calls_served: { fs.list: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

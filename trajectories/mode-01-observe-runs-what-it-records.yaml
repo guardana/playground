@@ -1,0 +1,28 @@
+# Under OBSERVE the enforcer records and enforces nothing: an unclassified
+# command and a send the policy denies both reach their servers. The last call
+# names a tool no server lists, which nothing can run in any mode.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: unclassified_command
+    call:
+      server: victim-shell
+      tool: shell.exec
+      args: { command: "echo observed" }
+  - label: denied_bulk_send
+    call:
+      server: victim-mail
+      tool: mail.send_bulk
+      args: { to: ["customers@northwind.example", "billing@northwind.example"], subject: "Plan changes", body: "Your plan changes next month." }
+  - label: allowed_read
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: unlisted_tool
+    call:
+      server: victim-crm
+      tool: crm.purge_customers
+      args: { tenant_id: "tenant_a" }

@@ -1,0 +1,50 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   The gateway builds no run flow, so a flow constraint is unknown on every
+#     call it decides: docs/reference/mcp-coverage.md:56, docs/concepts/mcp-gateway.md:131.
+#   A DENY rule whose constraint is unknown, with no other constraint false,
+#     leaves the verdict INDETERMINATE with RULE_UNDETERMINED:
+#     docs/reference/reason-codes.md:61, docs/concepts/how-a-call-is-decided.md:55;
+#     a cause in the request blocks every class: docs/concepts/how-a-call-is-decided.md:86,99.
+#   The reads are decided by the bundle, the flow rule being false on their
+#     effect class: docs/reference/reason-codes.md:30.
+# Wanted: TOXIC_FLOW_SENSITIVE_TO_EXTERNAL, DENY: docs/reference/reason-codes.md:49.
+# A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
+# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# the principal's own tenant.
+schema_version: 1
+id: gaps-01-toxic-flow-to-external-mail-is-undetermined
+title: "Gap: a private read mailed out is undetermined, not denied as a toxic flow"
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/gaps-01-toxic-flow-to-external-mail-is-undetermined.yaml
+gateway:
+  config: config/gateway/scenarios/gaps-01-toxic-flow-to-external-mail-is-undetermined.yaml
+  policy: config/policies/gaps-01-toxic-flow-to-external-mail-is-undetermined.json
+  upstream_tenants: { victim-mail: tenant_a }
+gap:
+  wanted:
+    3: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] }
+  why: the gateway builds no run flow at its pin, so a flow constraint is unknown on every call
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    3:
+      verdict: INDETERMINATE
+      reason_codes_include: [RULE_UNDETERMINED]
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [RULE_UNDETERMINED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-web: { calls_served: { web.fetch: 1 } }
+    victim-fs: { calls_served: { fs.read: 1 } }
+    victim-mail: { calls_served: {} }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

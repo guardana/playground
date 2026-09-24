@@ -1,0 +1,18 @@
+# shell.exec is listed by its upstream and kept out of the classification, so
+# the enforcer meets a tool it has no effect class for. The policy allows it by
+# name: whatever stops it is the enforcement point, not the bundle.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: unclassified_command
+    call:
+      server: victim-shell
+      tool: shell.exec
+      args: { command: "echo diagnostics" }
+  - label: classified_read
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

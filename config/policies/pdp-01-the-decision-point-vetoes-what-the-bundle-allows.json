@@ -1,0 +1,9 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-pdp-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "covered-allowed", "effect": "ALLOW", "when": {"action": {"name": ["crm.read_customer", "mail.send"]}}},
+    {"id": "covered-vetoed", "effect": "DENY", "when": {"action": {"name": ["crm.read_customer", "mail.send"]}, "external": {"denies": true}}},
+    {"id": "listing-allowed", "effect": "ALLOW", "when": {"action": {"name": ["fs.list"]}}}
+  ]
+}

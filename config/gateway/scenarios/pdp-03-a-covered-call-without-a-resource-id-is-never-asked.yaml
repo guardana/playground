@@ -1,0 +1,14 @@
+# The timeout leaves room for the first ask's TLS handshake.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+pdp:
+  timeout: 2s

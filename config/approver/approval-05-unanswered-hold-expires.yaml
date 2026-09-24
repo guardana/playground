@@ -1,0 +1,5 @@
+# Answers nothing, so every hold runs out its time.
+schema_version: 1
+rules:
+  - match: {}
+    answer: leave

@@ -1,0 +1,7 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-approval-03", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "external-mail-needs-approval", "effect": "REQUIRE_APPROVAL", "when": {"action": {"name": ["mail.send"]}}}
+  ]
+}

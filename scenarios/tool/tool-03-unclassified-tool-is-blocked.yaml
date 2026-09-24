@@ -1,0 +1,43 @@
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   A call nothing classifies is blocked outside OBSERVE, INDETERMINATE with
+#     ACTION_UNCLASSIFIED on the block: docs/concepts/enforcement-modes.md:76,
+#     docs/reference/mcp-coverage.md:103, docs/reference/reason-codes.md:65.
+#   The block is the enforcement point's own decision on ACTION_BLOCKED, and
+#     POLICY_DECIDED keeps the kernel's: docs/concepts/enforcement-modes.md:40-43.
+#   The kernel's decision on POLICY_DECIDED is INDETERMINATE: the translation
+#     gives an unclassified tool no effect class (docs/concepts/mcp-gateway.md:128,132),
+#     an envelope that declares none is refused (docs/contracts.md:340-343), and a
+#     refused request is INDETERMINATE (docs/concepts/how-a-call-is-decided.md:22-23,48).
+#     Which refusal code it carries the docs leave to the refusal's sentinel, so
+#     none is asserted there.
+# A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
+# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# the principal's own tenant.
+schema_version: 1
+id: tool-03-unclassified-tool-is-blocked
+title: A listed tool nobody classified is blocked, whatever the policy says about it
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/tool-03-unclassified-tool-is-blocked.yaml
+gateway:
+  config: config/gateway/scenarios/tool-03-unclassified-tool-is-blocked.yaml
+  policy: config/policies/tool-03-unclassified-tool-is-blocked.json
+  upstream_tenants: { victim-shell: tenant_a }
+  unclassified: [victim-shell/shell.exec]
+expect:
+  decisions:
+    1:
+      verdict: INDETERMINATE
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [ACTION_UNCLASSIFIED] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-shell: { calls_served: {} }
+    victim-fs: { calls_served: { fs.list: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

@@ -28,7 +28,8 @@ func (l lab) gradeTrajectory(
 		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
 	}
 	if spec.UsesEnforcer() {
-		checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir))
+		checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
+			check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl")})
 	}
 	records, unreadable := l.collect(spec, boot, runID, runDir)
 

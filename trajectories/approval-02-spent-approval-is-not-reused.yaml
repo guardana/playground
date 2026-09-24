@@ -1,0 +1,23 @@
+# The held mail is sent once on its approval; the identical call made
+# again afterwards tries to ride on the spent one.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: mail_to_partner
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }
+  - label: mail_to_partner_retried
+    retry_while_pending: { every: 500ms, at_most: 20 }
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }
+  - label: mail_to_partner_replayed
+    call:
+      server: victim-mail
+      tool: mail.send
+      args: { to: "accounts@partner.example", subject: "Credit note 8812", body: "Invoice 8812 is credited in full." }
