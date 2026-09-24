@@ -104,7 +104,11 @@ decides.
   wire contract carries it over JSON, and checks the documented event order. The
   lab never imports the enforcement plane's Go module: it tests a pinned image,
   and calling the producer's own validator would ask the system under test
-  whether it agrees with itself.
+  whether it agrees with itself. The plane exports its trail as OTLP/HTTP JSON
+  logs; the reader takes one event from each log record's body, refuses a record
+  whose attributes disagree with it, collapses a redelivered event and refuses
+  two different events under one id, and orders each trail by its links. A trail
+  whose events leave its request, project or tenant is refused as broken.
 - `internal/journal` reads what each victim recorded about the calls it served.
 - `internal/assertion` is the check interface. The zero value of an outcome is
   `indeterminate`, so a check that returned nothing, a report with no results

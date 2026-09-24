@@ -20,6 +20,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   refuses when the archive does not hash to that commit's tree or the clone
   carries replacement refs. `make verifier-image` installs the verifier from a
   hash-locked requirement file, then removes pip and every setuid or setgid bit.
+- `internal/evidence` reads the enforcer's trail from its OTLP/HTTP JSON log
+  export: the body of each record is the event, its attributes must agree, a
+  redelivered event collapses, and each trail is ordered by its links within one
+  request, project and tenant. The mirror carries the three fields the contract
+  gained (`prevEventDigest`, `decidedAt`, `redactionProfile`).
 - Every run report opens with its provenance: the lab commit (untracked files
   count as uncommitted changes), each pin, each image on this machine with its
   ID and the pin its label names, and the machine.

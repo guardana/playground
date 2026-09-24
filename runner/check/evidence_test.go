@@ -44,6 +44,8 @@ func TestEvidenceChainCompleteSeparatesBrokenFromIndeterminate(t *testing.T) {
 		EventID:     "r1-5",
 		Kind:        "EVENT_KIND_FROM_A_LATER_VERSION",
 		RequestID:   "r1",
+		ProjectID:   thisProject,
+		TenantID:    thisTenant,
 		PrevEventID: "r1-4",
 	})
 

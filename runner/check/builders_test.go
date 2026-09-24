@@ -21,6 +21,13 @@ const bundleDigest = "sha256:" +
 // written about something other than the run being graded.
 const thisRun = "run-1"
 
+// The scope every trail is written in: the contract chains events per request
+// within one project and tenant.
+const (
+	thisProject = "project-1"
+	thisTenant  = "tenant-1"
+)
+
 // decided is one request's trail: proposed, decided, then blocked or completed.
 // The links are the ones evidence.ValidateChain reads, so a trail built here is
 // one the chain check accepts unless a test breaks it on purpose.
@@ -56,6 +63,8 @@ func (d decided) events() []evidence.Event {
 		Kind:       evidence.KindActionProposed,
 		RequestID:  d.requestID,
 		RunID:      runID,
+		ProjectID:  thisProject,
+		TenantID:   thisTenant,
 		OccurredAt: at,
 		Proposed: &evidence.ActionEnvelope{
 			RequestID: d.requestID,
@@ -68,6 +77,8 @@ func (d decided) events() []evidence.Event {
 		Kind:        evidence.KindPolicyDecided,
 		RequestID:   d.requestID,
 		RunID:       runID,
+		ProjectID:   thisProject,
+		TenantID:    thisTenant,
 		OccurredAt:  at,
 		PrevEventID: proposed.EventID,
 		Decision: &evidence.Decision{
@@ -84,6 +95,8 @@ func (d decided) events() []evidence.Event {
 			Kind:        evidence.KindActionBlocked,
 			RequestID:   d.requestID,
 			RunID:       runID,
+			ProjectID:   thisProject,
+			TenantID:    thisTenant,
 			OccurredAt:  at,
 			PrevEventID: decision.EventID,
 		}}
@@ -93,6 +106,8 @@ func (d decided) events() []evidence.Event {
 		Kind:        evidence.KindActionStarted,
 		RequestID:   d.requestID,
 		RunID:       runID,
+		ProjectID:   thisProject,
+		TenantID:    thisTenant,
 		OccurredAt:  at,
 		PrevEventID: decision.EventID,
 	}
@@ -101,6 +116,8 @@ func (d decided) events() []evidence.Event {
 		Kind:        evidence.KindActionCompleted,
 		RequestID:   d.requestID,
 		RunID:       runID,
+		ProjectID:   thisProject,
+		TenantID:    thisTenant,
 		OccurredAt:  at,
 		PrevEventID: started.EventID,
 	}}

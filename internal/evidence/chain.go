@@ -7,8 +7,8 @@ import (
 
 var (
 	// ErrChainBroken reports a definite defect: a link that does not join, an
-	// event belonging to another request, or a step the documented order does
-	// not allow.
+	// event belonging to another request, project or tenant, or a step the
+	// documented order does not allow.
 	ErrChainBroken = errors.New("evidence: chain broken")
 
 	// ErrChainIndeterminate reports a kind this reader cannot place, so the
@@ -51,20 +51,17 @@ func ValidateChain(events []Event) error {
 }
 
 func checkLinks(events []Event) error {
-	requestID := events[0].RequestID
-	if requestID == "" {
-		return fmt.Errorf("%w: event 0 carries no requestId", ErrChainBroken)
+	scope, err := scopeOf(events[0])
+	if err != nil {
+		return err
 	}
 	seen := make(map[string]int, len(events))
 	prev := ""
 	for i, event := range events {
-		switch {
-		case event.RequestID != requestID:
-			// Two request ids are one broken trail and not two trails: joining
-			// them lets one request's outcome be read as another's.
-			return fmt.Errorf("%w: event %d belongs to request %q, not %q",
-				ErrChainBroken, i, event.RequestID, requestID)
-		case event.EventID == "":
+		if err := scope.holds(i, event); err != nil {
+			return err
+		}
+		if event.EventID == "" {
 			// An empty id and an empty prevEventId are the same bytes as the
 			// head of a trail, so the link below could not be read.
 			return fmt.Errorf("%w: event %d carries no eventId", ErrChainBroken, i)

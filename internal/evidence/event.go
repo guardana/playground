@@ -1,7 +1,8 @@
 // Package evidence reads the trail the enforcement plane writes, as the frozen
 // v1 wire contract carries it over JSON: one event per line, field names in
 // lower camel case, enums as their declared names, 64-bit integers as strings,
-// timestamps in RFC 3339.
+// timestamps in RFC 3339. The same lines arrive as the bodies of OTLP/JSON log
+// records when the plane exports to a collector; DecodeOTLP unwraps them.
 //
 // It is a reader, not a client. The lab never imports the enforcement plane's
 // Go module: what this repository tests is a pinned image, and a type shared
@@ -63,6 +64,9 @@ type Event struct {
 	Policy   *PolicyBundleRef `json:"policy,omitempty"`
 
 	PrevEventID string `json:"prevEventId,omitempty"`
+	// Declared for a digest link and empty in 1.0; nothing here reads it, so
+	// an empty value claims nothing.
+	PrevEventDigest string `json:"prevEventDigest,omitempty"`
 }
 
 // Obligation is a condition attached to an ALLOW_WITH_OBLIGATIONS verdict.
@@ -93,6 +97,7 @@ type Decision struct {
 	EnforcementMode    string       `json:"enforcementMode,omitempty"`
 	PolicyFreshness    string       `json:"policyFreshness,omitempty"`
 	PolicyLoadedAt     *time.Time   `json:"policyLoadedAt,omitempty"`
+	DecidedAt          *time.Time   `json:"decidedAt,omitempty"`
 }
 
 // ShortVerdict is the verdict without the VERDICT_ prefix, which is how a
@@ -141,6 +146,7 @@ type ActionResult struct {
 	Retryable              bool       `json:"retryable,omitempty"`
 	SideEffectConfirmation string     `json:"sideEffectConfirmation,omitempty"`
 	ExecutedActionDigest   string     `json:"executedActionDigest,omitempty"`
+	RedactionProfile       string     `json:"redactionProfile,omitempty"`
 }
 
 // Finding is what a detector reported after the fact. It annotates a trail that

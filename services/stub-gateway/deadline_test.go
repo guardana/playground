@@ -38,7 +38,7 @@ func TestAHungUpstreamIsRecordedAsAFailedAction(t *testing.T) {
 
 	file := &syncBuffer{}
 	gateway := newGateway("stub-gateway", declaredFor(t, "  - verdict: ALLOW\n    reason_codes: [RULE_ALLOW]\n"),
-		newTrail(file, runIdentity{runID: "run-1"}))
+		newTrail(file, runIdentity{runID: "run-1", projectID: "project-1", tenantID: "tenant-1"}))
 	gateway.callTimeout = 50 * time.Millisecond
 	server, err := gateway.newServer(t.Context(),
 		[]upstream{{name: "victim-fs", session: connect(t, victim, "stub-gateway")}})

@@ -144,6 +144,41 @@ func TestValidateChainRefusesTwoRequestsInOneChain(t *testing.T) {
 	}
 }
 
+// request_id is unique only within a project, and a trail is one tenant's, so
+// a second project or tenant under one request is a broken trail, not a join.
+func TestValidateChainRefusesASecondScopeInOneChain(t *testing.T) {
+	for name, scope := range map[string]string{
+		"two tenants":   `"projectId":"p","tenantId":"u"`,
+		"two projects":  `"projectId":"q","tenantId":"t"`,
+		"later no one":  `"projectId":"","tenantId":""`,
+		"later omitted": `"projectId":"p"`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			body := strings.Replace(trail, `"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","projectId":"p","tenantId":"t"`,
+				`"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1",`+scope, 1)
+			if body == trail {
+				t.Fatal("fixture unchanged")
+			}
+			if err := evidence.ValidateChain(decode(t, body)); !errors.Is(err, evidence.ErrChainBroken) {
+				t.Fatalf("err = %v, want ErrChainBroken", err)
+			}
+		})
+	}
+}
+
+// The first event sets the scope, so an empty one there would let every event
+// agree with a trail that names no project or no tenant.
+func TestValidateChainRefusesAnUnscopedFirstEvent(t *testing.T) {
+	for name, field := range map[string]string{"no project": `"projectId":"p",`, "no tenant": `"tenantId":"t",`} {
+		t.Run(name, func(t *testing.T) {
+			body := strings.ReplaceAll(trail, field, "")
+			if err := evidence.ValidateChain(decode(t, body)); !errors.Is(err, evidence.ErrChainBroken) {
+				t.Fatalf("err = %v, want ErrChainBroken", err)
+			}
+		})
+	}
+}
+
 // A run holds one trail per request. Grouping keeps each request's events in
 // the order the file carried them, because the order is what is being checked.
 func TestByRequestKeepsFileOrderPerRequest(t *testing.T) {

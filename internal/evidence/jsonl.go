@@ -90,14 +90,24 @@ func DecodeJSONL(r io.Reader, limit int) ([]Event, error) {
 }
 
 func decodeLine(line []byte) (Event, error) {
-	if len(bytes.TrimSpace(line)) == 0 {
+	trimmed := bytes.TrimSpace(line)
+	switch {
+	case len(trimmed) == 0:
 		return Event{}, fmt.Errorf("%w: blank", ErrMalformedLine)
+	case trimmed[0] != '{':
+		// null decodes into an empty event without an error.
+		return Event{}, fmt.Errorf("%w: not a JSON object", ErrMalformedLine)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(line))
+	decoder := json.NewDecoder(bytes.NewReader(trimmed))
 	decoder.DisallowUnknownFields()
 	var event Event
 	if err := decoder.Decode(&event); err != nil {
 		return Event{}, fmt.Errorf("%w: %w", ErrMalformedLine, err)
+	}
+	// Decode stops after the first value, so a second one on the line would
+	// otherwise pass unread.
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return Event{}, fmt.Errorf("%w: content after the event", ErrMalformedLine)
 	}
 	return event, nil
 }
