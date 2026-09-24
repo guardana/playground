@@ -110,6 +110,61 @@ three are checked when the files load:
   was expected is a failure unless that step is listed, and listing a step whose
   expectation is already `INDETERMINATE` is refused because it says nothing.
 
+### What decides the run
+
+A trajectory scenario names exactly one decider. `stub` replays declared
+verdicts and decides nothing; its profile names `stub`. `gateway` runs the
+pinned enforcer; its profile names `enforcer`:
+
+```yaml
+profile: [core, enforcer, approvals]
+gateway:
+  config: config/gateway/scenarios/tool-11-held-refund.yaml
+  policy: config/policies/tool-11-held-refund.json
+  unclassified: [victim-shell/shell.exec]
+  upstream_tenants: { victim-crm: tenant_b }
+  approver_script: held-refund.yaml
+```
+
+- `config` is the scenario's part of the enforcer's configuration, in the
+  enforcer's own format and the strict YAML it reads (block style only). It
+  may set these keys and no other, each one value: `mode`, `project_id`,
+  `tenant_id`, `environment`, `log.level`; `listener.kind`,
+  `listener.principal.{id,type,tenant_id}`,
+  `listener.agent.{id,framework,version}`; `policy.max_stale`,
+  `policy.fail_open_read`; `pdp.timeout`, `pdp.max_in_flight`;
+  `approvals.{provider,ttl,retry_after,max_held,max_open,max_records,max_record_bytes,reconcile_max}`;
+  `evidence.{max_bytes,segment_bytes,closing_reserve,fsync,fsync_interval,on_unwritable}`;
+  `list.shaping`, `list.ttl`; `upstream.call_timeout`, `upstream.list_timeout`.
+  A key is written nested, never dotted: the enforcer reads `a.b: x` as
+  `a: {b: x}`, so a key holding a dot is refused at any depth. The runner adds
+  the rest: the listener and health addresses, the bundle and its key, the
+  spool, the collector, the six victims as upstreams, the classification in
+  `config/gateway/classification.yaml` pinned to `fingerprints.yaml`, the
+  approvals directories when the provider is `file`, and the decision point's
+  identifier when `pdp_script` is set.
+- `policy` is an `agent-policy/v1alpha1` document, signed for the run with the
+  lab key (`make lab-key`) by the enforcer's own `policy sign`. The key lives
+  outside the clone and the reports directory (`LAB_KEYS_DIR`); a run refuses
+  one inside either.
+- `unclassified` keeps tools out of the classification on purpose, so a
+  scenario can meet one the enforcer does not know.
+- `upstream_tenants` puts a victim in a tenant of its own (the upstream's
+  `tenant_id`), for a scenario that crosses tenants. Tenant names are letters,
+  digits, `_` and `-`.
+- `pdp_script` (profile `pdp`) names the decision point double's script under
+  `config/pdp/`; `approver_script` (profile `approvals`) the approver's under
+  `config/approver/`. Each profile comes with its script and not without, and a
+  scenario the stub decides names neither profile.
+
+The run's trail is read from the collector, after the enforcer's `/healthz`
+reports nothing unacknowledged and nothing lost (no quarantined or truncated
+spool record, nothing the exporter quarantined or the collector refused or
+dropped, the exporter still running) and the collector has been stopped so its
+file is flushed. The `plane` checks report the drain, that the running enforcer
+reports the pinned commit, and that the run's own enforcer container runs the
+image tagged with the pin, built from it.
+
 ### Which trail a step is graded on
 
 The enforcer mints its own request ids and writes no step number, so a step is

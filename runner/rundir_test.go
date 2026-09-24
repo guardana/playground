@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -20,7 +22,7 @@ func TestMakeRunDirIsWritableByTheServicesThatWriteIntoIt(t *testing.T) {
 		t.Fatalf("makeRunDir: %v", err)
 	}
 
-	for _, directory := range []string{runDir, filepath.Join(runDir, "journals")} {
+	for _, directory := range []string{runDir, filepath.Join(runDir, "journals"), filepath.Join(runDir, "agent")} {
 		info, err := os.Stat(directory)
 		if err != nil {
 			t.Fatalf("stat: %v", err)
@@ -51,5 +53,18 @@ func TestMakeRunDirRefusesADirectoryThatIsAlreadyThere(t *testing.T) {
 	}
 	if err := makeRunDir(reports, runDir); err == nil {
 		t.Error("a second run was handed the first run's directory")
+	}
+}
+
+// The agent sees its own directory of the run and nothing else of it, so its
+// log goes there.
+func TestTheAgentWritesIntoItsOwnDirectory(t *testing.T) {
+	subject, compose, scenario := enforcerLab(t)
+	if _, err := subject.execute(context.Background(), scenario); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	replay := strings.Join(compose.ran[len(compose.ran)-1], " ")
+	if !strings.Contains(replay, "-out /reports/"+compose.env["LAB_RUN_ID"]+"/agent/agent.jsonl") {
+		t.Errorf("the agent was told to write elsewhere: %s", replay)
 	}
 }

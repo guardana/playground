@@ -80,32 +80,6 @@ func TestAKnownGapIsNamedInTheReport(t *testing.T) {
 	}
 }
 
-// A scenario without a stub runs against the enforcer, which stamps no run id:
-// its trail is this run's because it was read from the directory the run made.
-func TestAScenarioWithoutAStubIsGradedOnATrailThatNamesNoRun(t *testing.T) {
-	compose := workingCompose("")
-	compose.trail = strings.NewReplacer(`"runId":"${RUN_ID}",`, "", `"runId":"${RUN_ID}"`, "").Replace(evidenceFile)
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
-	writeFile(scenario, strings.Replace(scenarioFile, "stub: { verdicts: config/scenarios/flow-01.yaml }\n", "", 1))
-	graded, err := subject.execute(context.Background(), scenario)
-	if err != nil {
-		t.Fatalf("execute: %v", err)
-	}
-	if compose.env["LAB_STUB_VERDICTS"] != "" {
-		t.Fatalf("a scenario without a stub handed the stub verdicts %q", compose.env["LAB_STUB_VERDICTS"])
-	}
-	for _, result := range graded.Results {
-		if result.Check == "evidence/run-id" {
-			if result.Outcome != assertion.Pass || !strings.Contains(result.Want, "no event names a run") {
-				t.Errorf("evidence/run-id is %s against %q: %s", result.Outcome, result.Want, result.Detail)
-			}
-			return
-		}
-	}
-	t.Error("the run was not graded on which run wrote its trail")
-}
-
 func TestTheAgentIsToldTheEnforcersNamespace(t *testing.T) {
 	compose := workingCompose("")
 	subject, scenario := labUnderTest(t, compose)

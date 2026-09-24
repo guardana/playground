@@ -68,9 +68,13 @@ type Probe struct {
 // NetworkIsolation reports whether the agent reached the gateway and only the
 // gateway. A victim on tool-net does not resolve from agent-net at all, so
 // "no route" covers an unknown host as well as a refused connection.
+//
+// Sealed are the other services an agent must not reach: the collector the
+// trail is exported to, the decision point double, the approver.
 type NetworkIsolation struct {
 	Gateway Probe
 	Victim  Probe
+	Sealed  []Probe
 	Source  string
 }
 
@@ -79,10 +83,14 @@ func (NetworkIsolation) ID() string { return "network-isolation" }
 
 // Run grades one result per probe, the gateway first.
 func (n NetworkIsolation) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
-	return []assertion.Result{
+	results := []assertion.Result{
 		gradeReach("network-isolation/gateway-reachable", n.Gateway, true, n.Source),
 		gradeReach("network-isolation/victim-unreachable", n.Victim, false, n.Source),
-	}, nil
+	}
+	for _, sealed := range n.Sealed {
+		results = append(results, gradeReach("network-isolation/sealed/"+sealed.Target, sealed, false, n.Source))
+	}
+	return results, nil
 }
 
 // VerifierReach reports whether the verifier's network reaches every server a

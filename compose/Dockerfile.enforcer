@@ -23,7 +23,8 @@ ENV CGO_ENABLED=0 GOTOOLCHAIN=local
 # unstamped build would report "dev" and a stale tag would go unnoticed.
 RUN test -n "${ENFORCER_COMMIT}" && test -n "${ENFORCER_GATEWAY_BIN}" && test -n "${ENFORCER_CONTROL_BIN}" && \
     go build -trimpath -ldflags="-s -w -X main.version=${ENFORCER_COMMIT}" -o /out/gateway ./cmd/${ENFORCER_GATEWAY_BIN} && \
-    go build -trimpath -ldflags="-s -w -X main.version=${ENFORCER_COMMIT}" -o /out/control ./cmd/${ENFORCER_CONTROL_BIN}
+    go build -trimpath -ldflags="-s -w -X main.version=${ENFORCER_COMMIT}" -o /out/control ./cmd/${ENFORCER_CONTROL_BIN} && \
+    mkdir -p /out/lab/spool /out/lab/approvals /out/lab/holds && chmod 0700 /out/lab/spool /out/lab/approvals /out/lab/holds
 
 # The probe imports only the standard library, so it builds as a module of its
 # own without the lab's go.mod.
@@ -39,5 +40,10 @@ LABEL org.opencontainers.image.revision="${ENFORCER_COMMIT}"
 COPY --from=build /out/gateway /enforcer/gateway
 COPY --from=build /out/control /enforcer/control
 COPY --from=probe /out/healthprobe /healthprobe
+# The directories the plane refuses to create and refuses when others can write
+# them. A named volume mounted on one starts as a copy of it, owned by nonroot
+# with mode 0700, which is how the lab gives the spool, the approvals and the
+# hold journal to the plane without a root step.
+COPY --from=build --chown=65532:65532 /out/lab /var/lib/lab
 USER nonroot:nonroot
 ENTRYPOINT ["/enforcer/gateway"]

@@ -73,6 +73,14 @@ export ENFORCER_SOURCE=$PWD/control
 make images
 ```
 
+A scenario the enforcer decides signs its policy for each run with a lab key
+kept outside the clone, made once per machine by the enforcer's own `keygen`:
+
+```
+make lab-key
+make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
+```
+
 ## Contributing
 
 `CONTRIBUTING.md` has the short version, `AGENTS.md` the same rules written for

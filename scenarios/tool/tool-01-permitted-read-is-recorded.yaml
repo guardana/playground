@@ -1,7 +1,7 @@
 schema_version: 1
 id: tool-01-permitted-read-is-recorded
 title: A permitted read reaches the victim and every record shows it
-profile: [core]
+profile: [core, stub]
 enforcement_mode: enforce
 trajectory: trajectories/tool-01-permitted-read-is-recorded.yaml
 stub: { verdicts: config/scenarios/tool-01-permitted-read-is-recorded.yaml }

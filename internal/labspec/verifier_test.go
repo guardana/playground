@@ -82,7 +82,7 @@ func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testi
 		"an empty rule excluded":     {"[guardana.mcp.cache_scope]", "['']"},
 		"a probed server unstated":   {"    victim-fs: { calls_served: {} }\n", "    victim-crm: { calls_served: {} }\n"},
 		"a profile beside verifier":  {"profile: [verifier]", "profile: [verifier, core]"},
-		"another profile":            {"profile: [verifier]", "profile: [core]"},
+		"another profile":            {"profile: [verifier]", "profile: [core, stub]"},
 		"a trajectory beside it":     {"profile: [verifier]", "profile: [verifier]\ntrajectory: trajectories/x.yaml"},
 		"an enforcement mode":        {"profile: [verifier]", "profile: [verifier]\nenforcement_mode: enforce"},
 		"declared stub verdicts":     {"profile: [verifier]", "profile: [verifier]\nstub: { verdicts: config/x.yaml }"},

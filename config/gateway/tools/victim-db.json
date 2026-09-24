@@ -1,0 +1,161 @@
+[
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Remove a table and everything in it.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "table": {
+          "description": "the table to remove",
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "db.drop_table",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "dropped": {
+          "type": "boolean"
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table",
+        "dropped"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Run a read-only report against the customer database.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "statement": {
+          "description": "the SQL statement to run",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement"
+      ],
+      "type": "object"
+    },
+    "name": "db.execute",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        },
+        "rows_affected": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "columns",
+        "rows",
+        "rows_affected"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Run a SELECT against the customer database and return the rows.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "statement": {
+          "description": "the SQL statement to run",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement"
+      ],
+      "type": "object"
+    },
+    "name": "db.query",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        },
+        "rows_affected": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "columns",
+        "rows",
+        "rows_affected"
+      ],
+      "type": "object"
+    }
+  }
+]

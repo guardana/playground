@@ -25,8 +25,9 @@ const (
 	gatewayService  = "stub-gateway"
 	servicePort     = "8080"
 	gatewayEndpoint = "http://" + gatewayService + ":" + servicePort + "/mcp"
-	// containerReports is the bind mount of reports/. The agent and the
-	// gateway get the two directories they need and not the repository:
+	// containerReports is where a service sees the run: /reports/<run id>,
+	// holding only the part of the run that service writes. The agent and the
+	// gateway get the two directories they read and not the repository:
 	// compose mounts config/ and trajectories/ read only, at mount points
 	// named after the directories themselves, so a repository path becomes a
 	// container path by putting a slash in front of it. Handing a service
@@ -59,6 +60,17 @@ type lab struct {
 	// namespace is the enforcer's, under which its gateway marks the answers
 	// it makes itself; the agent reads a pending answer only under it.
 	namespace string
+	// pin is ENFORCER_COMMIT, which the running enforcer has to report.
+	pin string
+	// keysDir holds the lab key; sign signs a scenario's policy with it.
+	keysDir string
+	sign    signer
+	// drainBound bounds the wait for the plane's trail; zero reads as the
+	// default in drain.go.
+	drainBound time.Duration
+	// enforcerImage is ENFORCER_IMAGE:ENFORCER_COMMIT; inspect reads it.
+	enforcerImage string
+	inspect       lookup
 }
 
 // execute runs one scenario and writes its reports. It returns an error only
@@ -92,7 +104,15 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
-	compose := l.compose.WithEnv(l.environment(spec, runID, runDir))
+	env := l.environment(spec, runID, runDir)
+	if spec.UsesEnforcer() {
+		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
+			return unprepared(spec.ID, runID, err, l.clock()), nil
+		}
+		env["LAB_PDP_SCRIPT"] = spec.Gateway.PDPScript
+		env["LAB_APPROVER_SCRIPT"] = spec.Gateway.ApproverScript
+	}
+	compose := l.compose.WithEnv(env)
 	// Taken before anything boots. assertion.Run times the checks, which are
 	// the fast part; a report that said a run took no time because the reading
 	// of its records took no time would be telling a reader the wrong thing
@@ -164,19 +184,26 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 // a topology that is right about the victim.
 func (l lab) probes(
 	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
-) (check.Probe, check.Probe, string) {
-	gateway := l.probe(ctx, compose, spec.Profile, gatewayService+":"+servicePort)
+) (check.Probe, check.Probe, []check.Probe, string) {
+	gateway := l.probe(ctx, compose, spec.Profile, gatewayHost(spec)+":"+servicePort)
 	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
+	var sealed []check.Probe
+	for _, target := range sealedFromAgent(spec) {
+		sealed = append(sealed, l.probe(ctx, compose, spec.Profile, target))
+	}
 
 	source := filepath.Join(runDir, "probes.log")
 	recorded := fmt.Sprintf("gateway %s ran=%t reached=%t %s\nvictim %s ran=%t reached=%t %s\n",
 		gateway.Target, gateway.Ran, gateway.Reached, gateway.Detail,
 		victim.Target, victim.Ran, victim.Reached, victim.Detail)
+	for _, probe := range sealed {
+		recorded += fmt.Sprintf("sealed %s ran=%t reached=%t %s\n", probe.Target, probe.Ran, probe.Reached, probe.Detail)
+	}
 	// #nosec G703 -- the path is inside the run directory the runner made.
 	if err := os.WriteFile(source, []byte(recorded), 0o600); err != nil {
 		l.note("writing the probe record: %v", err)
 	}
-	return gateway, victim, source
+	return gateway, victim, sealed, source
 }
 
 func (l lab) probe(ctx context.Context, compose Compose, profiles []string, target string) check.Probe {
@@ -195,10 +222,10 @@ func (l lab) replay(
 	source := filepath.Join(runDir, "replay.log")
 	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, []string{
 		"-trajectory", inContainer(spec.Trajectory),
-		"-gateway", gatewayEndpoint,
+		"-gateway", "http://" + gatewayHost(spec) + ":" + servicePort + "/mcp",
 		"-run-id", runID,
 		"-namespace", l.namespace,
-		"-out", path.Join(containerReports, runID, "agent.jsonl"),
+		"-out", path.Join(containerReports, runID, "agent", "agent.jsonl"),
 	})
 	// #nosec G703 -- the path is inside the run directory the runner made.
 	if writeErr := os.WriteFile(source, []byte(execution.Output), 0o600); writeErr != nil {

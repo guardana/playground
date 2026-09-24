@@ -1,0 +1,32 @@
+# tool-01's trajectory, decided by the pinned enforcer instead of the stub.
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
+#   A run call's trail, proposed, decided, started, completed:
+#     docs/concepts/evidence-and-the-spool.md, the trail's state diagram.
+#   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
+schema_version: 1
+id: tool-02-permitted-read-is-recorded-by-the-enforcer
+title: A read the policy allows runs through the enforcer and every record shows it
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/tool-02-permitted-read-is-recorded-by-the-enforcer.yaml
+gateway:
+  config: config/gateway/scenarios/tool-02-permitted-read-is-recorded-by-the-enforcer.yaml
+  policy: config/policies/tool-02-permitted-read-is-recorded-by-the-enforcer.json
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+  effects:
+    victim-crm: { calls_served: { crm.read_customer: 1 } }
+    victim-fs: { calls_served: { fs.list: 1 } }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

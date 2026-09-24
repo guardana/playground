@@ -18,7 +18,7 @@ const (
 	scenarioFile = `schema_version: 1
 id: flow-01
 title: a read the policy permits is served and recorded
-profile: [core]
+profile: [core, stub]
 enforcement_mode: enforce
 trajectory: trajectories/flow-01.yaml
 stub: { verdicts: config/scenarios/flow-01.yaml }
@@ -80,6 +80,14 @@ type fakeCompose struct {
 	// downErr is what the teardown's own context said when it was called.
 	undated []string
 	downErr error
+	// collector is what the fake collector writes when the replay runs.
+	collector string
+	// exec answers a command run inside a service; execs records each one.
+	exec    func(service string, args []string) Split
+	execs   [][]string
+	stopped []string
+	// image answers which image a service's container runs.
+	image func(service string) (string, error)
 }
 
 // called records whether a docker call carried a deadline, and refuses the call
@@ -132,7 +140,7 @@ func (f *fakeCompose) RunOnce(ctx context.Context, _ []string, _ string, args []
 	}
 	f.ran = append(f.ran, args)
 	if len(args) == 2 && args[0] == "-probe" {
-		if strings.HasPrefix(args[1], "stub-gateway") {
+		if strings.HasPrefix(args[1], "stub-gateway") || args[1] == "enforcer:8080" {
 			return f.gateway, nil
 		}
 		return f.victim, nil
@@ -157,6 +165,9 @@ func (f *fakeCompose) writeRecords(args []string) {
 	stamp := func(body string) string { return strings.ReplaceAll(body, "${RUN_ID}", runID) }
 	if f.trail != "" {
 		writeFile(filepath.Join(directory, "evidence.jsonl"), stamp(f.trail))
+	}
+	if f.collector != "" {
+		writeFile(filepath.Join(directory, "collector", "otlp-logs.json"), f.collector)
 	}
 	for victim, body := range f.journals {
 		writeFile(filepath.Join(directory, "journals", victim+".jsonl"), stamp(body))

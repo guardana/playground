@@ -1,0 +1,323 @@
+[
+  {
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Export a table for reporting.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "table": {
+          "description": "the table to export",
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "crm.export_table",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "rows": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "bank_account": {
+                "type": "string"
+              },
+              "contact_email": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "internal_reference": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              },
+              "plan": {
+                "type": "string"
+              },
+              "tenant_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "tenant_id",
+              "name",
+              "contact_email",
+              "plan",
+              "note",
+              "bank_account",
+              "internal_reference"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        },
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table",
+        "rows"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Read one customer record belonging to the caller's tenant.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "customer_id": {
+          "description": "the customer record to read",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "the tenant the caller is acting for",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "customer_id"
+      ],
+      "type": "object"
+    },
+    "name": "crm.read_customer",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "additionalProperties": false,
+          "properties": {
+            "bank_account": {
+              "type": "string"
+            },
+            "contact_email": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal_reference": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string"
+            },
+            "tenant_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "tenant_id",
+            "name",
+            "contact_email",
+            "plan",
+            "note",
+            "bank_account",
+            "internal_reference"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "customer"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Correct the payout account held on a customer record.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "description": "the payout account to store",
+          "type": "string"
+        },
+        "customer_id": {
+          "description": "the customer record to correct",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "the tenant the caller is acting for",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "customer_id",
+        "account"
+      ],
+      "type": "object"
+    },
+    "name": "crm.update_bank_account",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "additionalProperties": false,
+          "properties": {
+            "bank_account": {
+              "type": "string"
+            },
+            "contact_email": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal_reference": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string"
+            },
+            "tenant_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "tenant_id",
+            "name",
+            "contact_email",
+            "plan",
+            "note",
+            "bank_account",
+            "internal_reference"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "customer"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Replace the free-text note on a customer record.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "customer_id": {
+          "description": "the customer record to annotate",
+          "type": "string"
+        },
+        "note": {
+          "description": "the note to store on the record",
+          "type": "string"
+        },
+        "tenant_id": {
+          "description": "the tenant the caller is acting for",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id",
+        "customer_id",
+        "note"
+      ],
+      "type": "object"
+    },
+    "name": "crm.update_note",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "additionalProperties": false,
+          "properties": {
+            "bank_account": {
+              "type": "string"
+            },
+            "contact_email": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal_reference": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string"
+            },
+            "tenant_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "tenant_id",
+            "name",
+            "contact_email",
+            "plan",
+            "note",
+            "bank_account",
+            "internal_reference"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "customer"
+      ],
+      "type": "object"
+    }
+  }
+]

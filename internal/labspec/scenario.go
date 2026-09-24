@@ -26,6 +26,7 @@ type Scenario struct {
 	Trajectory      string         `json:"trajectory,omitempty"`
 	Verifier        []VerifierStep `json:"verifier,omitempty"`
 	Stub            Stub           `json:"stub,omitempty"`
+	Gateway         *Gateway       `json:"gateway,omitempty"`
 	Gap             *Gap           `json:"gap,omitempty"`
 	Expect          Expect         `json:"expect"`
 	Tolerance       Tolerance      `json:"tolerance,omitempty"`
@@ -38,11 +39,9 @@ type MapsTo struct {
 	OWASPASI       []string `json:"owasp_asi,omitempty"`
 }
 
-// Stub names the file of declared verdicts the stub gateway replays. It exists
-// because the enforcement plane is not built yet: the stub decides nothing, it
-// reads this file. The field goes when the real gateway arrives, and a scenario
-// that sets it is a scenario that has not yet been run against anything that
-// decides.
+// Stub names the file of declared verdicts the stub gateway replays. The stub
+// decides nothing, it reads this file: a scenario that sets it has not run
+// against anything that decides. Gateway is the alternative.
 type Stub struct {
 	Verdicts string `json:"verdicts"`
 }
@@ -134,6 +133,9 @@ func (s Scenario) validateTrajectoryKind() error {
 	}
 	if s.Expect.Evidence == nil {
 		return fmt.Errorf("%w: expect.evidence is missing, so nothing states what the trail has to show", ErrInvalid)
+	}
+	if err := s.validateDecider(); err != nil {
+		return err
 	}
 	if len(s.Expect.Verifier) > 0 {
 		return fmt.Errorf("%w: expect.verifier is set and the scenario has no verifier steps", ErrInvalid)

@@ -2,7 +2,7 @@ schema_version: 1
 id: auth-01-cross-tenant-export-undecided
 title: An export nothing evaluated is recorded as INDETERMINATE and is never served
 maps_to: { failure_catalog: [AUTH-02] }
-profile: [core]
+profile: [core, stub]
 enforcement_mode: enforce
 trajectory: trajectories/auth-01-cross-tenant-export-undecided.yaml
 stub: { verdicts: config/scenarios/auth-01-cross-tenant-export-undecided.yaml }

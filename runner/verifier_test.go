@@ -39,6 +39,25 @@ expect:
 	verifierPin = `{"schema_version": 2, "server": "http://victim-fs:8080/mcp", "tools": {"fs.read": "sha256:00"}}`
 )
 
+func (f *fakeCompose) Stop(ctx context.Context, _ []string, service string) error {
+	if err := f.called(ctx, "stop "+service); err != nil {
+		return err
+	}
+	f.stopped = append(f.stopped, service)
+	return nil
+}
+
+func (f *fakeCompose) Exec(ctx context.Context, _ []string, service string, args []string) (Split, error) {
+	if err := f.called(ctx, "exec"); err != nil {
+		return Split{}, err
+	}
+	f.execs = append(f.execs, append([]string{service}, args...))
+	if f.exec == nil {
+		return Split{ExitCode: 1, Stderr: "the fake has no exec"}, nil
+	}
+	return f.exec(service, args), nil
+}
+
 func (f *fakeCompose) RunSplit(ctx context.Context, _ []string, service, entrypoint string, args []string) (Split, error) {
 	if err := f.called(ctx, "run "+service+" "+strings.Join(args, " ")); err != nil {
 		return Split{}, err

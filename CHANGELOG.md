@@ -77,6 +77,27 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the pages carry it); a generated `docs/README.md`; `make docs-impact` for
   the pages a change makes suspect. The link check no longer reads untracked
   run reports.
+- Scenarios the enforcer decides: a `gateway:` block names the scenario's part
+  of the enforcer's configuration and its policy; the runner signs the policy
+  for the run with the lab key (`make lab-key`, made once per machine outside
+  the clone and the reports by the enforcer's own keygen), assembles the
+  configuration around it from the keys a scenario may set (a dotted key is
+  refused), boots the enforcer from its pinned image with the collector, reads
+  the trail after the spool drained with nothing quarantined, truncated,
+  refused or dropped and the collector flushed, and fails a run whose enforcer
+  does not report the pinned commit or whose container does not run the pinned
+  image. `gateway.upstream_tenants` puts a victim in a tenant of its own. The
+  stub moves to its own compose profile. `tool-02` is the first such scenario.
+- The lab's classification of every victim tool (`config/gateway/`) is pinned
+  to the fingerprints the enforcer's own doctor prints (`make
+  classify-victims`), and those to the listing snapshots they were taken from
+  (`tools.sha256`); a changed definition or a snapshot rewritten alone fails a
+  test without Docker.
+- Each service mounts only the part of the run it writes (the victims, the
+  double and the approver `journals/`, the agent `agent/`), no longer the whole
+  reports directory. The agent's log moves to `agent/agent.jsonl`.
+- Compose services for the decision point double and the approver, each on a
+  network it shares with the enforcer alone or with nothing.
 - Every run report opens with its provenance: the lab commit (untracked files
   count as uncommitted changes), each pin, each image on this machine with its
   ID and the pin its label names, and the machine.

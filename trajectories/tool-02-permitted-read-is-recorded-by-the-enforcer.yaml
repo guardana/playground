@@ -1,0 +1,18 @@
+# The control through the enforcer: nothing here is an attack. It exists so an ALLOW is read back
+# from the same three records a DENY is, and a run where the call quietly never
+# happened cannot pass.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_412, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: customer_lookup
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: public_listing
+    call:
+      server: victim-fs
+      tool: fs.list
+      args: { path: "/data/public" }

@@ -7,9 +7,10 @@ SOURCES = scripts/repo-files.sh | grep '\.go$$'
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
 	check-sizes check-attribution check-hygiene check-actions-pinned \
-	enforcer-image verifier-image images up down scenario scenarios quality-quick quality
+	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios quality-quick quality
 
-# The compose profile a target brings up, and where a run writes its records.
+# The compose profiles a target brings up, space-separated, and where a run
+# writes its records.
 PROFILE ?= core
 REPORTS ?= reports
 COMPOSE = docker compose --env-file versions.env -f compose/compose.yaml
@@ -94,13 +95,29 @@ verifier-image:
 
 images: enforcer-image verifier-image
 
+# The lab's policy signing key, made once per machine outside the clone by the
+# pinned enforcer's own keygen. Scenarios the enforcer decides sign with it.
+lab-key:
+	scripts/lab-key.sh
+
+# The fingerprints the enforcer's doctor prints for every victim tool, which the
+# classification in config/gateway pins. Run after a victim's tools change.
+classify-victims:
+	scripts/classify-victims.sh
+
 # The lab itself. `up` and `down` are for working on a scenario by hand; a
-# scenario run brings up what it needs and takes it down again.
+# scenario run brings up what it needs and takes it down again. `core` is the
+# victims alone; PROFILE="core stub" adds the stub gateway. The enforcer's
+# profiles need a run the runner prepares (the signed bundle, the assembled
+# configuration): `go run ./runner -scenario <id> -keep` leaves one up. By
+# hand, the services write under reports/manual.
 up:
-	$(COMPOSE) --profile $(PROFILE) up -d --build
+	mkdir -p reports/manual/journals reports/manual/agent
+	chmod 777 reports/manual reports/manual/journals reports/manual/agent
+	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) up -d --build
 
 down:
-	$(COMPOSE) --profile $(PROFILE) down --volumes --remove-orphans
+	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) down --volumes --remove-orphans
 
 # One scenario, named by its identifier, which is its file name.
 scenario:

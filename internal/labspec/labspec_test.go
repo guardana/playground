@@ -161,7 +161,7 @@ func TestStepResolveLeavesTheLoadedStepAlone(t *testing.T) {
 const goodScenario = `schema_version: 1
 id: stub-01-allow-read
 title: A read the stub allows reaches the victim and is recorded
-profile: [core]
+profile: [core, stub]
 enforcement_mode: enforce
 trajectory: trajectories/stub-01-allow-read.yaml
 stub: { verdicts: config/stub-gateway/stub-01.yaml }

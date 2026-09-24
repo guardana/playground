@@ -146,7 +146,7 @@ func machine(ctx context.Context, run lookup) string {
 // command runs one lookup and returns its trimmed output, or the first line of
 // what it said on failure.
 func command(ctx context.Context, name string, args ...string) (string, error) {
-	// #nosec G204 -- fixed programs; the arguments are the lab's own pins and paths.
+	// #nosec G204,G702 -- fixed programs; the arguments are the lab's own pins and paths.
 	run := exec.CommandContext(ctx, name, args...)
 	var stderr strings.Builder
 	run.Stderr = &stderr

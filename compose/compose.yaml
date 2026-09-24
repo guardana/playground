@@ -1,12 +1,19 @@
 # The lab's world: six victim tool servers, a page that attacks them, a mail
-# sink, the gateway, the agent, the verifier and the collector the enforcer's
-# trail lands on.
+# sink, a gateway (the stub or the enforcer), the agent, the verifier, the
+# collector the enforcer's trail lands on, the decision point double and the
+# approver.
 #
-# Three networks, all internal, agent-net and tool-net sharing one service and
-# evidence-net holding only the collector. Nothing in the lab has a route out;
-# the agent sits on `agent-net` and can reach the gateway and nothing else. That
-# is the property every scenario depends on, and the runner proves it from
-# inside `agent-net` on every run rather than trusting this file.
+# Five networks, all internal: agent-net holds the agent and one gateway;
+# tool-net the gateway, the victims and what they reach; evidence-net the
+# collector and the enforcer; pdp-net the enforcer and the double;
+# approver-net the approver alone. Nothing in the lab has a route out; the
+# agent can reach the gateway and nothing else. That is the property every
+# scenario depends on, and the runner proves it from inside `agent-net` on
+# every run rather than trusting this file.
+#
+# A run's records live in its own directory, LAB_RUN_HOST_DIR, and each
+# service mounts only the part of it that service writes. By hand (`make up`),
+# with no run, that is reports/manual.
 #
 # Every image name and tag is a variable from versions.env. A tag written here
 # would be a second place to change when an upstream moves.
@@ -36,8 +43,9 @@ x-hardened: &hardened
   tmpfs: [/tmp]
 
 # A victim answers MCP at /mcp and readiness at /healthz on the same listener,
-# and writes its journal under /reports. The health check runs the probe that
-# every lab image carries, because the runtime base has no shell to run one in.
+# and writes its journal into the run's journals/, the one host directory it
+# sees. The health check runs the probe that every lab image carries, because
+# the runtime base has no shell to run one in.
 x-victim: &victim
   <<: *hardened
   networks: [tool-net]
@@ -45,7 +53,7 @@ x-victim: &victim
   # victim's tools at startup and would spend the listing a drift is read on.
   profiles: [core, verifier]
   volumes:
-    - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+    - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
   healthcheck:
     test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
     interval: 2s
@@ -201,9 +209,11 @@ services:
         <<: *build-args
         TARGET: ./services/stub-gateway
     networks: [agent-net, tool-net]
-    profiles: [core]
+    profiles: [stub]
+    # It writes evidence.jsonl at the top of the run directory, so it sees the
+    # run's directory; a stub run has no collector/ or pki/ in it.
     volumes:
-      - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+      - ${LAB_RUN_HOST_DIR:-../reports/manual}:/reports/${LAB_RUN_ID:-manual}
       - ../config:/config:ro
     environment:
       <<: *server-env
@@ -251,14 +261,11 @@ services:
     networks: [agent-net]
     profiles: [agent]
     volumes:
-      - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+      - ${LAB_RUN_HOST_DIR:-../reports/manual}/agent:/reports/${LAB_RUN_ID:-manual}/agent
       - ../trajectories:/trajectories:ro
     environment:
       <<: *lab-env
       LAB_SERVER_NAME: scripted-agent
-    depends_on:
-      stub-gateway:
-        condition: service_healthy
 
   # The verifier, run by the runner once per step with `docker compose run`.
   # It probes victims on tool-net and sees one host path: the run's verifier/
@@ -305,8 +312,135 @@ services:
         bind:
           create_host_path: false
 
+  # The enforcement plane under test, from the image `make enforcer-image`
+  # builds out of its pinned commit. It is told nothing the lab decided about
+  # a verdict: the runner hands it a bundle signed for the run and a
+  # configuration assembled from the scenario's part (runner/gateway), both
+  # read-only. It trusts the decision point double's CA and no other root: Go
+  # also reads SSL_CERT_DIR, so that points at a directory that does not exist.
+  enforcer:
+    image: ${ENFORCER_IMAGE}:${ENFORCER_COMMIT}
+    pull_policy: never
+    <<: *hardened
+    command: ["run", "--config", "/gateway/gateway.yaml"]
+    networks: [agent-net, tool-net, evidence-net, pdp-net]
+    profiles: [enforcer]
+    environment:
+      SSL_CERT_FILE: /pki/ca.pem
+      SSL_CERT_DIR: /pki/no-directory
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway
+        target: /gateway
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki
+        target: /pki
+        read_only: true
+        bind:
+          create_host_path: false
+      - spool:/var/lib/lab/spool
+      - approvals:/var/lib/lab/approvals
+      - holds:/var/lib/lab/holds
+    # /brand rather than /healthz: a plane that takes no material call, as
+    # under LOCKDOWN, answers /healthz 503 and is still up.
+    healthcheck:
+      test: ["CMD", "/healthprobe", "http://127.0.0.1:8081/brand"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 2s
+    depends_on:
+      victim-crm: {condition: service_healthy}
+      victim-db: {condition: service_healthy}
+      victim-fs: {condition: service_healthy}
+      victim-shell: {condition: service_healthy}
+      victim-mail: {condition: service_healthy}
+      victim-web: {condition: service_healthy}
+      collector: {condition: service_started}
+      pdp-double: {condition: service_healthy, required: false}
+
+  # The external decision point double (services/pdp-double), on a network
+  # it shares with the enforcer alone. It makes its CA in memory and writes
+  # only the CA certificate, into the run's pki/ directory.
+  pdp-double:
+    image: ${LAB_IMAGE_PREFIX}-pdp-double
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./services/pdp-double
+    command:
+      - -identifier=https://pdp-double:8443
+      - -san=pdp-double
+      - -ca-out=/pki/ca.pem
+      - -script=/scripts/${LAB_PDP_SCRIPT:-no-script-given.yaml}
+    networks: [pdp-net]
+    profiles: [pdp]
+    environment:
+      <<: *lab-env
+    volumes:
+      - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
+      - ../config/pdp:/scripts:ro
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki
+        target: /pki
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "/healthprobe", "-ca", "/pki/ca.pem", "https://pdp-double:8443/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # The approver (services/approver): answers held approvals through the
+  # enforcer's own command, on the approvals volume it shares with the plane
+  # alone. Its network holds nothing else and has no route out.
+  approver:
+    image: ${LAB_IMAGE_PREFIX}-approver
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.approver
+      args:
+        <<: *build-args
+        ENFORCER_IMAGE: ${ENFORCER_IMAGE}
+        ENFORCER_COMMIT: ${ENFORCER_COMMIT}
+    command:
+      - -dir=/var/lib/lab/approvals
+      - -script=/scripts/${LAB_APPROVER_SCRIPT:-no-script-given.yaml}
+    networks: [approver-net]
+    profiles: [approvals]
+    restart: "no"
+    environment:
+      <<: *lab-env
+    volumes:
+      - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
+      - ../config/approver:/scripts:ro
+      - approvals:/var/lib/lab/approvals
+    healthcheck:
+      test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 2s
+    depends_on:
+      enforcer: {condition: service_healthy}
+
+volumes:
+  # The plane's own directories. Each starts as a copy of the image's, owned by
+  # nonroot with mode 0700, and goes with the run's compose project.
+  spool:
+  approvals:
+  holds:
+
 networks:
-  # Both networks are sealed. The agent replays the attack payloads, so it is
+  # Every network is sealed. The agent replays the attack payloads, so it is
   # the last thing in the lab that should be able to reach anything outside it:
   # an exfiltration that succeeded would be one no scenario could grade. Nothing
   # needs a route out at run time — images are pulled and built over the host's
@@ -323,4 +457,11 @@ networks:
     # Sealed the same way, for the opposite reason: nothing on it should ever
     # need a route out, because the only thing meant to reach it is the
     # enforcer posting its own trail.
+    internal: true
+  # The enforcer and the decision point double, nothing else.
+  pdp-net:
+    internal: true
+  # The approver alone: it needs no peer, only the volume, and a service with
+  # no network would be put on the project's default one, which has a route out.
+  approver-net:
     internal: true

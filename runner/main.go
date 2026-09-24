@@ -65,6 +65,12 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if subject.namespace, err = enforcerNamespace(root); err != nil {
 		return err
 	}
+	if subject.pin, err = enforcerPin(root); err != nil {
+		return err
+	}
+	if subject.enforcerImage, err = enforcerImage(root); err != nil {
+		return err
+	}
 	return executeAll(ctx, subject, scenarios, out)
 }
 
@@ -101,6 +107,9 @@ func newLab(root string, chosen settings, environ []string, out io.Writer) lab {
 		suffix:   randomSuffix,
 		log:      out,
 		describe: describeHost(root, command),
+		keysDir:  labKeysDir(lookupIn(environ)),
+		sign:     signWithEnforcer(root, command),
+		inspect:  command,
 	}
 }
 

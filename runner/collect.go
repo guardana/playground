@@ -151,7 +151,12 @@ func makeRunDir(reports, runDir string) error {
 	if err := makeShared(runDir); err != nil {
 		return err
 	}
-	return makeShared(filepath.Join(runDir, "journals"))
+	for _, owned := range []string{"journals", "agent"} {
+		if err := makeShared(filepath.Join(runDir, owned)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // makeShared creates one directory the services can write into. The mode is set

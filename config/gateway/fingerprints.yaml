@@ -1,0 +1,15 @@
+# Written by scripts/classify-victims.sh from the pinned enforcer's doctor; do not edit.
+- { upstream: victim-crm, tool: crm.export_table, fingerprint: "sha256:45851a90f07ca9bd496a5f9757fed49cbad14ac6d29fbe0877a88c64968e872a" }
+- { upstream: victim-crm, tool: crm.read_customer, fingerprint: "sha256:ffe8a3af6870dcd4362cb653a107f8873a400abccd87d54170f423da99f21c59" }
+- { upstream: victim-crm, tool: crm.update_bank_account, fingerprint: "sha256:13075d07b76d552a32b6a8e33cf40833815df7f288897c4de0c92267d94287d3" }
+- { upstream: victim-crm, tool: crm.update_note, fingerprint: "sha256:daacada6c3579d3e26e4f19379816b3fcc33d624c30e330ce2899e021c5e06b0" }
+- { upstream: victim-db, tool: db.drop_table, fingerprint: "sha256:014a77412cafec0278328265b5aeb9e9871705c755c4f28918d5e91752cb60d1" }
+- { upstream: victim-db, tool: db.execute, fingerprint: "sha256:d29f9ecfab4d7ce1ed67c8f95c08acf1eb979bc916d74dc980caeb1681c4a9e4" }
+- { upstream: victim-db, tool: db.query, fingerprint: "sha256:9a04d272e89b1fe780f51e5af8b37a7064ef9c8fbca87d951c9f65d5dac63e2a" }
+- { upstream: victim-fs, tool: fs.list, fingerprint: "sha256:6d37df00c310cb6bd3ac7a61c4530ef4732782c9bbf0ba581df3fcda9ab8bd56" }
+- { upstream: victim-fs, tool: fs.read, fingerprint: "sha256:0ddc80c4931eb9770ef3bf7f2cef3b5806b723fd8b2fff01279335f462907ff5" }
+- { upstream: victim-fs, tool: fs.write, fingerprint: "sha256:44883433fd07e8b2a1961753cabb1eed4f97f151100c9201d3548920ed9f5eb8" }
+- { upstream: victim-mail, tool: mail.send, fingerprint: "sha256:18e4a5799dc8f03a0bd14583263694d52f376fa08b717eeb6681973f2cbe644d" }
+- { upstream: victim-mail, tool: mail.send_bulk, fingerprint: "sha256:cda69cf7a74f574e5df38a871f896e83b2869307bf78fe4840ffe643aecfc22c" }
+- { upstream: victim-shell, tool: shell.exec, fingerprint: "sha256:055a39b1baaf00d0e1538a9271b51e91d5a5198a5125dda791376c941dc9dc55" }
+- { upstream: victim-web, tool: web.fetch, fingerprint: "sha256:a8e50356b24cb05d055322b0579391e554aac3d1b2483a00fa715a11dc26f73b" }

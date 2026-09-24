@@ -34,6 +34,15 @@ type Compose interface {
 	// comes back apart from standard error, which carries compose's own
 	// progress. A non-empty entrypoint replaces the image's.
 	RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error)
+	// Exec runs a command inside a running service's container, its output
+	// kept apart from compose's own.
+	Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error)
+	// Stop stops one service and waits for it to exit; a service that flushes
+	// on SIGTERM has flushed when it returns without error.
+	Stop(ctx context.Context, profiles []string, service string) error
+	// ContainerImage is the image ID the project's own container of service
+	// runs, whatever tag it was started from.
+	ContainerImage(ctx context.Context, profiles []string, service string) (string, error)
 	Down(ctx context.Context, profiles []string) error
 	// WithEnv returns a Compose that adds these variables to every invocation.
 	// The run identifier is one of them, and it changes per run, so it is not
@@ -128,7 +137,14 @@ func (d dockerCompose) RunSplit(
 	if _, err := d.capture(ctx, profiles, "build", service); err != nil {
 		return Split{}, err
 	}
-	command := d.command(ctx, profiles, runSplitArgs(service, entrypoint, args)...)
+	return d.split(d.command(ctx, profiles, runSplitArgs(service, entrypoint, args)...))
+}
+
+func (d dockerCompose) Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error) {
+	return d.split(d.command(ctx, profiles, append([]string{"exec", "-T", service}, args...)...))
+}
+
+func (d dockerCompose) split(command *exec.Cmd) (Split, error) {
 	var out, problems strings.Builder
 	command.Stdout, command.Stderr = &out, &problems
 	err := command.Run()
@@ -142,6 +158,11 @@ func (d dockerCompose) RunSplit(
 		return split, err
 	}
 	return split, nil
+}
+
+func (d dockerCompose) Stop(ctx context.Context, profiles []string, service string) error {
+	_, err := d.capture(ctx, profiles, "stop", service)
+	return err
 }
 
 func (d dockerCompose) Down(ctx context.Context, profiles []string) error {
