@@ -44,6 +44,8 @@ type decided struct {
 	digest      string
 	preview     string
 	blocked     bool
+	// tool is the tool the proposal names; empty is the one sameTool calls.
+	tool string
 }
 
 func (d decided) events() []evidence.Event {
@@ -56,6 +58,10 @@ func (d decided) events() []evidence.Event {
 		runID = thisRun
 	}
 	stepID := strconv.Itoa(d.step)
+	tool := d.tool
+	if tool == "" {
+		tool = everyTool
+	}
 	at := time.Date(2026, 9, 9, 12, 0, d.step, 0, time.UTC)
 
 	proposed := evidence.Event{
@@ -68,6 +74,7 @@ func (d decided) events() []evidence.Event {
 		OccurredAt: at,
 		Proposed: &evidence.ActionEnvelope{
 			RequestID: d.requestID,
+			Action:    &evidence.Action{Name: tool, Protocol: "mcp"},
 			Context:   &evidence.RunContext{RunID: runID, StepID: stepID},
 			Arguments: &evidence.Arguments{RedactedPreview: d.preview},
 		},
@@ -163,6 +170,33 @@ func servedIn(runID, server, tool string) journal.Entry {
 		RunID:      runID,
 		Status:     journal.Served,
 	}
+}
+
+// everyTool is the tool sameTool calls at every step, and the one a proposal
+// names unless a test says otherwise.
+const everyTool = "fs.read"
+
+// calls is a trajectory whose n-th step calls the n-th tool.
+func calls(tools ...string) labspec.Trajectory {
+	trajectory := labspec.Trajectory{SchemaVersion: labspec.SchemaVersion}
+	for _, tool := range tools {
+		trajectory.Steps = append(trajectory.Steps, labspec.Step{Call: labspec.Call{Server: "victim-fs", Tool: tool}})
+	}
+	return trajectory
+}
+
+// sameTool is a trajectory as long as the scenario's last graded step, calling
+// everyTool at each.
+func sameTool(spec labspec.Scenario) labspec.Trajectory {
+	last := 0
+	for step := range spec.Expect.Decisions {
+		last = max(last, step)
+	}
+	tools := make([]string, last)
+	for i := range tools {
+		tools[i] = everyTool
+	}
+	return calls(tools...)
 }
 
 func scenario(decisions map[int]labspec.DecisionExpectation) labspec.Scenario {

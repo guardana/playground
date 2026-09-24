@@ -38,10 +38,11 @@ func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 		Properties: append([]junitProperty{
 			{Name: "run-id", Value: r.RunID},
 			{Name: "outcome", Value: r.Outcome().String()},
+			{Name: "gap", Value: or(r.Gap, "none")},
 		}, provenanceProperties(p)...),
 	}
 	for _, result := range results {
-		suite.Cases = append(suite.Cases, testCase(r.Scenario, result))
+		suite.Cases = append(suite.Cases, testCase(r.Suite()+"."+r.Scenario, result))
 		suite.Tests++
 		if result.Outcome != assertion.Pass {
 			suite.Failures++
@@ -67,8 +68,10 @@ func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 	return err
 }
 
-func testCase(scenario string, result assertion.Result) junitCase {
-	one := junitCase{Name: result.Check, Classname: scenario, Time: "0"}
+// testCase writes one result; classname carries the suite before the scenario,
+// so a reader of the JUnit alone can tell a known gap's pass from the catalogue's.
+func testCase(classname string, result assertion.Result) junitCase {
+	one := junitCase{Name: result.Check, Classname: classname, Time: "0"}
 	if result.Outcome == assertion.Pass {
 		return one
 	}

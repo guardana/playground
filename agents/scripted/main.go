@@ -1,7 +1,7 @@
 // Command scripted-agent replays one trajectory as real MCP calls through the
 // gateway.
 //
-//	scripted-agent -trajectory <path> -gateway <url> -run-id <id> -out <path>
+//	scripted-agent -trajectory <path> -gateway <url> -run-id <id> -namespace <ns> -out <path>
 //	scripted-agent -probe <host:port>
 //
 // No model decides anything here. The trajectory is the whole of what happens,
@@ -55,6 +55,7 @@ type options struct {
 	runID      string
 	out        string
 	probe      string
+	namespace  string
 	timeout    time.Duration
 }
 
@@ -79,6 +80,8 @@ func parse(args []string, out io.Writer) (options, error) {
 	set.StringVar(&settings.trajectory, "trajectory", "", "path to the trajectory to replay")
 	set.StringVar(&settings.gateway, "gateway", "", "the gateway's MCP endpoint, for example http://stub-gateway:8080/mcp")
 	set.StringVar(&settings.runID, "run-id", "", "the identifier of this run, minted by the runner")
+	set.StringVar(&settings.namespace, "namespace", "",
+		"the enforcer's namespace, under which its gateway marks an answer it made itself, for example guardana.control")
 	set.StringVar(&settings.out, "out", "", "where to write the agent's own log, as JSON lines")
 	set.StringVar(&settings.probe, "probe", "", "dial host:port, exit zero only if a TCP connection was made")
 	set.DurationVar(&settings.timeout, "timeout", defaultTimeout, "how long the whole replay may take")
@@ -93,6 +96,7 @@ func parse(args []string, out io.Writer) (options, error) {
 		{"-trajectory", settings.trajectory},
 		{"-gateway", settings.gateway},
 		{"-run-id", settings.runID},
+		{"-namespace", settings.namespace},
 		{"-out", settings.out},
 	} {
 		if required.value == "" {
@@ -113,7 +117,7 @@ func runTrajectory(ctx context.Context, settings options) error {
 	}
 	defer func() { _ = log.Close() }()
 
-	ctx, cancel := context.WithTimeout(ctx, settings.timeout)
+	ctx, cancel := context.WithTimeout(ctx, replayDeadline(settings.timeout, trajectory))
 	defer cancel()
 
 	session, err := connect(ctx, settings.gateway)
@@ -122,7 +126,7 @@ func runTrajectory(ctx context.Context, settings options) error {
 	}
 	defer func() { _ = session.Close() }()
 
-	return replay(ctx, session, trajectory, settings.runID, log)
+	return replay(ctx, session, trajectory, settings.runID, settings.namespace, log)
 }
 
 // connect opens one MCP session to the gateway.

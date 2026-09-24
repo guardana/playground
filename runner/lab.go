@@ -56,6 +56,9 @@ type lab struct {
 	// describe reads what produced the run for the report header; nil records
 	// that nothing was read.
 	describe func(context.Context) report.Provenance
+	// namespace is the enforcer's, under which its gateway marks the answers
+	// it makes itself; the agent reads a pending answer only under it.
+	namespace string
 }
 
 // execute runs one scenario and writes its reports. It returns an error only
@@ -118,12 +121,22 @@ func (l lab) runScenario(
 		check.Boot{Source: filepath.Join(runDir, "boot.json")},
 		check.NetworkIsolation{Gateway: gateway, Victim: victim, Source: probed},
 		replayed,
-		check.Decisions{Scenario: spec, EvidenceFile: trail},
+		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
+		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
 		check.Effects{Scenario: spec, JournalDir: filepath.Join(runDir, "journals")},
-		check.Evidence{Scenario: spec, EvidenceFile: trail, ReadError: unreadable},
+		check.Evidence{
+			Scenario: spec, EvidenceFile: trail, ReadError: unreadable,
+			Unstamped: spec.Stub.Verdicts == "",
+			// The trail is read from runDir, which execute created for this run
+			// and refuses when it already exists.
+			FreshTrail: true,
+		},
 	)
 	graded.StartedAt, graded.EndedAt = started, l.clock()
-	return graded, check.DecisionRows(spec, records, trail)
+	if spec.Gap != nil {
+		graded.Gap = spec.Gap.Why
+	}
+	return graded, check.DecisionRows(spec, trajectory, records, trail)
 }
 
 // boot brings up every long running service in the profile and records what
@@ -195,6 +208,7 @@ func (l lab) replay(
 		"-trajectory", inContainer(spec.Trajectory),
 		"-gateway", gatewayEndpoint,
 		"-run-id", runID,
+		"-namespace", l.namespace,
 		"-out", path.Join(containerReports, runID, "agent.jsonl"),
 	})
 	// #nosec G703 -- the path is inside the run directory the runner made.
@@ -210,21 +224,6 @@ func (l lab) replay(
 		Detail:   lastLine(execution.Output),
 		Source:   source,
 	}
-}
-
-// environment is what compose interpolates into the topology for this run.
-func (l lab) environment(spec labspec.Scenario, runID string) map[string]string {
-	env := map[string]string{
-		"LAB_RUN_ID":      runID,
-		"LAB_REPORTS_DIR": containerReports,
-	}
-	if absolute, err := filepath.Abs(l.reports); err == nil {
-		env["LAB_REPORTS_HOST_DIR"] = absolute
-	}
-	if spec.Stub.Verdicts != "" {
-		env["LAB_STUB_VERDICTS"] = inContainer(spec.Stub.Verdicts)
-	}
-	return env
 }
 
 func (l lab) mint(id string) string {

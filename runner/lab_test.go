@@ -45,7 +45,7 @@ steps:
 	// ${RUN_ID} is what the fake stub gateway and the fake victims stamp their
 	// records with, the way the real ones stamp LAB_RUN_ID. A record naming
 	// another run is a record of another run, and the runner has to say so.
-	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","context":{"runId":"${RUN_ID}","stepId":"1"}}}
+	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"},"context":{"runId":"${RUN_ID}","stepId":"1"}}}
 {"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
 {"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
 {"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3"}
@@ -198,13 +198,14 @@ func labUnderTest(t *testing.T, compose Compose) (lab, string) {
 	writeFile(filepath.Join(root, "trajectories/flow-01.yaml"), trajectoryFile)
 	reports := filepath.Join(root, "reports")
 	return lab{
-		root:    root,
-		reports: reports,
-		compose: compose,
-		timeout: defaultScenarioTimeout,
-		clock:   func() time.Time { return time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC) },
-		suffix:  countingSuffix(),
-		log:     io.Discard,
+		root:      root,
+		reports:   reports,
+		compose:   compose,
+		timeout:   defaultScenarioTimeout,
+		clock:     func() time.Time { return time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC) },
+		suffix:    countingSuffix(),
+		log:       io.Discard,
+		namespace: "guardana.control",
 	}, filepath.Join(root, "scenarios/flow/flow-01.yaml")
 }
 

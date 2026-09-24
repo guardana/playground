@@ -9,7 +9,7 @@ without notice · `planned` does not exist.
 |---|---|---|
 | Repository rules and quality gate | implemented | `make quality` |
 | Pinned versions of the systems under test | implemented | `versions.env`, every pulled image by tag and index digest; `make images` builds the enforcer from `git archive` of its commit, refused unless the archive hashes to that commit's tree, and the verifier from its hash-locked release; every report prints the pins, the machine, and each image on this machine with its ID and the pin its label names. No service runs these two images yet |
-| Trajectory and scenario file formats | implemented | `internal/labspec`; an unknown key is refused and the two files cross-validate |
+| Trajectory and scenario file formats | implemented | `internal/labspec`; an unknown key is refused and the two files cross-validate. Steps pair with the trails they open by order and by tool, can wait, retry a held call, resume a held trail or open none; named gaps are their own suite. The trail cannot tell which retry resumed a hold. Nothing has graded a real enforcer trail yet |
 | Evidence, journal and assertion readers | implemented | `internal/evidence` mirrors the enforcer's v1 contract at its pinned commit and reads its OTLP log export; `internal/journal`, `internal/assertion`. No scenario has read a real export yet |
 | Compose topology | implemented | `compose/`; ten services on two networks, `tool-net` with no route out |
 | Stub gateway | experimental | replays the declared verdicts in `config/scenarios/`; it decides nothing. It lists an upstream's tools once at startup as well as on demand, so a victim counting its own listings is one ahead of the agent |
@@ -17,7 +17,7 @@ without notice · `planned` does not exist.
 | AuthZEN decision point double | experimental | `services/pdp-double`: HTTPS with a CA it makes in memory and scopes to its own names, answers scripted per scenario (allow, deny, obligation, timeout, 500, no echo, malformed, extra member; unscripted is denied), every question journalled. No scenario uses it yet |
 | Approver | experimental | `services/approver`: answers held approvals per scenario script through the enforcer's own `approvals` command, never while no plane holds the directory; every action and every outcome it cannot confirm journalled. No scenario uses it yet |
 | Scripted agent | implemented | `agents/scripted`; replays a trajectory and forwards each step's output into the next |
-| Scenario runner and assertions | implemented | `make scenario ID=...`; boot, topology, replay, decisions, effects and evidence checks |
+| Scenario runner and assertions | implemented | `make scenario ID=...`; boot, topology, replay, decisions, trails, effects and evidence checks; every run in a compose project of its own |
 | Scenario catalogue | experimental | three scenarios, one `ALLOW`, one `DENY`, one `INDETERMINATE`; they have run only against the stub |
 | Attack payload catalogue | experimental | four indirect injections in `attacks/`, served by `attacker-web` |
 | Chaos matrix | planned | latency, timeouts, cut links, full disk, clock skew |

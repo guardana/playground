@@ -27,6 +27,13 @@ type Evidence struct {
 	// trail nobody could read and a trail with nothing in it are two facts, and
 	// the second one sends a reader to a file that turns out to be full.
 	ReadError error
+	// Unstamped is set for a gateway that writes no run id, as the enforcer at
+	// its pin does: the check asserts that no event names a run.
+	Unstamped bool
+	// FreshTrail is set by the runner when the trail file lives in the run
+	// directory it has just created. An unstamped trail says nothing about
+	// which run wrote it, so without this it cannot be read as this run's.
+	FreshTrail bool
 }
 
 // ID names the check in a report.
@@ -80,55 +87,19 @@ func (e Evidence) trailResult(records assertion.Records) (assertion.Result, bool
 	return result, true
 }
 
-// runResult reports whether the trail was written for the run being graded.
-//
-// A complete, coherent, digest-carrying trail from an earlier run satisfies
-// every other assertion here, so without this one a run is graded on whatever
-// was on disk. Nothing but a fresh run directory stands between the two, and a
-// directory is luck rather than an assertion.
-func (e Evidence) runResult(records assertion.Records) assertion.Result {
-	result := assertion.Result{
-		Check:  "evidence/run-id",
-		Want:   "every event stamped with run " + records.RunID,
-		Source: e.EvidenceFile,
-	}
-	stamped, elsewhere, first := 0, []string{}, 0
-	for i, event := range records.Evidence {
-		named := runIDs(event)
-		if len(named) == 0 {
-			continue
-		}
-		stamped++
-		if writtenForRun(named, records.RunID) {
-			continue
-		}
-		if first == 0 {
-			first = i + 1
-		}
-		elsewhere = append(elsewhere, fmt.Sprintf("%s at line %d", strings.Join(named, " and "), i+1))
-	}
-	switch {
-	case stamped == 0:
-		result.Outcome = assertion.Indeterminate
-		result.Got = "no event names a run"
-		result.Detail = "nothing in the trail says which run wrote it"
-	case len(elsewhere) > 0:
-		result.Outcome = assertion.Fail
-		result.Got = fmt.Sprintf("%d of %d events name another run", len(elsewhere), stamped)
-		result.Source = fmt.Sprintf("%s:%d", e.EvidenceFile, first)
-		result.Detail = fmt.Sprintf("this run is %s and the trail carries %s",
-			records.RunID, strings.Join(elsewhere, ", "))
-	default:
-		result.Outcome = assertion.Pass
-		result.Got = fmt.Sprintf("%d events, every one stamped %s", stamped, records.RunID)
-	}
-	return result
-}
+// requestless are the kinds that belong to no request: an operator reloading a
+// bundle, a detector reporting after the fact.
+var requestless = []evidence.Kind{evidence.KindPolicyReloaded, evidence.KindFindingRaised}
 
-// chainResults grades one trail per request, in request order.
+// chainResults grades one trail per request, in request order. Events with no
+// request id are graded apart: they are no request's chain.
 func (e Evidence) chainResults(events []evidence.Event) []assertion.Result {
 	trails := evidence.ByRequest(events)
 	results := make([]assertion.Result, 0, len(trails))
+	if unscoped, present := trails[""]; present {
+		results = append(results, e.requestlessResult(unscoped))
+		delete(trails, "")
+	}
 	for _, requestID := range slices.Sorted(maps.Keys(trails)) {
 		result := assertion.Result{
 			Check:  "evidence/chain-complete/" + requestID,
@@ -152,6 +123,24 @@ func (e Evidence) chainResults(events []evidence.Event) []assertion.Result {
 		results = append(results, result)
 	}
 	return results
+}
+
+func (e Evidence) requestlessResult(unscoped []evidence.Event) assertion.Result {
+	result := assertion.Result{
+		Check:  "evidence/requestless",
+		Want:   "only a reload or a finding carries no request id",
+		Source: e.EvidenceFile,
+	}
+	for _, event := range unscoped {
+		if !slices.Contains(requestless, event.Kind) {
+			result.Outcome = assertion.Fail
+			result.Got = fmt.Sprintf("event %q is %s and names no request", event.EventID, event.Kind)
+			return result
+		}
+	}
+	result.Outcome = assertion.Pass
+	result.Got = fmt.Sprintf("%d events, each a reload or a finding", len(unscoped))
+	return result
 }
 
 func (e Evidence) digestResult(events []evidence.Event) assertion.Result {

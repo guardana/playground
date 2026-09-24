@@ -51,6 +51,7 @@ x-victim: &victim
 
 services:
   victim-crm:
+    image: ${LAB_IMAGE_PREFIX}-victim-crm
     <<: *victim
     build:
       context: ..
@@ -63,6 +64,7 @@ services:
       LAB_SERVER_NAME: victim-crm
 
   victim-db:
+    image: ${LAB_IMAGE_PREFIX}-victim-db
     <<: *victim
     build:
       context: ..
@@ -75,6 +77,7 @@ services:
       LAB_SERVER_NAME: victim-db
 
   victim-fs:
+    image: ${LAB_IMAGE_PREFIX}-victim-fs
     <<: *victim
     build:
       context: ..
@@ -92,6 +95,7 @@ services:
       LAB_SERVER_NAME: victim-fs
 
   victim-shell:
+    image: ${LAB_IMAGE_PREFIX}-victim-shell
     <<: *victim
     build:
       context: ..
@@ -104,6 +108,7 @@ services:
       LAB_SERVER_NAME: victim-shell
 
   victim-mail:
+    image: ${LAB_IMAGE_PREFIX}-victim-mail
     <<: *victim
     build:
       context: ..
@@ -119,6 +124,7 @@ services:
         condition: service_healthy
 
   victim-web:
+    image: ${LAB_IMAGE_PREFIX}-victim-web
     <<: *victim
     build:
       context: ..
@@ -182,6 +188,7 @@ services:
   # reaches a tool. It decides nothing: it replays the verdicts declared in the
   # file at LAB_STUB_VERDICTS and records what it did.
   stub-gateway:
+    image: ${LAB_IMAGE_PREFIX}-stub-gateway
     <<: *hardened
     build:
       context: ..
@@ -229,6 +236,7 @@ services:
   # Not in the core profile: the agent is run for one trajectory and exits, so
   # the runner starts it with `docker compose run` and its arguments.
   scripted-agent:
+    image: ${LAB_IMAGE_PREFIX}-scripted-agent
     <<: *hardened
     build:
       context: ..
@@ -253,8 +261,9 @@ networks:
   # the last thing in the lab that should be able to reach anything outside it:
   # an exfiltration that succeeded would be one no scenario could grade. Nothing
   # needs a route out at run time — images are pulled and built over the host's
-  # network before any of this starts, the agent talks only to the gateway, and
-  # `docker compose run` attaches to a container the daemon already built.
+  # network before any container starts (`docker compose run --build` builds the
+  # agent's image first, over the host's network, not the lab's), and the agent
+  # talks only to the gateway.
   agent-net:
     internal: true
   tool-net:

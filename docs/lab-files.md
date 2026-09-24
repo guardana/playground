@@ -43,6 +43,24 @@ scenario says it is testing.
 
 The run identifier is not in the file. A trajectory replayed twice is two runs.
 
+A step can wait, and can resend its call while the gateway holds it:
+
+```yaml
+  - wait_before: 3s
+    retry_while_pending: { every: 500ms, at_most: 20 }
+    call: { server: victim-crm, tool: crm.refund, args: { order: "o-17" } }
+```
+
+`wait_before` pauses before the call, up to 10 minutes. `retry_while_pending`
+sends the same call again while the enforcer answers that the request is held
+for an approval, every `every` (100ms to 1m), at most `at_most` more times (1 to
+100). An answer is pending only when the result is an error whose structured
+content says `reason_code: APPROVAL_PENDING` and whose `_meta` carries
+`<namespace>/answer: pending`, the mark the enforcer's gateway puts on answers
+it makes itself; the namespace is `ENFORCER_NAMESPACE` in `versions.env`. An
+upstream result shaped like a pending answer is not retried. Durations are
+strings; a bare number is refused.
+
 ## `scenarios/<class>/<id>.yaml`
 
 The identifier is the file name. A scenario copied to a new file and left with
@@ -88,6 +106,75 @@ three are checked when the files load:
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
   was expected is a failure unless that step is listed, and listing a step whose
   expectation is already `INDETERMINATE` is refused because it says nothing.
+
+### Which trail a step is graded on
+
+The enforcer mints its own request ids and writes no step number, so a step is
+tied to its trail by order: the n-th trail the run opened (its
+`ACTION_PROPOSED`) belongs to the n-th step that opens one. The tool that
+proposal names (`action.name`) must be the tool the step calls, so a step whose
+trail never opened and an extra trail for another tool cannot cancel out. Two
+calls to the same tool can: if a step's trail never opens and a later
+`opens: none` retry of the same call opens one, every step pairs and passes.
+The trail records only a hash of the arguments, so the lab cannot tell those two
+calls apart without recomputing the enforcer's canonical form, which it does
+not do; the victim's journal still counts what ran. Where a trail also
+carries a step number, as the stub gateway writes one, the two must agree. A
+trail no step claims, or a request proposed twice, fails its check, because it
+shifts every pairing after it.
+
+A step opens a trail unless it says otherwise:
+
+```yaml
+  decisions:
+    1:
+      verdict: REQUIRE_APPROVAL
+      reason_codes_include: [APPROVAL_REQUIRED]
+    2: { opens: none }
+    3:
+      resumes: 1
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    4:
+      verdict: DENY
+      blocked: { verdict: DENY, reason_codes_include: [ACTION_UNCLASSIFIED] }
+```
+
+- `verdict`, `reason_codes_include` and `obligations_include` grade the
+  trail's `POLICY_DECIDED`, which carries the policy's own verdict. A step that
+  opens a trail has to state a verdict.
+- `blocked` grades the trail's `ACTION_BLOCKED`: the block a mode or the
+  gateway made, which `POLICY_DECIDED` does not show.
+- `trail` is the exact sequence of event kinds the trail holds when the run
+  ends, in the order its links give.
+- `resumes: n` grades step n's held trail instead of a trail of its own. It
+  states `trail` or `blocked`, never a verdict: the held trail's
+  `POLICY_DECIDED` is step n's, and grading it again would pass whether or not
+  anything resumed.
+- `opens: none` is a step that opens no trail of its own, such as a retry the
+  enforcer answered pending. It states nothing else.
+
+At the enforcer's pin, a retry answered pending and the retry that resumes a
+hold both write no `ACTION_PROPOSED`, so the trail cannot tell which attempt
+resumed. What is graded is the held trail's `trail`: the kinds it holds when
+the run ends.
+
+### Named gaps
+
+Behaviour a system under test does not have yet is a named gap. Its scenario
+lives in `scenarios/gaps/`, asserts the verdict the system documents today, and
+names the verdict it should give:
+
+```yaml
+gap:
+  wanted: { 3: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] } }
+  why: the gateway builds no run flow at its pin
+```
+
+The runner prints its suite as `known-gap`, and the report shows the wanted
+verdict beside every step it names. A gap passes while the system still does
+what it documents, and goes red when that changes, in either direction; then it
+moves to its class. A scenario under `gaps/` without `gap`, or with `gap`
+elsewhere, is refused at load.
 
 A scenario's declared verdicts live in `config/scenarios/`, named for the
 scenario, and so does its trajectory in `trajectories/`. One identifier

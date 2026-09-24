@@ -29,6 +29,23 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   external decision point: HTTPS only, a CA made in memory and scoped by
   critical name constraints to its own names, answers scripted per scenario,
   hostile by default, and every question journalled before it is answered.
+- The scenario format pairs steps with the trails they open by order, so a run
+  can be graded against a gateway that writes no step number or run id. A step
+  can `resumes` a held trail (stating `trail` or `blocked`, never a verdict) or
+  open none (`opens: none`), and grade the trail's `ACTION_BLOCKED` (`blocked`)
+  and its whole sequence of kinds (`trail`). Each trail's proposal must name the
+  tool its step calls. A trajectory step can `wait_before` its call and
+  `retry_while_pending`, which retries only an answer the enforcer's gateway
+  marks as its own under `ENFORCER_NAMESPACE`. Unchanged files load and grade
+  as before.
+- Named gaps: scenarios under `scenarios/gaps/` carry `gap: {wanted, why}`,
+  assert what the system documents today and run as their own suite, named in
+  the runner's summary and in every JUnit classname (`known-gap.<id>` or
+  `catalogue.<id>`).
+- Every scenario run gets its own compose project, lab-built images are named
+  through `LAB_IMAGE_PREFIX`, and the agent's image is rebuilt before every run
+  so a fixed name never replays a stale agent. A trail that names no run is
+  read as the run's own only from the directory the runner just created.
 - `services/approver` answers held approvals the way a person would, through
   the enforcer's own `approvals list|approve|reject`, per a scenario script:
   approve, reject or leave, after a delay; never while no plane holds the

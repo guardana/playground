@@ -45,9 +45,14 @@ type Session struct {
 // Step is one tool call. Label names what the step is for in the failure
 // message and in a scenario written about it; it carries no meaning to the
 // systems under test.
+//
+// WaitBefore pauses before the call; RetryWhilePending resends it while the
+// gateway answers that the request is held for an approval.
 type Step struct {
-	Label string `json:"label,omitempty"`
-	Call  Call   `json:"call"`
+	Label             string   `json:"label,omitempty"`
+	WaitBefore        Duration `json:"wait_before,omitempty"`
+	RetryWhilePending *Retry   `json:"retry_while_pending,omitempty"`
+	Call              Call     `json:"call"`
 }
 
 // Call is the tool call itself, addressed to a server by the name compose gives
@@ -93,6 +98,7 @@ func (s Step) validate(number int) error {
 	if err := first(
 		required(fmt.Sprintf("steps[%d].call.server", number), s.Call.Server),
 		required(fmt.Sprintf("steps[%d].call.tool", number), s.Call.Tool),
+		s.validateTiming(number),
 	); err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package report
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/guardana/playground/internal/assertion"
@@ -17,7 +18,11 @@ func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p 
 	out.printf("# %s\n\n", or(r.Scenario, "an unnamed scenario"))
 	out.printf("- Run: `%s`\n", or(r.RunID, "unnamed"))
 	out.printf("- Outcome: **%s**\n", r.Outcome().String())
-	out.printf("- Started: %s, took %ss\n\n", r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"), seconds(r))
+	out.printf("- Started: %s, took %ss\n", r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"), seconds(r))
+	if r.Gap != "" {
+		out.printf("- Known gap: %s. A pass means the system still does what it documents today; the Wanted column is what it should do\n", r.Gap)
+	}
+	out.printf("\n")
 
 	writeProvenance(out, p)
 	writeDecisions(out, rows)
@@ -31,16 +36,18 @@ func writeDecisions(out *writer, rows []check.DecisionRow) {
 		out.printf("No step was graded, so the run establishes nothing about any decision.\n\n")
 		return
 	}
-	out.printf("| Step | Expected | Recorded | Reason codes | Outcome | Source |\n")
-	out.printf("|---|---|---|---|---|---|\n")
+	wanted := slices.ContainsFunc(rows, func(row check.DecisionRow) bool { return row.Wanted != "" })
+	out.printf("| Step | Expected | Recorded | Reason codes | Outcome | Source |%s\n", ifWanted(wanted, " Wanted |"))
+	out.printf("|---|---|---|---|---|---|%s\n", ifWanted(wanted, "---|"))
 	for _, row := range rows {
-		out.printf("| %d | %s | %s | %s | %s | %s |\n",
+		out.printf("| %d | %s | %s | %s | %s | %s |%s\n",
 			row.Step,
 			cell(row.Want),
 			cell(row.Got),
 			cell(strings.Join(row.ReasonCodes, " ")),
 			row.Outcome.String(),
-			cell(row.Source))
+			cell(row.Source),
+			ifWanted(wanted, " "+cell(row.Wanted)+" |"))
 	}
 	out.printf("\n")
 }
@@ -79,6 +86,13 @@ func writeDetails(out *writer, results []assertion.Result) {
 			out.printf("  Read from `%s`.\n", result.Source)
 		}
 	}
+}
+
+func ifWanted(wanted bool, text string) string {
+	if !wanted {
+		return ""
+	}
+	return text
 }
 
 // cell keeps one value inside one table cell. A detail written by a service

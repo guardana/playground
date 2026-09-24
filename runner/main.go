@@ -61,7 +61,11 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return executeAll(ctx, newLab(root, chosen, environ, out), scenarios, out)
+	subject := newLab(root, chosen, environ, out)
+	if subject.namespace, err = enforcerNamespace(root); err != nil {
+		return err
+	}
+	return executeAll(ctx, subject, scenarios, out)
 }
 
 func parse(args []string, out io.Writer) (settings, error) {
@@ -112,7 +116,7 @@ func executeAll(ctx context.Context, subject lab, scenarios []string, out io.Wri
 			_, _ = fmt.Fprintf(out, "%s: the run could not be written: %v\n", filepath.Base(scenario), err)
 			continue
 		}
-		_, _ = fmt.Fprintf(out, "%-10s %s  %s\n", graded.Outcome(), graded.Scenario,
+		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), graded.Suite(), graded.Scenario,
 			filepath.Join(subject.reports, graded.RunID, "report.md"))
 		if graded.Outcome() != assertion.Pass {
 			failed = append(failed, graded.Scenario)

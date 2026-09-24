@@ -41,22 +41,28 @@ const (
 
 // replay sends every step of the trajectory in order and returns the first
 // reason a step could not be sent at all.
-func replay(ctx context.Context, caller toolCaller, trajectory labspec.Trajectory, runID string, log io.Writer) error {
+func replay(
+	ctx context.Context, caller toolCaller, trajectory labspec.Trajectory, runID, namespace string, log io.Writer,
+) error {
 	outputs := make(map[int]string, len(trajectory.Steps))
-	journal := &stepLog{to: log, runID: runID}
+	journal := &stepLog{to: log, runID: runID, namespace: namespace}
 
 	for i, step := range trajectory.Steps {
 		number := i + 1
+		if err := pause(ctx, time.Duration(step.WaitBefore)); err != nil {
+			journal.record(number, step, failed, 0, err)
+			return fmt.Errorf("step %d: waiting before the call: %w", number, err)
+		}
 		arguments, err := step.Resolve(outputs)
 		if err != nil {
 			journal.record(number, step, failed, 0, err)
 			return fmt.Errorf("step %d: %w", number, err)
 		}
-		result, err := caller.CallTool(ctx, &mcp.CallToolParams{
+		result, err := callWhilePending(ctx, caller, number, step, &mcp.CallToolParams{
 			Name:      step.Call.Tool,
 			Arguments: arguments,
 			Meta:      mcp.Meta{metaStep: number, metaRunID: runID},
-		})
+		}, journal)
 		if err != nil {
 			journal.record(number, step, failed, 0, err)
 			return fmt.Errorf("step %d: %s on %s: %w", number, step.Call.Tool, step.Call.Server, err)
@@ -69,12 +75,15 @@ func replay(ctx context.Context, caller toolCaller, trajectory labspec.Trajector
 			output = textOf(result)
 		}
 		outputs[number] = output
-		journal.record(number, step, statusOf(result), len(output), nil)
+		journal.record(number, step, statusOf(result, namespace), len(output), nil)
 	}
 	return journal.err
 }
 
-func statusOf(result *mcp.CallToolResult) outcome {
+func statusOf(result *mcp.CallToolResult, namespace string) outcome {
+	if isPending(result, namespace) {
+		return pendingOutcome
+	}
 	if result.IsError {
 		return denied
 	}
@@ -100,9 +109,10 @@ func textOf(result *mcp.CallToolResult) string {
 // what it produced, so a canary planted in a victim's fixtures does not end up
 // in a file the lab keeps.
 type stepLog struct {
-	to    io.Writer
-	runID string
-	err   error
+	to        io.Writer
+	runID     string
+	namespace string
+	err       error
 }
 
 type logLine struct {

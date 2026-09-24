@@ -21,10 +21,12 @@ type fakeGateway struct {
 }
 
 type answer struct {
-	text    []string
-	content []mcp.Content
-	isError bool
-	err     error
+	text       []string
+	content    []mcp.Content
+	isError    bool
+	structured any
+	meta       mcp.Meta
+	err        error
 }
 
 func (f *fakeGateway) CallTool(_ context.Context, params *mcp.CallToolParams) (*mcp.CallToolResult, error) {
@@ -36,7 +38,8 @@ func (f *fakeGateway) CallTool(_ context.Context, params *mcp.CallToolParams) (*
 	if scripted.err != nil {
 		return nil, scripted.err
 	}
-	result := &mcp.CallToolResult{IsError: scripted.isError, Content: scripted.content}
+	result := &mcp.CallToolResult{IsError: scripted.isError, Content: scripted.content, StructuredContent: scripted.structured}
+	result.Meta = scripted.meta
 	for _, text := range scripted.text {
 		result.Content = append(result.Content, &mcp.TextContent{Text: text})
 	}
@@ -66,7 +69,7 @@ func TestReplaySendsEachStepWithItsStepNumberAndRunID(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if len(gateway.sent) != 2 {
@@ -97,7 +100,7 @@ func TestReplayCarriesOnPastADenialAndFailsWhereTheDataIsMissing(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	err := replay(context.Background(), gateway, twoSteps(), "run-7", &log)
+	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log)
 	if err == nil {
 		t.Fatal("a step reading a denied step's output ran anyway")
 	}
@@ -116,7 +119,7 @@ func TestReplayStopsWhenAStepCouldNotBeSent(t *testing.T) {
 	gateway := &fakeGateway{answers: []answer{{err: errors.New("connection reset")}}}
 	var log bytes.Buffer
 
-	err := replay(context.Background(), gateway, twoSteps(), "run-7", &log)
+	err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log)
 	if err == nil {
 		t.Fatal("a transport failure did not stop the run")
 	}
@@ -135,7 +138,7 @@ func TestReplayLogIsJSONLinesAndCarriesNoContent(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	lines := strings.Split(strings.TrimSuffix(log.String(), "\n"), "\n")
@@ -171,7 +174,7 @@ func TestReplayTakesOnlyTextContentAsAStepOutput(t *testing.T) {
 	}}
 	var log bytes.Buffer
 
-	if err := replay(context.Background(), gateway, twoSteps(), "run-7", &log); err != nil {
+	if err := replay(context.Background(), gateway, twoSteps(), "run-7", testNamespace, &log); err != nil {
 		t.Fatalf("replay: %v", err)
 	}
 	if body := gateway.sent[1].Arguments.(map[string]any)["body"]; body != "the private rows" {

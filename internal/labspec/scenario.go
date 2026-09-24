@@ -3,7 +3,6 @@ package labspec
 import (
 	"fmt"
 	"slices"
-	"strconv"
 )
 
 // Verdicts are the five the wire contract declares, written without the
@@ -26,6 +25,7 @@ type Scenario struct {
 	EnforcementMode string    `json:"enforcement_mode"`
 	Trajectory      string    `json:"trajectory"`
 	Stub            Stub      `json:"stub,omitempty"`
+	Gap             *Gap      `json:"gap,omitempty"`
 	Expect          Expect    `json:"expect"`
 	Tolerance       Tolerance `json:"tolerance,omitempty"`
 }
@@ -58,10 +58,20 @@ type Expect struct {
 // and obligations are checked for inclusion rather than equality: a decision
 // may carry more than the scenario names, and naming all of them would make
 // every scenario a copy of the policy.
+//
+// A step opens a trail of its own unless it resumes an earlier step's held
+// trail or opens none. Verdict and its codes grade POLICY_DECIDED on the
+// step's own trail, Blocked grades ACTION_BLOCKED, and Trail is the exact
+// sequence of kinds the trail holds when the run ends. A resuming step states
+// Trail or Blocked only: the held trail's POLICY_DECIDED is the opening step's.
 type DecisionExpectation struct {
-	Verdict            string   `json:"verdict"`
-	ReasonCodesInclude []string `json:"reason_codes_include,omitempty"`
-	ObligationsInclude []string `json:"obligations_include,omitempty"`
+	Verdict            string            `json:"verdict,omitempty"`
+	ReasonCodesInclude []string          `json:"reason_codes_include,omitempty"`
+	ObligationsInclude []string          `json:"obligations_include,omitempty"`
+	Resumes            int               `json:"resumes,omitempty"`
+	Opens              string            `json:"opens,omitempty"`
+	Blocked            *BlockExpectation `json:"blocked,omitempty"`
+	Trail              []string          `json:"trail,omitempty"`
 }
 
 // EffectExpectation is what one victim served, read back from the journal that
@@ -115,8 +125,7 @@ func (s Scenario) validate(fileName string) error {
 		return fmt.Errorf("%w: expect.decisions is empty", ErrInvalid)
 	}
 	for _, number := range sortedInts(s.Expect.Decisions) {
-		field := "expect.decisions[" + strconv.Itoa(number) + "].verdict"
-		if err := oneOf(field, s.Expect.Decisions[number].Verdict, Verdicts...); err != nil {
+		if err := s.Expect.Decisions[number].validate(number); err != nil {
 			return err
 		}
 	}
@@ -139,6 +148,9 @@ func Validate(s Scenario, t Trajectory) error {
 			return fmt.Errorf("%w: expect.decisions names step %d and the trajectory has %d",
 				ErrInvalid, number, len(t.Steps))
 		}
+	}
+	if err := validateShapes(s, len(t.Steps)); err != nil {
+		return err
 	}
 	if err := validateEffects(s, t); err != nil {
 		return err
@@ -168,9 +180,12 @@ func validateTolerance(s Scenario, t Trajectory) error {
 			return fmt.Errorf("%w: tolerance names step %d and the trajectory has %d",
 				ErrInvalid, number, len(t.Steps))
 		}
-		if s.Expect.Decisions[number].Verdict == "INDETERMINATE" {
+		switch s.Expect.Decisions[number].Verdict {
+		case "INDETERMINATE":
 			return fmt.Errorf("%w: tolerance names step %d, where INDETERMINATE is already the expectation",
 				ErrInvalid, number)
+		case "":
+			return fmt.Errorf("%w: tolerance names step %d, which states no verdict to tolerate", ErrInvalid, number)
 		}
 	}
 	return nil

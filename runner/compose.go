@@ -95,7 +95,7 @@ func (d dockerCompose) Status(ctx context.Context, profiles, services []string) 
 }
 
 func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service string, args []string) (Execution, error) {
-	command := d.command(ctx, profiles, append([]string{"run", "--rm", "--no-TTY", service}, args...)...)
+	command := d.command(ctx, profiles, runOnceArgs(service, args)...)
 	output, err := command.CombinedOutput()
 	execution := Execution{Output: string(output)}
 	var exit *exec.ExitError
@@ -146,4 +146,11 @@ func composeArgs(file, envFile string, profiles, args []string) []string {
 		built = append(built, "--profile", profile)
 	}
 	return append(built, args...)
+}
+
+// runOnceArgs builds the service's image before running it: the image name is
+// fixed across runs, so without the build a run replays whatever agent an
+// earlier checkout left under that name.
+func runOnceArgs(service string, args []string) []string {
+	return append([]string{"run", "--rm", "--no-TTY", "--build", service}, args...)
 }

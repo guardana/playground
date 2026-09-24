@@ -45,7 +45,7 @@ func TestDecisionsGradeEachStepFromTheTrail(t *testing.T) {
 			expect:   labspec.DecisionExpectation{Verdict: "DENY"},
 			recorded: nil,
 			want:     assertion.Fail,
-			detail:   "no proposed envelope",
+			detail:   "never opened",
 		},
 		{
 			name:     "a proposal with no decision on its request is a failure",
@@ -111,7 +111,7 @@ func TestDecisionsGradeEachStepFromTheTrail(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			spec := scenario(map[int]labspec.DecisionExpectation{1: test.expect})
 			spec.Tolerance.AllowIndeterminateForSteps = test.tolerated
-			checker := check.Decisions{Scenario: spec, EvidenceFile: evidenceFile}
+			checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
 
 			results, err := checker.Run(context.Background(), records(test.recorded, nil))
 			if err != nil {
@@ -139,7 +139,7 @@ func TestDecisionsSourceNamesTheLineTheVerdictWasReadFrom(t *testing.T) {
 		decided{step: 1, requestID: "r1", verdict: "ALLOW"},
 		decided{step: 2, requestID: "r2", verdict: "DENY", blocked: true},
 	)
-	checker := check.Decisions{Scenario: spec, EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
 
 	results, err := checker.Run(context.Background(), records(recorded, nil))
 	if err != nil {
@@ -165,7 +165,7 @@ func TestDecisionsSourceNamesTheLineTheVerdictWasReadFrom(t *testing.T) {
 func TestDecisionsGradeEveryStepTheScenarioNames(t *testing.T) {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}, 2: {Verdict: "DENY"}, 3: {Verdict: "DENY"}})
 	recorded := trail(decided{step: 1, requestID: "r1", verdict: "ALLOW"})
-	checker := check.Decisions{Scenario: spec, EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
 
 	results, err := checker.Run(context.Background(), records(recorded, nil))
 	if err != nil {
@@ -187,7 +187,7 @@ func TestDecisionsGradeEveryStepTheScenarioNames(t *testing.T) {
 func TestDecisionsDoNotGradeAStepFromAnotherRunsTrail(t *testing.T) {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}})
 	yesterday := trail(decided{step: 1, requestID: "r1", verdict: "ALLOW", runID: "run-yesterday"})
-	checker := check.Decisions{Scenario: spec, EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
 
 	results, err := checker.Run(context.Background(), records(yesterday, nil))
 	if err != nil {

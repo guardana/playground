@@ -141,6 +141,19 @@ type Report struct {
 	StartedAt time.Time
 	EndedAt   time.Time
 	Results   []Result
+	// Gap is why the scenario is a named gap, empty for any other: its pass
+	// means the system still does what its documentation says today.
+	Gap string
+}
+
+// Suite names what a pass means: a catalogue scenario passes when the system
+// does what it documents, a known gap when it still does what it documents
+// today instead of what it should.
+func (r Report) Suite() string {
+	if r.Gap != "" {
+		return "known-gap"
+	}
+	return "catalogue"
 }
 
 // Outcome is the worst result in the report. A report with no results is

@@ -63,7 +63,7 @@ func LoadScenario(path string) (Scenario, error) {
 		return Scenario{}, err
 	}
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	if err := scenario.validate(name); err != nil {
+	if err := first(scenario.validate(name), validateGap(scenario, Class(path))); err != nil {
 		return Scenario{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return scenario, nil

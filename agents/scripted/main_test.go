@@ -21,7 +21,8 @@ func TestRunRefusesAReplayThatIsMissingAFlag(t *testing.T) {
 		{nil, "-trajectory"},
 		{[]string{"-trajectory", "trajectories/x.yaml"}, "-gateway"},
 		{[]string{"-trajectory", "trajectories/x.yaml", "-gateway", "http://gateway/mcp"}, "-run-id"},
-		{[]string{"-trajectory", "trajectories/x.yaml", "-gateway", "http://gateway/mcp", "-run-id", "r"}, "-out"},
+		{[]string{"-trajectory", "trajectories/x.yaml", "-gateway", "http://gateway/mcp", "-run-id", "r"}, "-namespace"},
+		{[]string{"-trajectory", "trajectories/x.yaml", "-gateway", "http://gateway/mcp", "-run-id", "r", "-namespace", "n"}, "-out"},
 	}
 	for _, test := range tests {
 		var out strings.Builder
@@ -85,6 +86,7 @@ steps:
 		"-trajectory", trajectory,
 		"-gateway", endpoint.URL,
 		"-run-id", "run-11",
+		"-namespace", "guardana.control",
 		"-out", log,
 	}, &out)
 	if err != nil {
