@@ -28,6 +28,8 @@ RUN go build -trimpath -ldflags="-s -w" -o /out/service ${TARGET}
 # A health check runs inside the container it checks, and the runtime base has
 # nothing to run. The compose file points the checks at this.
 RUN go build -trimpath -ldflags="-s -w" -o /out/healthprobe ./compose/healthprobe
+# A chaos scenario lists a victim's tools again from inside the victim.
+RUN go build -trimpath -ldflags="-s -w" -o /out/relist ./compose/relist
 
 FROM ${SERVICE_BASE_IMAGE}
 # Distroless has no shell. That is the point: a container the agent can get a
@@ -35,5 +37,6 @@ FROM ${SERVICE_BASE_IMAGE}
 # victim's own sandbox rather than the container's.
 COPY --from=build /out/service /service
 COPY --from=build /out/healthprobe /healthprobe
+COPY --from=build /out/relist /relist
 USER nonroot:nonroot
 ENTRYPOINT ["/service"]

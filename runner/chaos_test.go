@@ -159,7 +159,7 @@ func TestARelistRunsInsideTheVictimBeforeTheReplay(t *testing.T) {
 	if found["chaos/fault-1"].Outcome != assertion.Pass {
 		t.Fatalf("the relist was %s: %+v", found["chaos/fault-1"].Outcome, found["chaos/fault-1"])
 	}
-	listed, replayed := indexOf(compose.calls, "exec victim-fs /healthprobe -tools http://127.0.0.1:8080/mcp"), indexOf(compose.calls, "run -trajectory")
+	listed, replayed := indexOf(compose.calls, "exec victim-fs /relist http://127.0.0.1:8080/mcp"), indexOf(compose.calls, "run -trajectory")
 	if listed < 0 || listed > replayed {
 		t.Errorf("listed at %d, replayed at %d", listed, replayed)
 	}

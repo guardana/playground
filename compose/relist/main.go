@@ -1,3 +1,11 @@
+// Command relist lists an MCP server's tools once, one JSON line each:
+//
+//	relist <url>
+//
+// A chaos scenario runs it inside a victim's container, so a victim that
+// changes a tool on a later listing does it while the enforcer's session to it
+// is open. It is not part of healthprobe, which the enforcer image builds with
+// the standard library alone.
 package main
 
 import (
@@ -5,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -16,6 +25,17 @@ const (
 	// maxListed bounds how many tools one listing prints.
 	maxListed = 1000
 )
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintln(os.Stderr, "usage: relist <url>")
+		os.Exit(2)
+	}
+	if err := listTools(os.Args[1], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+}
 
 // listed is what one printed line says about a tool.
 type listed struct {
@@ -30,7 +50,7 @@ type listed struct {
 func listTools(url string, out io.Writer) error {
 	ctx, cancel := context.WithTimeout(context.Background(), listTimeout)
 	defer cancel()
-	client := mcp.NewClient(&mcp.Implementation{Name: "healthprobe", Version: "1"}, nil)
+	client := mcp.NewClient(&mcp.Implementation{Name: "relist", Version: "1"}, nil)
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: url}, nil)
 	if err != nil {
 		return err

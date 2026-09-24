@@ -5,6 +5,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Fixed
+
+- `make enforcer-image` builds again from a fresh clone: the tool lister a
+  chaos scenario runs inside a victim is its own command, `relist`, and
+  `compose/healthprobe`, which the enforcer image builds without the lab's
+  module, is held to the standard library by a test.
+
 ### Changed
 
 - The gate's file list reads git only in the repository's own work tree and
@@ -32,7 +39,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `upstream.call_timeout`); `collector: down`, lifted once compose reports the
   collector running and the enforcer's exporter acknowledges records again;
   and `relist`, a second listing of a victim's tools from inside it
-  (`healthprobe -tools`) that describes a tool otherwise than its listing
+  (`relist`) that describes a tool otherwise than its listing
   snapshot. A trajectory step can say `on_error: continue` to carry on past a
   JSON-RPC error the gateway answered, never past a call no gateway answered,
   and not in a scenario with `trace:`. `chaos-01`..`04` grade a slow victim, a

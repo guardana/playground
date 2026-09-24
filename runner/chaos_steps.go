@@ -143,7 +143,7 @@ func (l lab) acknowledgedSince(
 // was pinned to.
 func (l lab) relist(ctx context.Context, compose Compose, profiles []string, victim string, fault *check.ChaosFault, log *strings.Builder) {
 	listed, err := compose.Exec(ctx, profiles, victim,
-		[]string{"/healthprobe", "-tools", "http://127.0.0.1:" + servicePort + "/mcp"})
+		[]string{"/relist", "http://127.0.0.1:" + servicePort + "/mcp"})
 	fmt.Fprintf(log, "%s listed again: exit %d %v\n%s\n%s\n", victim, listed.ExitCode, err,
 		strings.TrimSpace(listed.Stdout), strings.TrimSpace(listed.Stderr))
 	fault.Applied = err == nil && listed.ExitCode == 0
