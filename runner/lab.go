@@ -1,0 +1,239 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/runner/check"
+)
+
+// What the runner and the compose topology agree on. The runner is the only
+// thing that knows a scenario's files by their repository paths, so it is the
+// one that translates them into the paths a container sees.
+const (
+	agentService    = "scripted-agent"
+	gatewayService  = "stub-gateway"
+	servicePort     = "8080"
+	gatewayEndpoint = "http://" + gatewayService + ":" + servicePort + "/mcp"
+	// containerReports is the bind mount of reports/. The agent and the
+	// gateway get the two directories they need and not the repository:
+	// compose mounts config/ and trajectories/ read only, at mount points
+	// named after the directories themselves, so a repository path becomes a
+	// container path by putting a slash in front of it. Handing a service
+	// standing in for a security boundary the whole tree, attack payloads
+	// included, would be a strange thing for this lab of all labs to do.
+	containerReports = "/reports"
+)
+
+// inContainer is the path a service sees for a file the scenario names by its
+// repository path. It holds only for the directories compose mounts at their
+// own names; a scenario naming a file anywhere else is refused before a run.
+func inContainer(repositoryPath string) string { return "/" + repositoryPath }
+
+// lab runs one scenario end to end.
+type lab struct {
+	root    string
+	reports string
+	compose Compose
+	// timeout is how long one scenario may take. Zero is read as the default:
+	// the rule is that every docker call carries a deadline, and a zero here
+	// would be a deadline that has already passed.
+	timeout time.Duration
+	keep    bool
+	clock   func() time.Time
+	suffix  func() string
+	log     io.Writer
+}
+
+// execute runs one scenario and writes its reports. It returns an error only
+// when the reports themselves could not be written: everything that went wrong
+// inside the run is in the report, because a run that failed silently and a run
+// that passed look the same to a caller that only reads errors.
+func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report, error) {
+	ctx, cancel := context.WithTimeout(ctx, l.deadline())
+	defer cancel()
+
+	id := strings.TrimSuffix(filepath.Base(scenarioPath), filepath.Ext(scenarioPath))
+	runID := l.mint(id)
+	runDir := filepath.Join(l.reports, runID)
+	if err := makeRunDir(l.reports, runDir); err != nil {
+		return assertion.Report{}, err
+	}
+
+	spec, trajectory, err := load(l.root, scenarioPath)
+	if err != nil {
+		// Nothing has been brought up, and nothing will be: a pair that does
+		// not validate cannot be graded, and a run that cannot be graded is a
+		// failure rather than a silence.
+		graded := refused(id, runID, scenarioPath, err, l.clock())
+		return graded, writeReports(runDir, graded, nil)
+	}
+	graded, rows := l.runScenario(ctx, spec, trajectory, runID, runDir)
+	return graded, writeReports(runDir, graded, rows)
+}
+
+func (l lab) runScenario(
+	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
+) (assertion.Report, []check.DecisionRow) {
+	compose := l.compose.WithEnv(l.environment(spec, runID))
+	// Taken before anything boots. assertion.Run times the checks, which are
+	// the fast part; a report that said a run took no time because the reading
+	// of its records took no time would be telling a reader the wrong thing
+	// about where the minutes went.
+	started := l.clock()
+	boot := l.boot(ctx, compose, spec, runDir)
+	if !l.keep {
+		defer func() {
+			// Not this run's context: a scenario that ran out of time is the
+			// one whose containers are still up, and a cancelled context would
+			// leave them there.
+			down, stop := context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
+			defer stop()
+			if err := compose.Down(down, spec.Profile); err != nil {
+				l.note("taking the profile down: %v", err)
+			}
+		}()
+	}
+
+	gateway, victim, probed := l.probes(ctx, compose, spec, trajectory, runDir)
+	replayed := l.replay(ctx, compose, spec, runID, runDir)
+	records, unreadable := l.collect(spec, boot, runID, runDir)
+
+	trail := filepath.Join(runDir, "evidence.jsonl")
+	graded := assertion.Run(ctx, records,
+		check.Boot{Source: filepath.Join(runDir, "boot.json")},
+		check.NetworkIsolation{Gateway: gateway, Victim: victim, Source: probed},
+		replayed,
+		check.Decisions{Scenario: spec, EvidenceFile: trail},
+		check.Effects{Scenario: spec, JournalDir: filepath.Join(runDir, "journals")},
+		check.Evidence{Scenario: spec, EvidenceFile: trail, ReadError: unreadable},
+	)
+	graded.StartedAt, graded.EndedAt = started, l.clock()
+	return graded, check.DecisionRows(spec, records, trail)
+}
+
+// boot brings up every long running service in the profile and records what
+// came up. The agent is left out: it is a one-shot the runner drives itself,
+// and starting it here would replay the trajectory before the topology has
+// been proved.
+func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, runDir string) assertion.Boot {
+	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
+	inProfile, err := compose.Services(ctx, spec.Profile)
+	if err != nil {
+		l.note("listing the profile's services: %v", err)
+		return boot
+	}
+	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool { return name == agentService })
+	if err := compose.Up(ctx, spec.Profile, wanted); err != nil {
+		// Recorded rather than returned: what did come up is still a fact, and
+		// the boot check reports the rest as not running.
+		l.note("bringing the profile up: %v", err)
+	}
+	status, err := compose.Status(ctx, spec.Profile, wanted)
+	if err != nil {
+		l.note("reading what came up: %v", err)
+		return boot
+	}
+	boot.Services = status
+	if err := writeJSON(filepath.Join(runDir, "boot.json"), boot); err != nil {
+		l.note("writing the boot record: %v", err)
+	}
+	return boot
+}
+
+// probes asks, from inside agent-net, whether the gateway answers and one
+// victim does not. Both answers are recorded, in memory for the check and on
+// disk for the person the check sends to a file. Neither is inferred from the
+// other: a topology where nothing at all is reachable would otherwise look like
+// a topology that is right about the victim.
+func (l lab) probes(
+	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
+) (check.Probe, check.Probe, string) {
+	gateway := l.probe(ctx, compose, spec.Profile, gatewayService+":"+servicePort)
+	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
+
+	source := filepath.Join(runDir, "probes.log")
+	recorded := fmt.Sprintf("gateway %s ran=%t reached=%t %s\nvictim %s ran=%t reached=%t %s\n",
+		gateway.Target, gateway.Ran, gateway.Reached, gateway.Detail,
+		victim.Target, victim.Ran, victim.Reached, victim.Detail)
+	// #nosec G703 -- the path is inside the run directory the runner made.
+	if err := os.WriteFile(source, []byte(recorded), 0o600); err != nil {
+		l.note("writing the probe record: %v", err)
+	}
+	return gateway, victim, source
+}
+
+func (l lab) probe(ctx context.Context, compose Compose, profiles []string, target string) check.Probe {
+	execution, err := compose.RunOnce(ctx, profiles, agentService, []string{"-probe", target})
+	if err != nil {
+		return check.Probe{Target: target, Detail: err.Error()}
+	}
+	return readProbe(target, execution.Output)
+}
+
+// replay runs the trajectory by running the agent, and keeps what the agent
+// printed. The exit status is the record; the agent's own log is not read.
+func (l lab) replay(
+	ctx context.Context, compose Compose, spec labspec.Scenario, runID, runDir string,
+) check.Replay {
+	source := filepath.Join(runDir, "replay.log")
+	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, []string{
+		"-trajectory", inContainer(spec.Trajectory),
+		"-gateway", gatewayEndpoint,
+		"-run-id", runID,
+		"-out", path.Join(containerReports, runID, "agent.jsonl"),
+	})
+	// #nosec G703 -- the path is inside the run directory the runner made.
+	if writeErr := os.WriteFile(source, []byte(execution.Output), 0o600); writeErr != nil {
+		l.note("writing what the agent printed: %v", writeErr)
+	}
+	if err != nil {
+		return check.Replay{Detail: err.Error(), Source: source}
+	}
+	return check.Replay{
+		Ran:      true,
+		ExitCode: execution.ExitCode,
+		Detail:   lastLine(execution.Output),
+		Source:   source,
+	}
+}
+
+// environment is what compose interpolates into the topology for this run.
+func (l lab) environment(spec labspec.Scenario, runID string) map[string]string {
+	env := map[string]string{
+		"LAB_RUN_ID":      runID,
+		"LAB_REPORTS_DIR": containerReports,
+	}
+	if absolute, err := filepath.Abs(l.reports); err == nil {
+		env["LAB_REPORTS_HOST_DIR"] = absolute
+	}
+	if spec.Stub.Verdicts != "" {
+		env["LAB_STUB_VERDICTS"] = inContainer(spec.Stub.Verdicts)
+	}
+	return env
+}
+
+func (l lab) mint(id string) string {
+	return fmt.Sprintf("%s-%s-%s", id, l.clock().UTC().Format("20060102T150405Z"), l.suffix())
+}
+
+func (l lab) note(format string, values ...any) {
+	if l.log == nil {
+		return
+	}
+	_, _ = fmt.Fprintf(l.log, "runner: "+format+"\n", values...)
+}
+
+func lastLine(output string) string {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	return strings.TrimSpace(lines[len(lines)-1])
+}

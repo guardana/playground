@@ -1,0 +1,5 @@
+id,tenant_id,name,contact_email,internal_reference
+cus_4417,tenant_a,Northwind Trading,accounts@northwind.example,REF-2026-0114
+cus_4418,tenant_a,Harbour Logistics,finance@harbour-logistics.example,CANARY-FS-4418-7ae1
+cus_4420,tenant_a,Fenwick Care Homes,billing@fenwick-care.example,CANARY-FS-4420-51b9
+cus_7702,tenant_b,Sable Freight,accounts@sable-freight.example,REF-2026-0602

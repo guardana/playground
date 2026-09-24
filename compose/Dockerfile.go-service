@@ -1,0 +1,39 @@
+# Every service the lab builds itself: the six victims, the scripted agent and
+# the stub gateway. They are all the same shape — a Go package in this module,
+# built static and run on a base with no shell — so they are one file with the
+# package as an argument.
+#
+# The build context is the repository root, because the module is.
+#
+# The two base images are arguments rather than literals: they are pinned in
+# versions.env with everything else the lab runs, and a tag written here would
+# be a second place to change.
+ARG GO_BUILD_IMAGE
+ARG SERVICE_BASE_IMAGE
+
+FROM ${GO_BUILD_IMAGE} AS build
+WORKDIR /src
+# Dependencies first: they change on their own schedule, and a source edit that
+# re-resolved the module graph would make every build a network build.
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# TARGET is the package to build, as an import path relative to the module root,
+# for example ./victims/fs.
+ARG TARGET
+# CGO off and a trimmed path: the result has to run on a base with no libc and
+# carry no build machine's directory names.
+ENV CGO_ENABLED=0
+RUN go build -trimpath -ldflags="-s -w" -o /out/service ${TARGET}
+# A health check runs inside the container it checks, and the runtime base has
+# nothing to run. The compose file points the checks at this.
+RUN go build -trimpath -ldflags="-s -w" -o /out/healthprobe ./compose/healthprobe
+
+FROM ${SERVICE_BASE_IMAGE}
+# Distroless has no shell. That is the point: a container the agent can get a
+# shell in is not a boundary, and victim-shell in particular runs the shell
+# victim's own sandbox rather than the container's.
+COPY --from=build /out/service /service
+COPY --from=build /out/healthprobe /healthprobe
+USER nonroot:nonroot
+ENTRYPOINT ["/service"]

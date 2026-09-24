@@ -1,0 +1,7 @@
+# Path prefixes where an assistant vendor name is the subject matter rather than
+# a signature: an adapter written for that vendor, or the page documenting it.
+# One prefix per line. Empty until the first such adapter exists.
+
+# Reproduced verbatim from upstream; their wording is not ours to change.
+LICENSE
+CODE_OF_CONDUCT.md

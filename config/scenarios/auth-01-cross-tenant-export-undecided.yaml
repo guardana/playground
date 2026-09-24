@@ -1,0 +1,21 @@
+# Declared verdicts for auth-01-cross-tenant-export-undecided, replayed by the
+# stub gateway in trajectory order. Nothing here decides anything: the
+# enforcement plane is not wired in yet, and the stub reads this file.
+#
+# Step 2 is declared INDETERMINATE with POLICY_UNAVAILABLE, and the scenario
+# asserts that code by name. A step nobody declares is answered
+# STUB_NO_DECLARED_VERDICT instead, so deleting these two lines turns the run
+# red rather than leaving it green on the stub's own silence.
+#
+# The digest is the sha256 of the scenario id. It is stable across runs and it
+# is not the digest of any policy bundle, which is what a scenario asserting
+# policy_digest_present needs the field to be until a real bundle exists.
+schema_version: 1
+project_id: playground
+tenant_id: tenant_a
+policy_bundle_digest: "sha256:7e598fbec0bd509f0864914094ee987a69b1abb75f2c3627907f83e06ec00e89"
+steps:
+  - verdict: ALLOW
+    reason_codes: [RULE_ALLOW]
+  - verdict: INDETERMINATE
+    reason_codes: [POLICY_UNAVAILABLE]

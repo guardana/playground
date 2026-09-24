@@ -1,0 +1,3 @@
+billing: ok
+crm: ok
+mail: degraded since 09:12

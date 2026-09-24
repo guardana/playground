@@ -1,0 +1,9 @@
+# A mistake in these paths makes every scenario look green, so they need a
+# second pair of eyes that did not write the change.
+
+*                       @guardana/maintainers
+
+/runner/                @guardana/maintainers
+/scenarios/             @guardana/maintainers
+/.github/workflows/     @guardana/maintainers
+/scripts/               @guardana/maintainers

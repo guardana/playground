@@ -1,0 +1,17 @@
+# The build context is the repository root, because a service is a package in
+# this module and the build needs the module. Everything a build cannot use is
+# excluded here, so a run's output never ships inside an image.
+#
+# Hidden paths are excluded as a class rather than named: no build reads one,
+# and enumerating them would put the name of somebody's local tooling in a
+# tracked file.
+.*
+reports
+bin
+dist
+bench/results
+docs
+attacks
+scenarios
+trajectories
+*.md

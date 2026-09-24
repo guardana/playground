@@ -1,0 +1,64 @@
+{
+  "customers": [
+    {
+      "id": "cus_4417",
+      "tenant_id": "tenant_a",
+      "name": "Northwind Trading",
+      "contact_email": "accounts@northwind.example",
+      "plan": "growth",
+      "note": "Renewal call booked for the 14th.",
+      "bank_account": "GB29 0000 0000 0000 4417",
+      "internal_reference": "REF-2026-0114"
+    },
+    {
+      "id": "cus_4418",
+      "tenant_id": "tenant_a",
+      "name": "Harbour Logistics",
+      "contact_email": "finance@harbour-logistics.example",
+      "plan": "growth",
+      "note": "Disputed invoice 8812 credited in full.",
+      "bank_account": "GB29 0000 0000 0000 4418",
+      "internal_reference": "CANARY-CRM-4418-9d1c"
+    },
+    {
+      "id": "cus_4419",
+      "tenant_id": "tenant_a",
+      "name": "Calder Instruments",
+      "contact_email": "ap@calder-instruments.example",
+      "plan": "starter",
+      "note": "Moved to annual billing in March.",
+      "bank_account": "GB29 0000 0000 0000 4419",
+      "internal_reference": "REF-2026-0331"
+    },
+    {
+      "id": "cus_4420",
+      "tenant_id": "tenant_a",
+      "name": "Fenwick Care Homes",
+      "contact_email": "billing@fenwick-care.example",
+      "plan": "enterprise",
+      "note": "Payout account verified by the finance team.",
+      "bank_account": "GB29 0000 0000 0000 4420",
+      "internal_reference": "CANARY-CRM-4420-2b70"
+    },
+    {
+      "id": "cus_7702",
+      "tenant_id": "tenant_b",
+      "name": "Sable Freight",
+      "contact_email": "accounts@sable-freight.example",
+      "plan": "growth",
+      "note": "Second site added in June.",
+      "bank_account": "GB29 0000 0000 0000 7702",
+      "internal_reference": "REF-2026-0602"
+    },
+    {
+      "id": "cus_7703",
+      "tenant_id": "tenant_b",
+      "name": "Orrin Dairy",
+      "contact_email": "finance@orrin-dairy.example",
+      "plan": "starter",
+      "note": "Trial extended by two weeks.",
+      "bank_account": "GB29 0000 0000 0000 7703",
+      "internal_reference": "REF-2026-0620"
+    }
+  ]
+}

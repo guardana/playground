@@ -1,0 +1,69 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - errorlint
+    - forbidigo
+    - gocyclo
+    - gosec
+    - misspell
+    - nilerr
+    - revive
+    - unparam
+  settings:
+    gocyclo:
+      min-complexity: 12
+    depguard:
+      # The frozen shared contract: the two file shapes, the reader for the
+      # enforcement plane's evidence, the victims' journal and the assertion
+      # interface. Every lane builds against it, so it may depend on none of
+      # them; and a check reads records it was handed rather than asking a
+      # running service how it is, which is the difference between asserting on
+      # evidence and asserting on narrative.
+      rules:
+        lab-contract:
+          files:
+            - "**/internal/labspec/**"
+            - "**/internal/evidence/**"
+            - "**/internal/journal/**"
+            - "**/internal/assertion/**"
+          deny:
+            - pkg: "github.com/guardana/playground/victims"
+              desc: the shared contract must not depend on a victim
+            - pkg: "github.com/guardana/playground/agents"
+              desc: the shared contract must not depend on an agent
+            - pkg: "github.com/guardana/playground/runner"
+              desc: the shared contract must not depend on the runner
+            - pkg: "github.com/guardana/playground/services"
+              desc: the shared contract must not depend on a lab service
+            - pkg: "net/http"
+              desc: an assertion reads records; it does not ask a service how it is
+            - pkg: "os/exec"
+              desc: an assertion reads records; it does not run commands
+    forbidigo:
+      forbid:
+        - pattern: ^panic$
+          msg: malformed input returns an error; panic is for broken invariants
+        - pattern: ^fmt\.Print(ln|f)?$
+          msg: write to an explicit writer, or return the value
+  exclusions:
+    paths:
+      - api/gen
+      - testdata
+    rules:
+      # These tests read files whose paths they compute by walking the tree.
+      # Reading a path the test just derived is what the test is for.
+      - path: _test\.go
+        linters: [gosec]
+        text: G304|G703
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

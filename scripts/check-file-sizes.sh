@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Warns at 350 non-blank lines and fails at 500.
+#
+# A long file is usually several ideas sharing a name. Generated code, tests and
+# fixtures are exempt because their length says nothing about the design.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+status=0
+while IFS= read -r f; do
+	lines=$(grep -cve '^[[:space:]]*$' "$f")
+	if [ "$lines" -gt 500 ]; then
+		echo "FAIL $f: $lines lines (limit 500)" >&2
+		status=1
+	elif [ "$lines" -gt 350 ]; then
+		echo "warn $f: $lines lines (target 250)"
+	fi
+done < <(scripts/repo-files.sh | grep '\.go$' | grep -vE '^(api/gen/|testdata/)|_test\.go$|\.pb\.go$')
+
+[ "$status" -eq 0 ] && echo "sizes: clean"
+exit $status

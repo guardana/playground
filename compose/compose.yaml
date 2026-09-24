@@ -1,0 +1,263 @@
+# The lab's world: six victim tool servers, a page that attacks them, a mail
+# sink, the gateway and the agent.
+#
+# Two networks, both internal, and one service on both. Nothing in the lab has a
+# route out; the agent sits on `agent-net` and can reach the gateway and nothing
+# else. That is the property every scenario depends on, and the runner proves it
+# from inside `agent-net` on every run rather than trusting this file.
+#
+# Every image name and tag is a variable from versions.env. A tag written here
+# would be a second place to change when an upstream moves.
+name: guardana-playground
+
+x-lab-env: &lab-env
+  # The runner mints the run id. `manual` is what a lab brought up by hand
+  # records under, so a hand-run and a scenario run never share a trail.
+  LAB_RUN_ID: ${LAB_RUN_ID:-manual}
+  LAB_REPORTS_DIR: /reports
+
+x-server-env: &server-env
+  <<: *lab-env
+  LAB_LISTEN: ":8080"
+
+x-build-args: &build-args
+  GO_BUILD_IMAGE: ${GO_BUILD_IMAGE}
+  SERVICE_BASE_IMAGE: ${SERVICE_BASE_IMAGE}
+
+# What every lab-built service gets unless something stops it. victim-shell runs
+# the shell victim, so these are spelled out rather than assumed: a container
+# the agent can get a shell in is not a boundary.
+x-hardened: &hardened
+  cap_drop: [ALL]
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: [/tmp]
+
+# A victim answers MCP at /mcp and readiness at /healthz on the same listener,
+# and writes its journal under /reports. The health check runs the probe that
+# every lab image carries, because the runtime base has no shell to run one in.
+x-victim: &victim
+  <<: *hardened
+  networks: [tool-net]
+  profiles: [core]
+  volumes:
+    - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+  healthcheck:
+    test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
+    interval: 2s
+    timeout: 3s
+    retries: 15
+    start_period: 2s
+
+services:
+  victim-crm:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/crm
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-crm
+
+  victim-db:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/db
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-db
+
+  victim-fs:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/fs
+    # The fs victim seeds its sandbox from an embedded fixture on every start,
+    # so it needs somewhere to write it. A tmpfs keeps the root filesystem read
+    # only and throws the sandbox away with the container, which is what
+    # "seeded on every start" means.
+    tmpfs: [/tmp, /data]
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-fs
+
+  victim-shell:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/shell
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-shell
+
+  victim-mail:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/mail
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-mail
+    depends_on:
+      mailpit:
+        condition: service_healthy
+
+  victim-web:
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/web
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-web
+    depends_on:
+      attacker-web:
+        condition: service_healthy
+
+  # The pages the victims fetch. Catalogued, inert, and on a network with no
+  # route out; they exist to be blocked.
+  attacker-web:
+    image: ${ATTACKER_WEB_IMAGE}
+    networks: [tool-net]
+    profiles: [core]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    # nginx binds :80 as root and drops its workers to another user, so these
+    # four are what stops it starting rather than hardening it can do without.
+    cap_add: [CHOWN, SETGID, SETUID, NET_BIND_SERVICE]
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    volumes:
+      - ../attacks:/usr/share/nginx/html:ro
+    healthcheck:
+      # An answered request, whatever its status. nginx returning 403 over an
+      # empty catalogue is still an nginx that is up, and busybox wget reports
+      # every HTTP error as exit 1, so the status line is what is read.
+      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1/ 2>&1 | grep -q 'HTTP/1.1'"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # Where victim-mail delivers. Nothing asserts through its API: a scenario
+  # reads what victim-mail journalled, not what arrived here.
+  mailpit:
+    image: ${MAILPIT_IMAGE}
+    networks: [tool-net]
+    profiles: [core]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1:8025/ 2>&1 | grep -q 'HTTP/1.1'"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # The only service on both networks, and the only way anything on `agent-net`
+  # reaches a tool. It decides nothing: it replays the verdicts declared in the
+  # file at LAB_STUB_VERDICTS and records what it did.
+  stub-gateway:
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./services/stub-gateway
+    networks: [agent-net, tool-net]
+    profiles: [core]
+    volumes:
+      - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+      - ../config:/config:ro
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: stub-gateway
+      # The runner points this at the scenario's declared verdicts. The default
+      # declares none, so a lab brought up by hand answers every call
+      # INDETERMINATE and writes down that nobody stated a verdict.
+      LAB_STUB_VERDICTS: ${LAB_STUB_VERDICTS:-/config/stub-gateway/verdicts.yaml}
+      LAB_UPSTREAMS: >-
+        victim-crm=http://victim-crm:8080/mcp,
+        victim-db=http://victim-db:8080/mcp,
+        victim-fs=http://victim-fs:8080/mcp,
+        victim-shell=http://victim-shell:8080/mcp,
+        victim-mail=http://victim-mail:8080/mcp,
+        victim-web=http://victim-web:8080/mcp
+    healthcheck:
+      test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+    # Every victim, healthy, before the gateway starts: it lists the upstreams'
+    # tools at startup and refuses to run without them, because a gateway
+    # missing a victim's tools answers "no such tool" and no scenario declared
+    # that.
+    depends_on:
+      victim-crm: {condition: service_healthy}
+      victim-db: {condition: service_healthy}
+      victim-fs: {condition: service_healthy}
+      victim-shell: {condition: service_healthy}
+      victim-mail: {condition: service_healthy}
+      victim-web: {condition: service_healthy}
+
+  # Not in the core profile: the agent is run for one trajectory and exits, so
+  # the runner starts it with `docker compose run` and its arguments.
+  scripted-agent:
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./agents/scripted
+    networks: [agent-net]
+    profiles: [agent]
+    volumes:
+      - ${LAB_REPORTS_HOST_DIR:-../reports}:/reports
+      - ../trajectories:/trajectories:ro
+    environment:
+      <<: *lab-env
+      LAB_SERVER_NAME: scripted-agent
+    depends_on:
+      stub-gateway:
+        condition: service_healthy
+
+networks:
+  # Both networks are sealed. The agent replays the attack payloads, so it is
+  # the last thing in the lab that should be able to reach anything outside it:
+  # an exfiltration that succeeded would be one no scenario could grade. Nothing
+  # needs a route out at run time — images are pulled and built over the host's
+  # network before any of this starts, the agent talks only to the gateway, and
+  # `docker compose run` attaches to a container the daemon already built.
+  agent-net:
+    internal: true
+  tool-net:
+    # No route out, for anything, ever. The attack payloads and the canary
+    # tokens live behind this line.
+    internal: true

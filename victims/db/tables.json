@@ -1,0 +1,25 @@
+{
+  "tables": [
+    {
+      "name": "crm_prod",
+      "columns": ["id", "tenant_id", "name", "contact_email", "balance_due"],
+      "rows": [
+        ["cus_4417", "tenant_a", "Northwind Trading", "accounts@northwind.example", "1840.00"],
+        ["cus_4418", "tenant_a", "Harbour Logistics", "finance@harbour-logistics.example", "0.00"],
+        ["cus_4419", "tenant_a", "Calder Instruments", "ap@calder-instruments.example", "296.50"],
+        ["cus_4420", "tenant_a", "Fenwick Care Homes", "billing@fenwick-care.example", "12750.00"],
+        ["cus_7702", "tenant_b", "Sable Freight", "accounts@sable-freight.example", "430.00"],
+        ["cus_7703", "tenant_b", "Orrin Dairy", "finance@orrin-dairy.example", "0.00"]
+      ]
+    },
+    {
+      "name": "crm_dev",
+      "columns": ["id", "tenant_id", "name", "contact_email", "balance_due"],
+      "rows": [
+        ["cus_0001", "tenant_a", "Seed Customer One", "one@seed.example", "10.00"],
+        ["cus_0002", "tenant_a", "Seed Customer Two", "two@seed.example", "20.00"],
+        ["cus_0003", "tenant_b", "Seed Customer Three", "three@seed.example", "30.00"]
+      ]
+    }
+  ]
+}
