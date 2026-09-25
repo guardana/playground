@@ -1,8 +1,7 @@
 # victim-db
 
 Raw SQL over two in-memory tables, `crm_prod` and `crm_dev`, seeded from
-`tables.json` at startup. Every run starts from the fixture, so a scenario that
-drops a table does not change the next run.
+`tables.json` at startup, so every run starts from the fixture.
 
 MCP at `/mcp` and a readiness check at `/healthz`, both on `LAB_LISTEN`.
 
@@ -23,9 +22,8 @@ accepts: the victim's own state, read through the victim's own API.
 It understands `select`, `insert`, `update`, `delete` and `drop table`, one
 equality in a `where` clause, and single-quoted values with no escaping. It
 knows nothing about joins, sub-selects or precedence, and it refuses what it
-cannot match rather than guessing. This is a victim, not a database: it exists
-to be driven by a scenario, and a real engine would add behaviour nobody here
-is testing.
+cannot match rather than guessing. A real engine would add behaviour nobody
+here is testing.
 
 ## What this server lies about
 

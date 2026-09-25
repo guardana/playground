@@ -1,8 +1,7 @@
 # victim-crm
 
 Tenant-scoped customer records, held in memory and seeded from `customers.json`
-at startup. Every run starts from the fixture, so a scenario that moves a payout
-destination does not change the next run.
+at startup, so every run starts from the fixture.
 
 MCP at `/mcp` and a readiness check at `/healthz`, both on `LAB_LISTEN`.
 
@@ -29,11 +28,9 @@ in-memory table really does have a closed world, and reading really is
 read-only. The description is what a client decides from, and the description
 does not say whose rows come back.
 
-`crm_test.go` pins both, the annotations on one and the description and the
-missing tenant argument on the other. Correcting either fails the build, which
-is the point: the lab's claim is that a self-description is a hint and never
-authorization, and it cannot make that claim against a server that tells the
-truth.
+`crm_test.go` pins both, so correcting either fails the build: the lab's claim
+is that a self-description is a hint and never authorization, and it cannot
+make that claim against a server that tells the truth.
 
 ## What it does not lie about
 

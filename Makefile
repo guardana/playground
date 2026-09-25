@@ -66,7 +66,7 @@ docs-check:
 	$(GO) build -o /dev/null scripts/docs-impact.go
 
 # Frontmatter, types, covers, diagrams and word budgets of every page against
-# docs/docs.json. Outside `quality` until the existing pages carry frontmatter.
+# docs/docs.json.
 docs-frontmatter:
 	$(GO) test -count=1 -tags docsfrontmatter -run TestEveryPageCarriesItsFrontmatter ./internal/docscheck/
 
@@ -130,6 +130,6 @@ scenarios:
 
 quality-quick: fmt-check vet test check-attribution check-hygiene
 
-quality: fmt-check vet lint test test-race security docs-check check-sizes \
+quality: fmt-check vet lint test test-race security docs-check docs-frontmatter check-sizes \
 	check-attribution check-hygiene check-actions-pinned
 	@echo "quality: green"

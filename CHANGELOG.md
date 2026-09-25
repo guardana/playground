@@ -20,6 +20,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `make docs-frontmatter` runs in `make quality`: every page under `docs/`
+  carries frontmatter (`docs/lab-files.md` as a contract, exempt from a word
+  budget), `docs/index.md` gave way to the generated `docs/README.md`, and the
+  approver's, the decision point double's and two victims' READMEs fit the
+  300-word folder budget.
 - `tool-01`, `auth-01` and `flow-01` run against the enforcer instead of the
   stub, under new names: `tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write`,
   `auth-01-an-injected-administrator-override-grants-no-export` and

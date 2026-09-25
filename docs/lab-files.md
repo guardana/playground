@@ -1,3 +1,11 @@
+---
+title: Trajectory and scenario files
+summary: The two files a run is written in, the checks each expectation becomes, and how a workspace outside the clone holds your own.
+type: contract
+audience: [engineering, product]
+covers: [internal/labspec/**, runner/check/**, runner/workspace.go, runner/locate.go, scenarios/**, trajectories/**]
+---
+
 # Trajectory and scenario files
 
 A run is two files. The trajectory says which tool calls happen. The scenario

@@ -20,7 +20,7 @@
     "docs/reference": "reference",
     "docs/runbooks": "runbook"
   },
-  "page_types": {},
+  "page_types": {"docs/lab-files.md": "contract"},
   "frozen": [
     "AGENTS.md",
     "README.md",

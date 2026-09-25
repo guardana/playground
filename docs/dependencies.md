@@ -1,3 +1,11 @@
+---
+title: Dependencies
+summary: Every direct dependency of the lab, the pinned systems under test and the images, with the reason each one is here.
+type: project
+audience: [engineering]
+covers: [go.mod, go.sum, versions.env, compose/Dockerfile.*, compose/verifier/requirements.lock, scripts/bootstrap.sh]
+---
+
 # Dependencies
 
 Every direct dependency is listed here with the reason it exists. A lab that
