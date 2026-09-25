@@ -52,10 +52,42 @@ func (f *fakeCompose) Exec(ctx context.Context, _ []string, service string, args
 		return Split{}, err
 	}
 	f.execs = append(f.execs, append([]string{service}, args...))
+	if url := listenerURLOf(args); url != "" && (url == listenerURL || url == f.agentURL()) {
+		if f.listener != nil {
+			return f.listener(service, url), nil
+		}
+		if url == listenerURL {
+			return Split{ExitCode: 1, Stderr: `calling "initialize": Post "` + url + `": dial tcp 172.30.0.4:8080: connect: connection refused`}, nil
+		}
+		return Split{ExitCode: 1, Stderr: `Post "` + url + `": dial tcp ` + f.env["LAB_ENFORCER_ADDRESS"] + `:8080: connect: network is unreachable`}, nil
+	}
 	if f.exec == nil {
 		return Split{ExitCode: 1, Stderr: "the fake has no exec"}, nil
 	}
 	return f.exec(service, args), nil
+}
+
+// listenerURLOf is the URL a /relist command lists, empty for any other.
+func listenerURLOf(args []string) string {
+	if len(args) == 2 && args[0] == "/relist" {
+		return args[1]
+	}
+	return ""
+}
+
+// agentURL is the listener at the enforcer's agent-net address in this run.
+func (f *fakeCompose) agentURL() string {
+	return "http://" + f.env["LAB_ENFORCER_ADDRESS"] + ":8080/mcp"
+}
+
+func (f *fakeCompose) Logs(ctx context.Context, _ []string, service string) (Split, error) {
+	if err := f.called(ctx, "logs "+service); err != nil {
+		return Split{}, err
+	}
+	if f.logs != nil {
+		return f.logs(service), nil
+	}
+	return Split{Stdout: "listening for agents on " + f.env["LAB_ENFORCER_ADDRESS"] + ":8080\n"}, nil
 }
 
 func (f *fakeCompose) RunSplit(ctx context.Context, _ []string, service, entrypoint string, args []string) (Split, error) {

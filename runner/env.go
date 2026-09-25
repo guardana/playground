@@ -1,10 +1,58 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"hash/fnv"
+	"net"
+	"net/netip"
 	"path/filepath"
 	"strings"
 )
+
+// agentPool is where every run's agent-net is carved from: private, and outside
+// the pools docker allocates its own networks from. The last /27 is left to a
+// lab brought up by hand, which compose.yaml defaults to.
+const (
+	agentPool  = "10.231.0.0/16"
+	agentBits  = 27
+	agentSlots = 1<<(agentBits-16) - 1
+)
+
+// agentNet is one run's agent-net: its subnet, the lower half docker hands out
+// to the agent's containers, and the enforcer's fixed address in the upper half.
+type agentNet struct {
+	subnet   netip.Prefix
+	dynamic  netip.Prefix
+	enforcer netip.Addr
+}
+
+// agentNetFor picks the run's subnet from its random suffix, so parallel runs
+// land apart. Two runs that land on one subnet are not resolved here: docker
+// refuses the second network, and that run's boot fails.
+func agentNetFor(runID string) agentNet {
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(runID[strings.LastIndex(runID, "-")+1:]))
+	slot := hash.Sum32() % agentSlots
+	base := netip.MustParsePrefix(agentPool).Addr().As4()
+	offset := binary.BigEndian.Uint32(base[:]) + slot<<(32-agentBits)
+	var first [4]byte
+	binary.BigEndian.PutUint32(first[:], offset)
+	var last [4]byte
+	binary.BigEndian.PutUint32(last[:], offset+1<<(32-agentBits)-2)
+	start := netip.AddrFrom4(first)
+	return agentNet{
+		subnet:   netip.PrefixFrom(start, agentBits),
+		dynamic:  netip.PrefixFrom(start, agentBits+1),
+		enforcer: netip.AddrFrom4(last),
+	}
+}
+
+// enforcerListener is the address the enforcer's agent listener binds in this
+// run: its own address on agent-net, which no other network of its reaches.
+func enforcerListener(runID string) string {
+	return net.JoinHostPort(agentNetFor(runID).enforcer.String(), servicePort)
+}
 
 // environment is what compose interpolates into the topology for this run.
 func (l lab) environment(runID, runDir string) map[string]string {
@@ -14,6 +62,10 @@ func (l lab) environment(runID, runDir string) map[string]string {
 		"COMPOSE_PROJECT_NAME": projectName(runID),
 		workspaceVariable:      l.workspace.dir,
 	}
+	network := agentNetFor(runID)
+	env["LAB_AGENT_SUBNET"] = network.subnet.String()
+	env["LAB_AGENT_RANGE"] = network.dynamic.String()
+	env["LAB_ENFORCER_ADDRESS"] = network.enforcer.String()
 	if absolute, err := filepath.Abs(runDir); err == nil {
 		env["LAB_RUN_HOST_DIR"] = absolute
 	}

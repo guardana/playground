@@ -42,6 +42,8 @@ type Compose interface {
 	// Exec runs a command inside a running service's container, its output
 	// kept apart from compose's own.
 	Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error)
+	// Logs is what a service printed, its output streams merged.
+	Logs(ctx context.Context, profiles []string, service string) (Split, error)
 	// Stop stops one service and waits for it to exit; a service that flushes
 	// on SIGTERM has flushed when it returns without error.
 	Stop(ctx context.Context, profiles []string, service string) error
@@ -147,6 +149,10 @@ func (d dockerCompose) RunSplit(
 
 func (d dockerCompose) Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error) {
 	return d.split(d.command(ctx, profiles, append([]string{"exec", "-T", service}, args...)...))
+}
+
+func (d dockerCompose) Logs(ctx context.Context, profiles []string, service string) (Split, error) {
+	return d.split(d.command(ctx, profiles, "logs", "--no-color", "--no-log-prefix", service))
 }
 
 func (d dockerCompose) split(command *exec.Cmd) (Split, error) {

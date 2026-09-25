@@ -174,15 +174,21 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 		}
 		return l.writeBoot(runDir, boot)
 	}
-	if err := compose.Up(ctx, spec.Profile, wanted); err != nil {
+	upErr := compose.Up(ctx, spec.Profile, wanted)
+	if upErr != nil {
 		// Recorded rather than returned: what did come up is still a fact, and
-		// the boot check reports the rest as not running.
-		l.note("bringing the profile up: %v", err)
+		// the boot check reports the rest as not running, with this as why.
+		l.note("bringing the profile up: %v", upErr)
 	}
 	status, err := compose.Status(ctx, spec.Profile, wanted)
 	if err != nil {
 		l.note("reading what came up: %v", err)
 		return boot
+	}
+	for i := range status {
+		if !status[i].Running && upErr != nil {
+			status[i].Detail = strings.TrimSpace(status[i].Detail + "; up failed: " + upErr.Error())
+		}
 	}
 	boot.Services = status
 	return l.writeBoot(runDir, boot)

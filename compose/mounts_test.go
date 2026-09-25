@@ -12,9 +12,9 @@ import (
 
 type mounted struct {
 	Services map[string]struct {
-		Networks []string `json:"networks"`
-		Profiles []string `json:"profiles"`
-		Volumes  []any    `json:"volumes"`
+		Networks networkList `json:"networks"`
+		Profiles []string    `json:"profiles"`
+		Volumes  []any       `json:"volumes"`
 	} `json:"services"`
 }
 

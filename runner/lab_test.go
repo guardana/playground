@@ -92,7 +92,14 @@ type fakeCompose struct {
 	// agentTrace is what the fake agent writes when it is asked for a trace.
 	agentTrace string
 	// exec answers a command run inside a service; execs records each one.
-	exec    func(service string, args []string) Split
+	exec func(service string, args []string) Split
+	// listener answers a listing of the enforcer's listener from inside a
+	// service, at its name or at its agent-net address; nil answers as the
+	// listener bound to agent-net does: refused at the name, unreachable at the
+	// address.
+	listener func(service, url string) Split
+	// logs answers the enforcer's output; nil says it bound agent-net alone.
+	logs    func(service string) Split
 	execs   [][]string
 	stopped []string
 	// image answers which image a service's container runs.

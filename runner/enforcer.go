@@ -116,6 +116,7 @@ func (l lab) prepareGateway(
 		Partial: partial, Key: key, BundleID: bundleID, BundleFile: gatewayMount + "/policy.bundle",
 		SpoolDir: enforcerSpoolDir, Collector: collectorLogs, Upstreams: routes, Overrides: overrides,
 		UsesPDP: plan.PDPScript != "", UpstreamTenants: plan.UpstreamTenants,
+		Listener: enforcerListener(filepath.Base(runDir)),
 	})
 	if err != nil {
 		return "", err

@@ -11,17 +11,17 @@ import (
 )
 
 type hardenedService struct {
-	Image       string   `json:"image"`
-	Build       any      `json:"build"`
-	PullPolicy  string   `json:"pull_policy"`
-	User        string   `json:"user"`
-	ReadOnly    bool     `json:"read_only"`
-	CapDrop     []string `json:"cap_drop"`
-	SecurityOpt []string `json:"security_opt"`
-	Tmpfs       []string `json:"tmpfs"`
-	Networks    []string `json:"networks"`
-	Profiles    []string `json:"profiles"`
-	Volumes     []any    `json:"volumes"`
+	Image       string      `json:"image"`
+	Build       any         `json:"build"`
+	PullPolicy  string      `json:"pull_policy"`
+	User        string      `json:"user"`
+	ReadOnly    bool        `json:"read_only"`
+	CapDrop     []string    `json:"cap_drop"`
+	SecurityOpt []string    `json:"security_opt"`
+	Tmpfs       []string    `json:"tmpfs"`
+	Networks    networkList `json:"networks"`
+	Profiles    []string    `json:"profiles"`
+	Volumes     []any       `json:"volumes"`
 }
 
 // runVerifierMount is the one mount the verifier gets: the run's verifier/

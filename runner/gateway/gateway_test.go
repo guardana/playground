@@ -21,6 +21,7 @@ func inputs(partial string) gateway.Inputs {
 		Upstreams:  []gateway.Upstream{{Name: "victim-crm", Endpoint: "http://victim-crm:8080/mcp"}},
 		Overrides: []gateway.Override{{Upstream: "victim-crm", Tool: "crm.read_customer", Fingerprint: "sha256:ff",
 			Effect: "READ", ResourceType: "customer", ResourceFrom: "/customer_id"}},
+		Listener: "10.231.4.62:8080",
 	}
 }
 
@@ -54,7 +55,7 @@ func TestAssembleJoinsTheScenarioWithWhatTheLabOwns(t *testing.T) {
 	}
 	checks := map[string][2]string{
 		"mode":               {got.Mode, "ENFORCE"},
-		"listener.address":   {str(got.Listener["address"]), "0.0.0.0:8080"},
+		"listener.address":   {str(got.Listener["address"]), "10.231.4.62:8080"},
 		"listener.kind":      {str(got.Listener["kind"]), "stateless_http"},
 		"health.address":     {got.Health["address"], "127.0.0.1:8081"},
 		"policy.bundle_id":   {got.Policy["bundle_id"], "lab-tool-11"},

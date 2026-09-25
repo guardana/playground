@@ -9,6 +9,7 @@ package gateway
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"sigs.k8s.io/yaml"
@@ -39,6 +40,9 @@ type Inputs struct {
 	UsesPDP bool
 	// UpstreamTenants puts named upstreams in a tenant of their own.
 	UpstreamTenants map[string]string
+	// Listener is the address the agent listener binds: the enforcer's own
+	// address on agent-net and its port.
+	Listener string
 }
 
 // Upstream is one victim the gateway fronts.
@@ -86,7 +90,7 @@ func Assemble(in Inputs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	listener["address"] = "0.0.0.0:8080"
+	listener["address"] = in.Listener
 	config["health"] = map[string]any{"address": "127.0.0.1:8081"}
 	policy["bundle_id"], policy["bundle_file"] = in.BundleID, in.BundleFile
 	policy["key_id"], policy["public_key"] = in.Key.ID, in.Key.Public
@@ -128,6 +132,26 @@ func (in Inputs) check() error {
 	}
 	if len(in.Upstreams) == 0 {
 		return fmt.Errorf("%w: no upstream", ErrInvalid)
+	}
+	return checkListener(in.Listener)
+}
+
+// checkListener accepts one address and port. The enforcer binds exactly what
+// it is given, so a wildcard or a name would open the listener on every
+// network the enforcer is on.
+func checkListener(listener string) error {
+	address, err := netip.ParseAddrPort(listener)
+	switch {
+	case err != nil:
+		return fmt.Errorf("%w: listener %q is not an address and port: %w", ErrInvalid, listener, err)
+	case address.Addr().Unmap().IsUnspecified():
+		return fmt.Errorf("%w: listener %q binds every network the enforcer is on", ErrInvalid, listener)
+	case !address.Addr().Is4() || !address.Addr().IsPrivate():
+		// An IPv4 address mapped into IPv6 can bind as the IPv6 wildcard;
+		// loopback, multicast and broadcast are no address agent-net gives.
+		return fmt.Errorf("%w: listener %q is not a private IPv4 address", ErrInvalid, listener)
+	case address.Port() == 0:
+		return fmt.Errorf("%w: listener %q names no port", ErrInvalid, listener)
 	}
 	return nil
 }

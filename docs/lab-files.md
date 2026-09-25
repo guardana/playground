@@ -169,7 +169,8 @@ gateway:
   `list.shaping`, `list.ttl`; `upstream.call_timeout`, `upstream.list_timeout`.
   A key is written nested, never dotted: the enforcer reads `a.b: x` as
   `a: {b: x}`, so a key holding a dot is refused at any depth. The runner adds
-  the rest: the listener and health addresses, the bundle and its key, the
+  the rest: the listener address (the enforcer's own address on the run's
+  `agent-net`, never a wildcard) and the health address, the bundle and its key, the
   spool, the collector, the six victims as upstreams (each in the scenario's
   `environment` when it names one, spelled with letters, digits, `_` or `-`),
   the classification in

@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The enforcer's agent listener binds the enforcer's own address on
+  `agent-net`, where it bound every interface, so a container on
+  `tool-net`, `evidence-net` or `pdp-net` could open a session as the
+  configured principal. Each run gives `agent-net` a /27 of `10.231.0.0/16`,
+  picked from the run id's random suffix, and the enforcer a fixed address
+  in its upper half (`LAB_AGENT_SUBNET`, `LAB_AGENT_RANGE`,
+  `LAB_ENFORCER_ADDRESS`, set by the runner); a lab brought up by hand
+  uses the last /27, which no run is given.
 - `make enforcer-image` builds again from a fresh clone: the tool lister a
   chaos scenario runs inside a victim is its own command, `relist`, and
   `compose/healthprobe`, which the enforcer image builds without the lab's
@@ -82,6 +90,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Three checks on the enforcer's agent listener, each recorded in
+  `probes.log`: from the first victim the trajectory calls, and the decision
+  point double when its profile is up, `listener-closed-to/<service>` (a
+  refused connection at the enforcer's address on their network) and
+  `agent-address-unreachable-from/<service>` (no route or no answer at its
+  agent-net address); and `listener-bound-to-agent-net`, from the address the
+  enforcer says its listener bound. A boot that fails says why in
+  `boot.json`.
 - `expect.health` grades the enforcer's own `/healthz` counters after the
   replay, each count exact: `blocks` by reason code, `reads_unrecorded`,
   `sink_failures_before_effect`. The answer is kept in the run directory as

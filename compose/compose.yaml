@@ -327,7 +327,14 @@ services:
     pull_policy: never
     <<: *hardened
     command: ["run", "--config", "/gateway/gateway.yaml"]
-    networks: [agent-net, tool-net, evidence-net, pdp-net]
+    # The agent listener binds this address alone (runner/gateway), so no
+    # service on the enforcer's other networks can open a session at it.
+    networks:
+      agent-net:
+        ipv4_address: ${LAB_ENFORCER_ADDRESS:-10.231.255.254}
+      tool-net: {}
+      evidence-net: {}
+      pdp-net: {}
     profiles: [enforcer]
     environment:
       SSL_CERT_FILE: /pki/ca.pem
@@ -462,8 +469,16 @@ networks:
   # network before any container starts (`docker compose run --build` builds the
   # agent's image first, over the host's network, not the lab's), and the agent
   # talks only to the gateway.
+  # The runner gives each run its own subnet (runner/env.go), so parallel runs
+  # do not share one; docker refuses a subnet already in use and that run's
+  # boot fails. Docker hands the lower half out; the enforcer's address is in
+  # the upper half. The defaults are a lab brought up by hand.
   agent-net:
     internal: true
+    ipam:
+      config:
+        - subnet: ${LAB_AGENT_SUBNET:-10.231.255.224/27}
+          ip_range: ${LAB_AGENT_RANGE:-10.231.255.224/28}
   tool-net:
     # No route out, for anything, ever. The attack payloads and the canary
     # tokens live behind this line.

@@ -5,8 +5,13 @@
 package compose
 
 import (
+	"encoding/json"
+	"errors"
+	"maps"
+	"net/netip"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 
 	"sigs.k8s.io/yaml"
@@ -15,11 +20,32 @@ import (
 type topology struct {
 	Networks map[string]struct {
 		Internal bool `json:"internal"`
+		IPAM     struct {
+			Config []map[string]string `json:"config"`
+		} `json:"ipam"`
 	} `json:"networks"`
 	Services map[string]struct {
-		Networks    []string `json:"networks"`
-		NetworkMode string   `json:"network_mode"`
+		Networks    networkList `json:"networks"`
+		NetworkMode string      `json:"network_mode"`
 	} `json:"services"`
+}
+
+// networkList reads a service's networks in either spelling compose accepts,
+// a list of names or a mapping from name to settings, as the sorted names.
+type networkList []string
+
+func (n *networkList) UnmarshalJSON(body []byte) error {
+	var names []string
+	if err := json.Unmarshal(body, &names); err == nil {
+		*n = names
+		return nil
+	}
+	var settings map[string]json.RawMessage
+	if err := json.Unmarshal(body, &settings); err != nil {
+		return err
+	}
+	*n = slices.Sorted(maps.Keys(settings))
+	return nil
 }
 
 // Services allowed to reach evidence-net: the collector always, and the
@@ -100,4 +126,53 @@ func TestTheAgentIsOnAgentNetAlone(t *testing.T) {
 	if len(agent.Networks) != 1 || agent.Networks[0] != "agent-net" {
 		t.Errorf("scripted-agent is on %v, want agent-net alone", agent.Networks)
 	}
+}
+
+// The enforcer's agent listener binds its address on agent-net alone, so that
+// address has to be its own: fixed, and outside the range docker hands out to
+// the agent's containers. The defaults are what a lab brought up by hand gets.
+func TestTheEnforcerHasAFixedAddressOnAgentNet(t *testing.T) {
+	parsed := read(t)
+	enforcer := parsed.Services["enforcer"].Networks
+	if !slices.Equal(enforcer, []string{"agent-net", "evidence-net", "pdp-net", "tool-net"}) {
+		t.Errorf("the enforcer is on %v", enforcer)
+	}
+	var fixed struct {
+		Services struct {
+			Enforcer struct {
+				Networks map[string]struct {
+					IPv4Address string `json:"ipv4_address"`
+				} `json:"networks"`
+			} `json:"enforcer"`
+		} `json:"services"`
+	}
+	body, err := os.ReadFile("compose.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := yaml.Unmarshal(body, &fixed); err != nil {
+		t.Fatal(err)
+	}
+	config := parsed.Networks["agent-net"].IPAM.Config
+	if len(config) != 1 {
+		t.Fatalf("agent-net declares %d address pools, want one", len(config))
+	}
+	subnet, errSubnet := netip.ParsePrefix(byHand(config[0]["subnet"]))
+	dynamic, errRange := netip.ParsePrefix(byHand(config[0]["ip_range"]))
+	address, errAddress := netip.ParseAddr(byHand(fixed.Services.Enforcer.Networks["agent-net"].IPv4Address))
+	if err := errors.Join(errSubnet, errRange, errAddress); err != nil {
+		t.Fatalf("agent-net's defaults do not read: %v", err)
+	}
+	if !subnet.Contains(address) || dynamic.Contains(address) || !subnet.Contains(dynamic.Addr()) {
+		t.Errorf("the enforcer at %s is not in %s outside the range %s docker hands out", address, subnet, dynamic)
+	}
+}
+
+// byHand is the default of a `${NAME:-default}` interpolation.
+func byHand(value string) string {
+	_, fallback, found := strings.Cut(value, ":-")
+	if !found || !strings.HasPrefix(value, "${") || !strings.HasSuffix(value, "}") {
+		return ""
+	}
+	return strings.TrimSuffix(fallback, "}")
 }

@@ -63,6 +63,14 @@ type Probe struct {
 	Reached bool
 	// Detail is what the probe said: the dial error, or why it never ran.
 	Detail string
+	// From names the service a listener probe ran inside; empty for a probe
+	// the agent ran.
+	From string
+	// Kind says what a listener probe asked; zero for a reach probe.
+	Kind ListenerKind
+	// Agent is the enforcer's address on agent-net, the one its listener
+	// should be bound to.
+	Agent string
 }
 
 // NetworkIsolation reports whether the agent reached the gateway and only the
@@ -70,7 +78,9 @@ type Probe struct {
 // "no route" covers an unknown host as well as a refused connection.
 //
 // Sealed are the other services an agent must not reach: the collector the
-// trail is exported to, the decision point double, the approver.
+// trail is exported to, the decision point double, the approver. A sealed probe
+// with a Kind is about the enforcer's agent listener instead, graded by
+// gradeListener.
 type NetworkIsolation struct {
 	Gateway Probe
 	Victim  Probe
@@ -88,6 +98,10 @@ func (n NetworkIsolation) Run(_ context.Context, _ assertion.Records) ([]asserti
 		gradeReach("network-isolation/victim-unreachable", n.Victim, false, n.Source),
 	}
 	for _, sealed := range n.Sealed {
+		if sealed.Kind != 0 {
+			results = append(results, gradeListener(sealed, n.Source))
+			continue
+		}
 		results = append(results, gradeReach("network-isolation/sealed/"+sealed.Target, sealed, false, n.Source))
 	}
 	return results, nil

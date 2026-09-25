@@ -89,3 +89,23 @@ func TestTheAgentIsBuiltUnderItsOwnProfile(t *testing.T) {
 		t.Errorf("%s is in profiles %v, want [%s]", agentService, got, agentProfile)
 	}
 }
+
+// A profile that did not come up says why in the boot record, not only in the
+// runner's own output: two runs that drew one agent-net subnet fail here.
+func TestAFailedUpNamesItsCauseInTheBootRecord(t *testing.T) {
+	subject, compose, scenario := enforcerLab(t)
+	compose.upErr = errors.New("docker compose up: exit status 1: networks have overlapping IPv4")
+	compose.status = []assertion.Service{{Name: "enforcer", Detail: "no container: compose reported nothing"}}
+	graded, err := subject.execute(context.Background(), scenario)
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	found := results(graded)["boot/enforcer"]
+	if found.Outcome != assertion.Fail || !strings.Contains(found.Detail, "overlapping IPv4") {
+		t.Errorf("boot/enforcer is %s: %s", found.Outcome, found.Detail)
+	}
+	record, err := os.ReadFile(filepath.Join(subject.reports, graded.RunID, "boot.json"))
+	if err != nil || !strings.Contains(string(record), "overlapping IPv4") {
+		t.Errorf("boot.json does not say why (%v): %s", err, record)
+	}
+}
