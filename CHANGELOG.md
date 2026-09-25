@@ -90,6 +90,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Runbooks for a stranger and an adopting team: `docs/runbooks/quickstart.md`
+  (from `git clone` to one green scenario, reading the report, what a red
+  run means, cleaning up) and one page each for bringing your own policy,
+  gateway configuration and verifier contract. `README.md` is rewritten
+  around them; it no longer says no scenario runs.
 - A CI scenario job (`.github/workflows/scenarios.yml`): the enforcer's commit
   fetched by its id from `ENFORCER_REPOSITORY` (new in `versions.env`) by
   `scripts/fetch-enforcer.sh`, which fails with the reason and never skips,
