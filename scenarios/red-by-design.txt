@@ -1,0 +1,7 @@
+# Scenarios that stay red on a finding in a system under test, one per line:
+# the scenario's identifier, then the finding in one line. `runner -all
+# -red-by-design scenarios/red-by-design.txt` passes only when the scenarios
+# that do not pass are exactly these, each failing on a record. Take a line
+# out when its system is fixed; the run fails until you do.
+mode-01-observe-runs-what-it-records enforcer: under OBSERVE a call whose decision refused its action digest closes ACTION_COMPLETED with an executed digest, as if authorized bytes were sent
+verify-04-drift-severity-is-the-catalogued-one verifier: a drifted MCP manifest is reported CRITICAL while the rule catalogue lists guardana.agent.mcp_server_manifest as HIGH

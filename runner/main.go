@@ -2,12 +2,14 @@
 // records the run left behind.
 //
 //	runner -scenario <id or path> [-reports dir] [-keep] [-timeout d]
-//	runner -all [-reports dir] [-timeout d]
+//	runner -all [-reports dir] [-timeout d] [-red-by-design file]
 //
-// It exits zero only when every scenario it ran passed. Anything else — a
-// service that did not start, a step with no decision, a check that could not
-// read its input — is a run that did not establish what it claimed, and a lab
-// that reported those as green would be worth nothing.
+// It exits zero only when every scenario it ran passed, or, with
+// -red-by-design, when the ones that did not are exactly those the file lists,
+// each failing on a record. Anything else — a service that did not start, a
+// step with no decision, a check that could not read its input — is a run that
+// did not establish what it claimed, and a lab that reported those as green
+// would be worth nothing.
 //
 // The lab's own files are read relative to the working directory, which is
 // the clone: `make scenario` runs it from there. A scenario names its files by
@@ -67,6 +69,10 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	listed, err := redByDesignList(chosen)
+	if err != nil {
+		return err
+	}
 	subject := newLab(root, space, chosen, environ, out)
 	if subject.namespace, err = enforcerNamespace(root); err != nil {
 		return err
@@ -76,6 +82,9 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	}
 	if subject.enforcerImage, err = enforcerImage(root); err != nil {
 		return err
+	}
+	if chosen.redByDesign != "" {
+		return executeRedByDesign(ctx, subject, scenarios, listed, out)
 	}
 	return executeAll(ctx, subject, scenarios, out)
 }
@@ -90,6 +99,8 @@ func parse(args []string, out io.Writer) (settings, error) {
 	set.BoolVar(&chosen.keep, "keep", false, "leave the profile up after the run, for looking at it by hand")
 	set.DurationVar(&chosen.timeout, "timeout", defaultScenarioTimeout,
 		"how long one scenario may take, the first docker build included")
+	set.StringVar(&chosen.redByDesign, "red-by-design", "",
+		"with -all, pass only when the scenarios that do not pass are exactly the ones this file lists")
 	if err := set.Parse(args); err != nil {
 		return settings{}, err
 	}
@@ -125,17 +136,9 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 // the rest, and a person looking at a broken lab wants the whole picture.
 func executeAll(ctx context.Context, subject lab, scenarios []string, out io.Writer) error {
 	var failed []string
-	for _, scenario := range scenarios {
-		graded, err := subject.execute(ctx, scenario)
-		if err != nil {
-			failed = append(failed, filepath.Base(scenario))
-			_, _ = fmt.Fprintf(out, "%s: the run could not be written: %v\n", filepath.Base(scenario), err)
-			continue
-		}
-		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), graded.Suite(), graded.Scenario,
-			filepath.Join(subject.reports, graded.RunID, "report.md"))
-		if graded.Outcome() != assertion.Pass {
-			failed = append(failed, graded.Scenario)
+	for _, ran := range runEach(ctx, subject, scenarios, out) {
+		if ran.outcome != assertion.Pass {
+			failed = append(failed, ran.id)
 		}
 	}
 	if len(failed) > 0 {
@@ -143,6 +146,25 @@ func executeAll(ctx context.Context, subject lab, scenarios []string, out io.Wri
 			len(failed), len(scenarios), strings.Join(failed, ", "))
 	}
 	return nil
+}
+
+// runEach runs every scenario and prints one line for each. A run that could
+// not be written established nothing and counts as indeterminate.
+func runEach(ctx context.Context, subject lab, scenarios []string, out io.Writer) []ranScenario {
+	ran := make([]ranScenario, 0, len(scenarios))
+	for _, scenario := range scenarios {
+		graded, err := subject.execute(ctx, scenario)
+		if err != nil {
+			id := strings.TrimSuffix(filepath.Base(scenario), filepath.Ext(scenario))
+			ran = append(ran, ranScenario{id: id, outcome: assertion.Indeterminate})
+			_, _ = fmt.Fprintf(out, "%s: the run could not be written: %v\n", filepath.Base(scenario), err)
+			continue
+		}
+		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), graded.Suite(), graded.Scenario,
+			filepath.Join(subject.reports, graded.RunID, "report.md"))
+		ran = append(ran, ranScenario{id: graded.Scenario, outcome: graded.Outcome()})
+	}
+	return ran
 }
 
 // randomSuffix keeps two runs of one scenario in one second apart. The error is

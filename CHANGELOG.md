@@ -90,6 +90,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A CI scenario job (`.github/workflows/scenarios.yml`): the enforcer's commit
+  fetched by its id from `ENFORCER_REPOSITORY` (new in `versions.env`) by
+  `scripts/fetch-enforcer.sh`, which fails with the reason and never skips,
+  then `scripts/ci-scenarios.sh` (`make ci-scenarios`): both images, a lab key
+  of its own, the catalogue judged by `runner -all -red-by-design
+  scenarios/red-by-design.txt`, and every example from a copy outside the
+  clone. The list names each red scenario with the finding that keeps it red;
+  a listed scenario that passes, an unlisted red or a listed id that no longer
+  exists fails the run by name.
 - Three checks on the enforcer's agent listener, each recorded in
   `probes.log`: from the first victim the trajectory calls, and the decision
   point double when its profile is up, `listener-closed-to/<service>` (a

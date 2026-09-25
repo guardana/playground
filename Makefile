@@ -7,7 +7,8 @@ SOURCES = scripts/repo-files.sh | grep '\.go$$'
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
 	check-sizes check-attribution check-hygiene check-actions-pinned \
-	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios quality-quick quality
+	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios ci-scenarios \
+	quality-quick quality
 
 # The compose profiles a target brings up, space-separated, and where a run
 # writes its records.
@@ -127,6 +128,12 @@ scenario:
 
 scenarios:
 	$(GO) run ./runner -all -reports $(REPORTS)
+
+# What CI runs after the gate: images, a throwaway lab key, the catalogue judged
+# against scenarios/red-by-design.txt, and every example from a copy outside
+# the clone. Needs ENFORCER_SOURCE; scripts/fetch-enforcer.sh <dir> makes one.
+ci-scenarios:
+	REPORTS=$(REPORTS) scripts/ci-scenarios.sh
 
 quality-quick: fmt-check vet test check-attribution check-hygiene
 

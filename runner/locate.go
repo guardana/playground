@@ -20,6 +20,8 @@ type settings struct {
 	reports  string
 	keep     bool
 	timeout  time.Duration
+	// redByDesign is the list a whole-catalogue run is judged against.
+	redByDesign string
 }
 
 // locate returns the scenario files to run, in the order they will be run.

@@ -19,7 +19,9 @@ make bootstrap
 make quality
 ```
 
-`make quality` is the whole gate, and CI runs the same targets.
+`make quality` is the whole gate, and CI runs the same targets. CI's scenario
+job runs `scripts/ci-scenarios.sh`, which you can run the same way with Docker
+and `ENFORCER_SOURCE` set.
 `make docs-impact FOR=<path>` names the pages a change to that path makes suspect.
 
 Local tooling — editor settings, agent configuration, scratch notes — stays out

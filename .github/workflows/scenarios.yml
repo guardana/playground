@@ -1,0 +1,40 @@
+name: scenarios
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scenarios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Needs Docker; GitHub's hosted Ubuntu runner has it. A run that cannot fetch
+  # or boot the systems under test fails, it never skips. A pull request's run
+  # reads its own versions.env, like the rest of its tree; the job holds no
+  # secret and a read-only token.
+  catalogue:
+    name: catalogue and examples (ubuntu-latest, Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pin: v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # pin: v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: false
+
+      - name: Fetch the enforcer at its pin
+        run: scripts/fetch-enforcer.sh "$RUNNER_TEMP/control.git"
+
+      - name: Catalogue, red by design, and every example
+        run: ENFORCER_SOURCE="$RUNNER_TEMP/control.git" scripts/ci-scenarios.sh
