@@ -1,4 +1,4 @@
-# tool-01's trajectory, decided by the pinned enforcer instead of the stub.
+# Two reads the policy allows, decided by the pinned enforcer.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
 #   A run call's trail, proposed, decided, started, completed:

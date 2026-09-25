@@ -14,6 +14,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `tool-01`, `auth-01` and `flow-01` run against the enforcer instead of the
+  stub, under new names: `tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write`,
+  `auth-01-an-injected-administrator-override-grants-no-export` and
+  `flow-01-a-private-read-is-not-mailed-to-an-untrusted-sink`. Their declared
+  verdicts in `config/scenarios/` are gone.
 - `expect.effects` accounts for every journal line of the run, not only the
   served ones: an entry takes an optional `calls_refused: {tool: n}` beside
   `calls_served`, and a line whose status and tool the scenario does not name,
@@ -53,6 +58,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The verifier image is built by `make verifier-image` alone: the `verifier`
   service carries no `build:` and the runner's build before a run skips it,
   so the image it checked against `VERIFIER_VERSION` is the one that runs.
+
+### Removed
+
+- The stub gateway: `services/stub-gateway/`, `config/stub-gateway/`, its
+  compose service and the `stub` profile. The enforcer decides every
+  trajectory scenario; a scenario carrying `stub:` is refused at load as an
+  unknown key, and one without `gateway:` or without the `enforcer` profile is
+  refused. The runner no longer pairs a trail by a step number the trail
+  carries or grades a trail stamped with a run id as this run's: an event
+  naming any run fails `evidence/run-id`.
 
 ### Added
 
@@ -235,6 +250,4 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `tool-01-permitted-read-is-recorded`, `flow-01-injected-page-to-external-mail`
   and `auth-01-cross-tenant-export-undecided`.
 
-Nothing is released yet. The scenarios run end to end against the stub gateway,
-and the verdicts they replay come from a file rather than from anything that
-decides.
+Nothing is released yet.

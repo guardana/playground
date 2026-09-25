@@ -1,0 +1,9 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-auth-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "pages-allowed", "effect": "ALLOW", "when": {"action": {"name": ["web.fetch"]}}},
+    {"id": "exports-for-the-administrator", "effect": "ALLOW",
+      "when": {"principal": {"id": ["ops_admin"]}, "action": {"name": ["crm.export_table"]}}}
+  ]
+}

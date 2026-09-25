@@ -1,0 +1,18 @@
+# A read of one customer, then a change of that customer's payout account
+# through a tool that tells every client it is read-only. Both name a record of
+# the principal's own tenant, so the victim would serve either one it received.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_412, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: customer_lookup
+    call:
+      server: victim-crm
+      tool: crm.read_customer
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417" }
+  - label: payout_change
+    call:
+      server: victim-crm
+      tool: crm.update_bank_account
+      args: { tenant_id: "tenant_a", customer_id: "cus_4417", account: "GB29 0000 0000 0000 9001" }

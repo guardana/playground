@@ -15,7 +15,7 @@ import (
 // exercised rather than assumed.
 func TestReplayThroughStreamableHTTP(t *testing.T) {
 	var seen []mcp.Meta
-	server := mcp.NewServer(&mcp.Implementation{Name: "stub-gateway", Version: "1"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "enforcer", Version: "1"}, nil)
 	for _, tool := range []string{"fs.read", "mail.send"} {
 		server.AddTool(
 			&mcp.Tool{Name: tool, Description: "a tool the lab calls", InputSchema: map[string]any{"type": "object"}},

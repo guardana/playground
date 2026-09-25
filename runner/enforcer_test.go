@@ -52,61 +52,13 @@ func otlpOf(t *testing.T, lines string) string {
 	return string(encoded) + "\n"
 }
 
-// enforcerLab is a lab whose scenario the enforcer decides, with every file the
-// runner prepares from written into the test's own root.
+// enforcerLab is a working lab and the fake docker it runs on.
 func enforcerLab(t *testing.T) (lab, *fakeCompose, string) {
 	t.Helper()
-	compose := workingCompose("")
-	compose.trail = ""
-	unstamped := strings.NewReplacer(`"runId":"${RUN_ID}",`, "", `"runId":"${RUN_ID}"`, "").Replace(evidenceFile)
-	compose.collector = otlpOf(t, asEnforced(unstamped))
-	compose.exec = func(_ string, args []string) Split {
-		switch {
-		case strings.HasSuffix(args[len(args)-1], "/brand"):
-			return Split{Stdout: `status 200` + "\n" + `{"version":"` + testPin + `"}`}
-		default:
-			return Split{Stdout: "status 200\n" + drainedHealth}
-		}
-	}
+	compose := workingCompose(t)
 	subject, scenario := labUnderTest(t, compose)
 	compose.reports = subject.reports
-	root := subject.root
-	body := strings.Replace(scenarioFile, "stub: { verdicts: config/scenarios/flow-01.yaml }\n",
-		"gateway: { config: config/gateway/scenarios/flow-01.yaml, policy: config/policies/flow-01.json }\n", 1)
-	writeFile(scenario, strings.Replace(body, "profile: [core, stub]", "profile: [core, enforcer]", 1))
-	writeFile(filepath.Join(root, "config/gateway/scenarios/flow-01.yaml"),
-		"mode: ENFORCE\nproject_id: project-1\ntenant_id: tenant-1\nlistener:\n  principal:\n    id: user_123\n  agent:\n    id: support-agent\n")
-	writeFile(filepath.Join(root, "config/policies/flow-01.json"),
-		`{"apiVersion":"agent-policy/v1alpha1","bundle":{"id":"lab-flow-01","version":"1","serial":1}}`)
-	writeFile(filepath.Join(root, classification), "- { upstream: victim-fs, tool: fs.read, effect: READ, resource_type: file, resource_from: /path }\n")
-	writeFile(filepath.Join(root, fingerprints), "- { upstream: victim-fs, tool: fs.read, fingerprint: \"sha256:0d\" }\n")
-	subject.keysDir = t.TempDir()
-	writeFile(filepath.Join(subject.keysDir, "public.txt"), "key_id: ed25519-0011223344556677\npublic_key: cHVibGljLWtleQ==\n")
-	subject.sign = func(_ context.Context, keysDir, policy, outDir string) error {
-		if keysDir != subject.keysDir || filepath.Base(policy) != "flow-01.json" {
-			t.Errorf("signed %s with %s", policy, keysDir)
-		}
-		return os.WriteFile(filepath.Join(outDir, "policy.bundle"), []byte("signed"), 0o600)
-	}
-	subject.namespace, subject.pin = testNamespace, testPin
-	subject.drainBound = 2 * time.Second
-	compose.image = func(string) (string, error) { return "sha256:aa", nil }
-	subject.enforcerImage = "lab-enforcer:" + testPin
-	writeFile(filepath.Join(root, versionFile), "ENFORCER_TREE="+testTree+"\n")
-	subject.inspect = inspectEnforcer(testTree)
 	return subject, compose, scenario
-}
-
-// asEnforced adds what the enforcer writes and the stub does not: the mode on
-// every event, the decision's action digest, and the executed digest on the
-// completion.
-func asEnforced(trail string) string {
-	const digest = `"sha256:1111111111111111111111111111111111111111111111111111111111111111"`
-	return strings.NewReplacer(
-		`"tenantId":"tenant-1",`, `"tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE",`,
-		`"decision":{"requestId":"r1",`, `"decision":{"requestId":"r1","actionDigest":`+digest+`,`,
-		`"prevEventId":"e3"}`, `"prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":`+digest+`}}`,
-	).Replace(trail)
 }
 
 func results(graded assertion.Report) map[string]assertion.Result {

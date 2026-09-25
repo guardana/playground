@@ -147,22 +147,6 @@ func TestANamedDirectoryIsNotAFile(t *testing.T) {
 	}
 }
 
-// The stub mounts the clone's config/, so a workspace scenario it decided
-// would be decided by a file the workspace does not hold.
-func TestAWorkspaceScenarioTheStubDecidesIsRefused(t *testing.T) {
-	space := workspaceHolding(t, "")
-	writeFile(filepath.Join(space.dir, "config/scenarios/s.yaml"), "x\n")
-	stubbed := labspec.Scenario{Trajectory: "trajectories/t.yaml", Stub: labspec.Stub{Verdicts: "config/scenarios/s.yaml"}}
-	err := space.refuseMissing(stubbed)
-	if err == nil || !strings.Contains(err.Error(), "stub") {
-		t.Errorf("a stub scenario from a workspace was %v", err)
-	}
-	space.external = false
-	if err := space.refuseMissing(stubbed); err != nil {
-		t.Errorf("a stub scenario in the clone was refused: %v", err)
-	}
-}
-
 // Compose binds a workspace directory by the path as written and Docker follows
 // a link there, so a linked directory would show a container what it points at.
 func TestAWorkspaceDirectoryThatIsALinkIsRefused(t *testing.T) {
@@ -206,7 +190,7 @@ func TestADanglingWorkspaceLinkIsRefused(t *testing.T) {
 // reports, and a workspace directory is mounted into the agent.
 func TestReportsInsideADirectoryTheCloneMountsAreRefused(t *testing.T) {
 	root := t.TempDir()
-	for _, inside := range []string{"trajectories/out", "config/pdp/out", "config/out"} {
+	for _, inside := range []string{"trajectories/out", "config/pdp/out"} {
 		reports := filepath.Join(root, inside)
 		_, err := openWorkspace(root, reports, nil)
 		if err == nil || !strings.Contains(err.Error(), "which containers mount") {

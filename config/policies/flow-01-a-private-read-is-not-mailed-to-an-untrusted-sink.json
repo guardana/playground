@@ -1,0 +1,10 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-flow-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "reads-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["READ"]}}},
+    {"id": "mail-only-to-trusted-sinks", "effect": "ALLOW_WITH_OBLIGATIONS",
+      "when": {"action": {"effect": ["COMMUNICATE"]}},
+      "obligations": [{"type": "deny_external_sink"}]}
+  ]
+}

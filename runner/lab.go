@@ -22,18 +22,17 @@ const (
 	agentService = "scripted-agent"
 	// agentProfile holds the agent alone; no scenario names it, and a build
 	// over the scenario's own profiles would skip the agent's image.
-	agentProfile    = "agent"
-	gatewayService  = "stub-gateway"
-	servicePort     = "8080"
-	gatewayEndpoint = "http://" + gatewayService + ":" + servicePort + "/mcp"
+	agentProfile = "agent"
+	servicePort  = "8080"
+	// trajectoriesDir is the one directory of the workspace the agent mounts.
+	trajectoriesDir = "trajectories/"
 	// containerReports is where a service sees the run: /reports/<run id>,
-	// holding only the part of the run that service writes. The agent and the
-	// gateway get the two directories they read and not the repository:
-	// compose mounts config/ and trajectories/ read only, at mount points
-	// named after the directories themselves, so a repository path becomes a
-	// container path by putting a slash in front of it. Handing a service
-	// standing in for a security boundary the whole tree, attack payloads
-	// included, would be a strange thing for this lab of all labs to do.
+	// holding only the part of the run that service writes. The agent gets
+	// the directory it reads and not the repository: compose mounts
+	// trajectories/ read only at its own name, so a repository path becomes a
+	// container path by putting a slash in front of it. Handing the agent the
+	// whole tree, attack payloads included, would be a strange thing for this
+	// lab of all labs to do.
 	containerReports = "/reports"
 )
 
@@ -113,7 +112,7 @@ func (l lab) runScenario(
 			return imageRefused(spec.ID, runID, err, l.clock()), nil
 		}
 	}
-	env := l.environment(spec, runID, runDir)
+	env := l.environment(runID, runDir)
 	if spec.UsesEnforcer() {
 		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
 			return unprepared(spec.ID, runID, err, l.clock()), nil

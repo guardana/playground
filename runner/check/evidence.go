@@ -27,12 +27,9 @@ type Evidence struct {
 	// trail nobody could read and a trail with nothing in it are two facts, and
 	// the second one sends a reader to a file that turns out to be full.
 	ReadError error
-	// Unstamped is set for a gateway that writes no run id, as the enforcer at
-	// its pin does: the check asserts that no event names a run.
-	Unstamped bool
 	// FreshTrail is set by the runner when the trail file lives in the run
-	// directory it has just created. An unstamped trail says nothing about
-	// which run wrote it, so without this it cannot be read as this run's.
+	// directory it has just created. The enforcer writes no run id, so without
+	// this nothing says the trail is this run's.
 	FreshTrail bool
 }
 

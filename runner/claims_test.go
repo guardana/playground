@@ -12,8 +12,7 @@ import (
 // states is a run of another scenario, whatever its decisions say.
 func TestAnEnforcerRunUnderAnotherModeIsRed(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
-	unstamped := strings.NewReplacer(`"runId":"${RUN_ID}",`, "", `"runId":"${RUN_ID}"`, "").Replace(evidenceFile)
-	observed := strings.ReplaceAll(asEnforced(unstamped), "ENFORCEMENT_MODE_ENFORCE", "ENFORCEMENT_MODE_OBSERVE")
+	observed := strings.ReplaceAll(evidenceFile, "ENFORCEMENT_MODE_ENFORCE", "ENFORCEMENT_MODE_OBSERVE")
 	compose.collector = otlpOf(t, observed)
 
 	graded, err := subject.execute(context.Background(), scenario)
@@ -33,8 +32,7 @@ func TestAnEnforcerRunUnderAnotherModeIsRed(t *testing.T) {
 // What ran is compared with what was decided on every run the enforcer decides.
 func TestAnEnforcerRunThatRanOtherBytesIsRed(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
-	unstamped := strings.NewReplacer(`"runId":"${RUN_ID}",`, "", `"runId":"${RUN_ID}"`, "").Replace(evidenceFile)
-	altered := strings.Replace(asEnforced(unstamped), `"executedActionDigest":"sha256:1111`, `"executedActionDigest":"sha256:2222`, 1)
+	altered := strings.Replace(evidenceFile, `"executedActionDigest":"sha256:1111`, `"executedActionDigest":"sha256:2222`, 1)
 	compose.collector = otlpOf(t, altered)
 
 	graded, err := subject.execute(context.Background(), scenario)

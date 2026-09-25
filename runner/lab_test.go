@@ -18,10 +18,10 @@ const (
 	scenarioFile = `schema_version: 1
 id: flow-01
 title: a read the policy permits is served and recorded
-profile: [core, stub]
+profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/flow-01.yaml
-stub: { verdicts: config/scenarios/flow-01.yaml }
+gateway: { config: config/gateway/scenarios/flow-01.yaml, policy: config/policies/flow-01.json }
 expect:
   decisions:
     1: { verdict: ALLOW, reason_codes_include: [RULE_ALLOW] }
@@ -42,14 +42,16 @@ steps:
       tool: fs.read
       args: { path: "/data/private/customers.csv" }
 `
-	// ${RUN_ID} is what the fake stub gateway and the fake victims stamp their
-	// records with, the way the real ones stamp LAB_RUN_ID. A record naming
-	// another run is a record of another run, and the runner has to say so.
-	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"},"context":{"runId":"${RUN_ID}","stepId":"1"}}}
-{"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
-{"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
-{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","runId":"${RUN_ID}","projectId":"project-1","tenantId":"tenant-1","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3"}
+	// evidenceFile is the trail as the enforcer at its pin writes it: the mode
+	// on every event, the action digest on the decision, the executed digest
+	// on the completion, and no run id anywhere.
+	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"}}}
+{"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","actionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
+{"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
+{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
 `
+	// ${RUN_ID} is what the fake victims stamp their journals with, the way the
+	// real ones stamp LAB_RUN_ID.
 	journalFile = `{"occurred_at":"2026-09-09T12:00:03Z","server":"victim-fs","tool":"fs.read","run_id":"${RUN_ID}","status":"served"}
 `
 )
@@ -68,7 +70,8 @@ type fakeCompose struct {
 	victim    Execution
 	replay    Execution
 	replayErr error
-	// what the fake writes when the replay runs; nil writes nothing.
+	// trail is an evidence.jsonl the fake writes itself when the replay runs,
+	// as nothing in a working run does; empty writes none.
 	trail    string
 	journals map[string]string
 	// split answers the verifier's runs; nil answers every one as not run.
@@ -156,7 +159,7 @@ func (f *fakeCompose) RunOnce(ctx context.Context, _ []string, _ string, args []
 	}
 	f.ran = append(f.ran, args)
 	if len(args) == 2 && args[0] == "-probe" {
-		if strings.HasPrefix(args[1], "stub-gateway") || args[1] == "enforcer:8080" {
+		if args[1] == "enforcer:8080" {
 			return f.gateway, nil
 		}
 		return f.victim, nil
@@ -165,8 +168,8 @@ func (f *fakeCompose) RunOnce(ctx context.Context, _ []string, _ string, args []
 	return f.replay, f.replayErr
 }
 
-// writeRecords plays the part of the stub gateway and the victims, which write
-// into the run directory the runner made for them.
+// writeRecords plays the part of the collector, the agent and the victims,
+// which write into the run directory the runner made for them.
 func (f *fakeCompose) writeRecords(args []string) {
 	runID := ""
 	for i, arg := range args {
@@ -208,46 +211,72 @@ func countingSuffix() func() string {
 	}
 }
 
-func workingCompose(reports string) *fakeCompose {
+// workingCompose answers every docker call the way a healthy run the enforcer
+// decides does, down to the trail its collector exports.
+func workingCompose(t *testing.T) *fakeCompose {
+	t.Helper()
 	return &fakeCompose{
-		reports:   reports,
-		inProfile: []string{"scripted-agent", "stub-gateway", "victim-fs"},
+		inProfile: []string{"scripted-agent", "enforcer", "collector", "victim-fs"},
 		status: []assertion.Service{
-			{Name: "stub-gateway", Running: true, Detail: "running"},
+			{Name: "enforcer", Running: true, Detail: "running"},
 			{Name: "victim-fs", Running: true, Detail: "running"},
 		},
-		gateway:  Execution{Output: "probe reached stub-gateway:8080\n"},
-		victim:   Execution{ExitCode: 1, Output: "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n"},
-		trail:    evidenceFile,
-		journals: map[string]string{"victim-fs": journalFile},
+		gateway:   Execution{Output: "probe reached enforcer:8080\n"},
+		victim:    Execution{ExitCode: 1, Output: "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n"},
+		collector: otlpOf(t, evidenceFile),
+		journals:  map[string]string{"victim-fs": journalFile},
+		exec: func(_ string, args []string) Split {
+			if strings.HasSuffix(args[len(args)-1], "/brand") {
+				return Split{Stdout: `status 200` + "\n" + `{"version":"` + testPin + `"}`}
+			}
+			return Split{Stdout: "status 200\n" + drainedHealth}
+		},
+		image: func(string) (string, error) { return "sha256:aa", nil },
 	}
 }
 
+// labUnderTest is a lab over a root holding the scenario, its trajectory and
+// every file the runner prepares the enforcer from.
 func labUnderTest(t *testing.T, compose Compose) (lab, string) {
 	t.Helper()
 	root := t.TempDir()
 	writeFile(filepath.Join(root, "scenarios/flow/flow-01.yaml"), scenarioFile)
 	writeFile(filepath.Join(root, "trajectories/flow-01.yaml"), trajectoryFile)
-	writeFile(filepath.Join(root, "config/scenarios/flow-01.yaml"), "verdicts: []\n")
-	reports := filepath.Join(root, "reports")
+	writeFile(filepath.Join(root, "config/gateway/scenarios/flow-01.yaml"),
+		"mode: ENFORCE\nproject_id: project-1\ntenant_id: tenant-1\nlistener:\n  principal:\n    id: user_123\n  agent:\n    id: support-agent\n")
+	writeFile(filepath.Join(root, "config/policies/flow-01.json"),
+		`{"apiVersion":"agent-policy/v1alpha1","bundle":{"id":"lab-flow-01","version":"1","serial":1}}`)
+	writeFile(filepath.Join(root, classification), "- { upstream: victim-fs, tool: fs.read, effect: READ, resource_type: file, resource_from: /path }\n")
+	writeFile(filepath.Join(root, fingerprints), "- { upstream: victim-fs, tool: fs.read, fingerprint: \"sha256:0d\" }\n")
+	writeFile(filepath.Join(root, versionFile), "ENFORCER_TREE="+testTree+"\n")
+	keysDir := t.TempDir()
+	writeFile(filepath.Join(keysDir, "public.txt"), "key_id: ed25519-0011223344556677\npublic_key: cHVibGljLWtleQ==\n")
 	return lab{
 		root:      root,
 		workspace: workspace{dir: resolved(root)},
-		reports:   reports,
+		reports:   filepath.Join(root, "reports"),
 		compose:   compose,
 		timeout:   defaultScenarioTimeout,
 		clock:     func() time.Time { return time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC) },
 		suffix:    countingSuffix(),
 		log:       io.Discard,
-		namespace: "guardana.control",
+		namespace: testNamespace,
+		pin:       testPin,
+		keysDir:   keysDir,
+		sign: func(_ context.Context, signedWith, policy, outDir string) error {
+			if signedWith != keysDir || filepath.Base(policy) != "flow-01.json" {
+				t.Errorf("signed %s with %s", policy, signedWith)
+			}
+			return os.WriteFile(filepath.Join(outDir, "policy.bundle"), []byte("signed"), 0o600)
+		},
+		drainBound:    2 * time.Second,
+		enforcerImage: "lab-enforcer:" + testPin,
+		inspect:       inspectEnforcer(testTree),
 	}, filepath.Join(root, "scenarios/flow/flow-01.yaml")
 }
 
 func TestRunGradesAWholeRunGreenOnlyOnWhatItRead(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 
 	report, err := subject.execute(context.Background(), scenario)
 	if err != nil {
@@ -284,8 +313,8 @@ func TestRunIsNotGreenWhenSomethingItNeededDidNotHappen(t *testing.T) {
 			says:  "boot/victim-fs",
 		},
 		{
-			name:  "the trail was never written",
-			spoil: func(f *fakeCompose) { f.trail = "" },
+			name:  "the collector exported no trail",
+			spoil: func(f *fakeCompose) { f.collector = "" },
 			says:  "decisions/step-1",
 		},
 		{
@@ -312,10 +341,7 @@ func TestRunIsNotGreenWhenSomethingItNeededDidNotHappen(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			root := t.TempDir()
-			compose := workingCompose(filepath.Join(root, "reports"))
-			subject, scenario := labUnderTest(t, compose)
-			compose.reports = subject.reports
+			subject, compose, scenario := enforcerLab(t)
 			test.spoil(compose)
 
 			report, err := subject.execute(context.Background(), scenario)
@@ -342,10 +368,7 @@ func TestRunIsNotGreenWhenSomethingItNeededDidNotHappen(t *testing.T) {
 }
 
 func TestRunRefusesAPairThatDoesNotValidateBeforeBringingAnythingUp(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	// The trajectory gains a step the scenario grades nothing about.
 	writeFile(filepath.Join(subject.root, "trajectories/flow-01.yaml"), trajectoryFile+
 		"  - call: { server: victim-fs, tool: fs.list, args: { path: \"/data\" } }\n")
@@ -366,10 +389,7 @@ func TestRunRefusesAPairThatDoesNotValidateBeforeBringingAnythingUp(t *testing.T
 }
 
 func TestRunLeavesTheProfileUpWhenAskedTo(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	subject.keep = true
 
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
@@ -381,25 +401,22 @@ func TestRunLeavesTheProfileUpWhenAskedTo(t *testing.T) {
 }
 
 func TestRunProbesFromInsideTheAgentNetwork(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
-	if len(compose.ran) != 3 {
-		t.Fatalf("the agent image was run %d times, want two probes and one replay", len(compose.ran))
+	want := []string{"enforcer:8080", "victim-fs:8080", "collector:4318", "enforcer:8081"}
+	if len(compose.ran) != len(want)+1 {
+		t.Fatalf("the agent image was run %d times, want %d probes and one replay", len(compose.ran), len(want))
 	}
-	if compose.ran[0][0] != "-probe" || !strings.HasPrefix(compose.ran[0][1], "stub-gateway") {
-		t.Errorf("the first run is %v, want the gateway probe", compose.ran[0])
+	for i, target := range want {
+		if compose.ran[i][0] != "-probe" || compose.ran[i][1] != target {
+			t.Errorf("run %d is %v, want the probe of %s", i+1, compose.ran[i], target)
+		}
 	}
-	if compose.ran[1][0] != "-probe" || !strings.HasPrefix(compose.ran[1][1], "victim-fs") {
-		t.Errorf("the second run is %v, want a victim probe", compose.ran[1])
-	}
-	if !slices.Contains(compose.ran[2], "-trajectory") {
-		t.Errorf("the third run is %v, want the replay", compose.ran[2])
+	if !slices.Contains(compose.ran[len(want)], "-trajectory") {
+		t.Errorf("the last run is %v, want the replay", compose.ran[len(want)])
 	}
 }
 
@@ -408,10 +425,7 @@ func TestRunProbesFromInsideTheAgentNetwork(t *testing.T) {
 // them apart. Read a missing file as an empty one and every `calls_served: {}`
 // in the catalogue passes without a victim having run.
 func TestRunDoesNotReadAMissingJournalAsAVictimThatServedNothing(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	compose.journals = nil
 	writeFile(scenario, strings.Replace(scenarioFile,
 		"victim-fs: { calls_served: { fs.read: 1 } }",
@@ -434,10 +448,7 @@ func TestRunDoesNotReadAMissingJournalAsAVictimThatServedNothing(t *testing.T) {
 // Two runs of one scenario are two runs. Writing into a directory that is
 // already there would grade the second one on what the first one left.
 func TestRunRefusesARunDirectoryItDidNotJustMake(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, _, scenario := enforcerLab(t)
 	subject.suffix = func() string { return "same" }
 
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
@@ -448,15 +459,13 @@ func TestRunRefusesARunDirectoryItDidNotJustMake(t *testing.T) {
 	}
 }
 
-// The run directory is fresh per run, and a directory is luck rather than an
-// assertion. A complete trail and a full journal left by yesterday's run
-// satisfy every other check, so the records have to say which run wrote them.
+// The enforcer names no run, so an event naming one came from something else;
+// a journal line naming another run is that run's. Neither is graded as this
+// run's, however complete it looks.
 func TestRunIsNotGreenOnRecordsAnotherRunWrote(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
-	compose.trail = strings.ReplaceAll(evidenceFile, "${RUN_ID}", "flow-01-yesterday-0badc0de")
+	subject, compose, scenario := enforcerLab(t)
+	compose.collector = otlpOf(t, strings.ReplaceAll(evidenceFile,
+		`"requestId":"r1","projectId"`, `"requestId":"r1","runId":"flow-01-yesterday-0badc0de","projectId"`))
 	compose.journals = map[string]string{
 		"victim-fs": strings.ReplaceAll(journalFile, "${RUN_ID}", "flow-01-yesterday-0badc0de"),
 	}
@@ -488,10 +497,8 @@ func TestRunIsNotGreenOnRecordsAnotherRunWrote(t *testing.T) {
 // Reported as one, they send the person reading a red run to a file that turns
 // out to be full, and the run directory keeps no trace of the real cause.
 func TestRunSaysWhenTheTrailCouldNotBeRead(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
+	compose.collector = ""
 	compose.trail = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED"` + "\n"
 
 	graded, err := subject.execute(context.Background(), scenario)
@@ -523,10 +530,7 @@ func TestRunSaysWhenTheTrailCouldNotBeRead(t *testing.T) {
 // hangs, would otherwise wedge one scenario with no junit.xml and no report.md
 // — and under -all, every scenario after it.
 func TestRunGivesEveryDockerCallADeadline(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
 		t.Fatalf("execute: %v", err)
@@ -539,10 +543,7 @@ func TestRunGivesEveryDockerCallADeadline(t *testing.T) {
 // The scenario whose deadline just fired is exactly the one whose containers
 // have to come down, so the teardown does not inherit the deadline that fired.
 func TestRunTakesTheProfileDownAfterItsDeadlineHasPassed(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	subject.timeout = time.Nanosecond
 
 	graded, err := subject.execute(context.Background(), scenario)

@@ -14,13 +14,8 @@ The compose core profile. Six tool servers with realistic data and deliberately
 wrong annotations: customer records, raw SQL, a sandboxed filesystem, a shell,
 mail, and a fetcher pointed at an attacker-controlled page. A scripted agent
 that replays a trajectory as real tool calls, forwarding one step's output into
-the next so a toxic flow is a real data flow. A runner that asserts on decisions
-against a stub gateway.
-
-What that last word costs: the verdicts a run replays are written by the
-scenario's author, so a green catalogue says the runner asserts what it claims
-to assert and says nothing about the enforcement plane. `docs/status.md` states
-it component by component.
+the next so a toxic flow is a real data flow. A runner that asserts on decisions,
+the evidence trail and the victims' journals.
 
 ## P2 — The real enforcer and the first catalogue (current)
 

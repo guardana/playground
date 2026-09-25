@@ -9,7 +9,7 @@ security tooling.
 ### github.com/modelcontextprotocol/go-sdk
 
 The official Go implementation of the Model Context Protocol. The victim tool
-servers, the scripted agent and the stub gateway all speak MCP, and the lab's
+servers and the scripted agent speak MCP, as the enforcer does, and the lab's
 whole claim is that it exercises the protocol a real deployment uses. Writing
 the JSON-RPC framing, the streamable HTTP transport and the session lifecycle by
 hand would make every finding a question about our transport rather than about
@@ -67,7 +67,7 @@ index; the digest is what Docker resolves.
 
 `OTEL_COLLECTOR_IMAGE`. The one place the enforcer's OTLP/HTTP log export
 lands, so `internal/evidence.DecodeOTLP` reads back what the plane actually
-sent rather than what the lab's own stub gateway wrote to a file directly. The
+sent rather than a file the lab wrote itself. The
 core distribution carries the file exporter (`docker run --rm
 otel/opentelemetry-collector:<tag> components` lists it), so writing an
 OTLP/HTTP receiver by hand to avoid one dependency would make every finding a

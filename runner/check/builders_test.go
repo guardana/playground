@@ -1,7 +1,6 @@
 package check_test
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/guardana/playground/internal/assertion"
@@ -17,8 +16,8 @@ import (
 const bundleDigest = "sha256:" +
 	"0000000000000000000000000000000000000000000000000000000000000000"
 
-// thisRun is the run the records name. A record stamped with anything else was
-// written about something other than the run being graded.
+// thisRun is the run the records name. The victims stamp their journals with
+// it; the enforcer stamps no event with any run.
 const thisRun = "run-1"
 
 // The scope every trail is written in: the contract chains events per request
@@ -33,9 +32,9 @@ const (
 // one the chain check accepts unless a test breaks it on purpose.
 type decided struct {
 	step int
-	// runID stamps the events the way the gateway stamps them, on the event and
-	// on the proposed envelope's context. It defaults to the run the records
-	// name, so a test that wants a trail from another run says so.
+	// runID stamps the events with a run, on the event and on the proposed
+	// envelope's context, which the enforcer never does; a test sets it to put
+	// a trail from something else in front of the checks.
 	runID       string
 	requestID   string
 	verdict     string
@@ -54,10 +53,6 @@ func (d decided) events() []evidence.Event {
 		digest = bundleDigest
 	}
 	runID := d.runID
-	if runID == "" {
-		runID = thisRun
-	}
-	stepID := strconv.Itoa(d.step)
 	tool := d.tool
 	if tool == "" {
 		tool = everyTool
@@ -75,7 +70,7 @@ func (d decided) events() []evidence.Event {
 		Proposed: &evidence.ActionEnvelope{
 			RequestID: d.requestID,
 			Action:    &evidence.Action{Name: tool, Protocol: "mcp"},
-			Context:   &evidence.RunContext{RunID: runID, StepID: stepID},
+			Context:   &evidence.RunContext{RunID: runID},
 			Arguments: &evidence.Arguments{RedactedPreview: d.preview},
 		},
 	}

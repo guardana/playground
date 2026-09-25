@@ -54,7 +54,7 @@ func TestRunProbesWithoutTheReplayFlags(t *testing.T) {
 }
 
 func TestRunReplaysATrajectoryFromDiskAndWritesItsLog(t *testing.T) {
-	server := mcp.NewServer(&mcp.Implementation{Name: "stub-gateway", Version: "1"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "enforcer", Version: "1"}, nil)
 	server.AddTool(
 		&mcp.Tool{Name: "fs.read", Description: "a tool the lab calls", InputSchema: map[string]any{"type": "object"}},
 		func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error) {

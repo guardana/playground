@@ -1,0 +1,15 @@
+# The trajectory's principal is the listener's: the listener authenticates
+# nobody, so every call it takes is made by the principal configured here,
+# whatever a page the agent read says about who is asking.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_412
+    type: human
+    tenant_id: tenant_a
+  agent:
+    id: support-agent

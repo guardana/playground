@@ -61,7 +61,7 @@ func openWorkspace(root, reports string, environ []string) (workspace, error) {
 // container mounts: every run's gateway/, pki/ and journals would be in the
 // agent's or a double's view.
 func refuseReportsInMounts(root, reports string) error {
-	for _, dir := range append(mountedDirs(), "config") {
+	for _, dir := range mountedDirs() {
 		if within(resolved(reports), filepath.Join(root, filepath.FromSlash(strings.Trim(dir, "/")))) {
 			return fmt.Errorf("the reports directory %s is inside %s, which containers mount; keep the reports outside it", reports, dir)
 		}
@@ -78,8 +78,7 @@ type namedFile struct{ field, path, dir string }
 
 func namedFiles(spec labspec.Scenario) []namedFile {
 	files := []namedFile{
-		{"trajectory", spec.Trajectory, "trajectories/"},
-		{"stub.verdicts", spec.Stub.Verdicts, "config/"},
+		{"trajectory", spec.Trajectory, trajectoriesDir},
 	}
 	if plan := spec.Gateway; plan != nil {
 		files = append(files,
@@ -106,9 +105,6 @@ func scriptFile(field, name, dir string) namedFile {
 // before anything boots: a missing script surfaces otherwise as a double that
 // exits, far from its cause.
 func (w workspace) refuseMissing(spec labspec.Scenario) error {
-	if w.external && spec.Stub.Verdicts != "" {
-		return errors.New("the stub reads the clone's config/ only; a workspace scenario is decided by the enforcer (gateway:)")
-	}
 	if w.external {
 		if err := w.refuseLinkedDirs(); err != nil {
 			return err

@@ -32,16 +32,16 @@ func TestASplitRunNamesItsEntrypointBeforeTheService(t *testing.T) {
 
 func TestParseStatusReadsBothShapesComposeWrites(t *testing.T) {
 	lines := `{"Name":"lab-victim-fs-1","Service":"victim-fs","State":"running","Health":"healthy"}
-{"Name":"lab-stub-gateway-1","Service":"stub-gateway","State":"exited","ExitCode":1,"Health":""}
+{"Name":"lab-enforcer-1","Service":"enforcer","State":"exited","ExitCode":1,"Health":""}
 `
 	array := `[
   {"Name":"lab-victim-fs-1","Service":"victim-fs","State":"running","Health":"healthy"},
-  {"Name":"lab-stub-gateway-1","Service":"stub-gateway","State":"exited","ExitCode":1,"Health":""}
+  {"Name":"lab-enforcer-1","Service":"enforcer","State":"exited","ExitCode":1,"Health":""}
 ]`
 
 	for name, output := range map[string]string{"one object per line": lines, "one array": array} {
 		t.Run(name, func(t *testing.T) {
-			services, err := parseStatus(output, []string{"victim-fs", "stub-gateway", "victim-mail"})
+			services, err := parseStatus(output, []string{"victim-fs", "enforcer", "victim-mail"})
 			if err != nil {
 				t.Fatalf("parseStatus: %v", err)
 			}
@@ -94,7 +94,7 @@ func TestReadProbeTellsNoRouteApartFromNotHavingRun(t *testing.T) {
 		ran     bool
 		reached bool
 	}{
-		{"reached", "probe reached stub-gateway:8080\n", true, true},
+		{"reached", "probe reached enforcer:8080\n", true, true},
 		{"no route", "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n", true, false},
 		{"never ran", "Error response from daemon: no such image\n", false, false},
 		{"said nothing at all", "", false, false},

@@ -11,9 +11,7 @@ import (
 )
 
 func TestEveryRunGetsItsOwnComposeProject(t *testing.T) {
-	compose := workingCompose("")
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	var projects []string
 	for range 2 {
 		if _, err := subject.execute(context.Background(), scenario); err != nil {
@@ -27,9 +25,7 @@ func TestEveryRunGetsItsOwnComposeProject(t *testing.T) {
 }
 
 func TestTheRunIsGradedOnTheTrailsItOpened(t *testing.T) {
-	compose := workingCompose("")
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, _, scenario := enforcerLab(t)
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -46,9 +42,7 @@ func TestTheRunIsGradedOnTheTrailsItOpened(t *testing.T) {
 }
 
 func TestAKnownGapIsNamedInTheReport(t *testing.T) {
-	compose := workingCompose("")
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, _, scenario := enforcerLab(t)
 	gaps := filepath.Join(subject.root, "scenarios", "gaps")
 	body := scenarioFile + "gap: { wanted: { 1: { verdict: DENY } }, why: the plane builds no run flow }\n"
 	writeFile(filepath.Join(gaps, "flow-01.yaml"), body)
@@ -81,9 +75,7 @@ func TestAKnownGapIsNamedInTheReport(t *testing.T) {
 }
 
 func TestTheAgentIsToldTheEnforcersNamespace(t *testing.T) {
-	compose := workingCompose("")
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
 		t.Fatalf("execute: %v", err)
 	}

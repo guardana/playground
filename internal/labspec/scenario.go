@@ -25,7 +25,6 @@ type Scenario struct {
 	EnforcementMode string         `json:"enforcement_mode"`
 	Trajectory      string         `json:"trajectory,omitempty"`
 	Verifier        []VerifierStep `json:"verifier,omitempty"`
-	Stub            Stub           `json:"stub,omitempty"`
 	Gateway         *Gateway       `json:"gateway,omitempty"`
 	Trace           *Trace         `json:"trace,omitempty"`
 	Chaos           []Fault        `json:"chaos,omitempty"`
@@ -39,13 +38,6 @@ type Scenario struct {
 type MapsTo struct {
 	FailureCatalog []string `json:"failure_catalog,omitempty"`
 	OWASPASI       []string `json:"owasp_asi,omitempty"`
-}
-
-// Stub names the file of declared verdicts the stub gateway replays. The stub
-// decides nothing, it reads this file: a scenario that sets it has not run
-// against anything that decides. Gateway is the alternative.
-type Stub struct {
-	Verdicts string `json:"verdicts"`
 }
 
 // Expect holds the three places a run is graded from, and none of them is the

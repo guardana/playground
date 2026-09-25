@@ -39,20 +39,17 @@ var (
 	tenantName   = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 )
 
-// UsesEnforcer reports whether the enforcer, not the stub, decides the scenario.
+// UsesEnforcer reports whether the enforcer decides the scenario: every
+// trajectory scenario does, and no verifier scenario.
 func (s Scenario) UsesEnforcer() bool { return s.Gateway != nil }
 
-// validateDecider refuses a trajectory scenario that names no decider or two.
+// validateDecider refuses a trajectory scenario that names nothing to decide it.
 func (s Scenario) validateDecider() error {
-	switch {
-	case s.Gateway != nil && s.Stub.Verdicts != "":
-		return fmt.Errorf("%w: stub and gateway are both set; one thing decides a run", ErrInvalid)
-	case s.Gateway == nil && s.Stub.Verdicts == "":
-		return fmt.Errorf("%w: neither stub nor gateway is set, so nothing would decide the run", ErrInvalid)
-	case s.Gateway != nil:
-		if err := s.Gateway.validate(); err != nil {
-			return err
-		}
+	if s.Gateway == nil {
+		return fmt.Errorf("%w: gateway is not set, so nothing would decide the run", ErrInvalid)
+	}
+	if err := s.Gateway.validate(); err != nil {
+		return err
 	}
 	return s.validateProfiles()
 }
@@ -83,18 +80,11 @@ func underWith(path, directory, suffix string) bool {
 	return strings.HasPrefix(path, directory) && strings.HasSuffix(path, suffix) && !strings.Contains(path, "..")
 }
 
-// validateProfiles ties the profile to what decides the run: the stub or the
-// enforcer and never both, each double's profile exactly when its script is
-// named, and no double for the stub.
+// validateProfiles ties the profile to the enforcer that decides the run, and
+// each double's profile to its script.
 func (s Scenario) validateProfiles() error {
-	enforcer, stub := slices.Contains(s.Profile, "enforcer"), slices.Contains(s.Profile, "stub")
-	switch {
-	case s.Gateway != nil && (!enforcer || stub):
-		return fmt.Errorf("%w: the enforcer decides this run, so profile names enforcer and not stub", ErrInvalid)
-	case s.Gateway == nil && (!stub || enforcer):
-		return fmt.Errorf("%w: the stub decides this run, so profile names stub and not enforcer", ErrInvalid)
-	case s.Gateway == nil:
-		return validateStubProfiles(s.Profile)
+	if !slices.Contains(s.Profile, "enforcer") {
+		return fmt.Errorf("%w: the enforcer decides this run, so profile names enforcer", ErrInvalid)
 	}
 	for _, double := range []struct{ profile, script string }{
 		{"pdp", s.Gateway.PDPScript}, {"approvals", s.Gateway.ApproverScript},
@@ -102,13 +92,6 @@ func (s Scenario) validateProfiles() error {
 		if err := validateDouble(s.Profile, double.profile, double.script); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func validateStubProfiles(profiles []string) error {
-	if slices.Contains(profiles, "pdp") || slices.Contains(profiles, "approvals") {
-		return fmt.Errorf("%w: the stub decides this run, and profiles pdp and approvals answer only the enforcer", ErrInvalid)
 	}
 	return nil
 }

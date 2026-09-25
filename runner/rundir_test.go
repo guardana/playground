@@ -9,7 +9,7 @@ import (
 )
 
 // The lab services run as nonroot, uid 65532, and write into the run directory
-// the runner made for them: the stub gateway its evidence trail, each victim
+// the runner made for them: the collector the enforcer's trail, each victim
 // its journal. A directory the invoking user owns at 0750 is one none of them
 // can write to on Linux, where the uid in the container is the uid on the
 // bind mount. macOS hides it — Docker Desktop's file sharing maps every access

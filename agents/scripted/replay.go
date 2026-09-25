@@ -14,10 +14,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// The two keys COMMON.md freezes. The step number is how the gateway ties a
-// call to the decision it wrote about it, and it is the only place that mapping
-// exists: the runner reads it back out of the evidence trail, never out of the
-// log this file writes.
+// The two _meta keys the agent puts on every call. The enforcer at its pin
+// writes neither into its trail, and nothing in the lab reads them back.
 const (
 	metaStep  = "io.guardana.playground/step"
 	metaRunID = "io.guardana.playground/run-id"

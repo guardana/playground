@@ -55,16 +55,6 @@ func TestDecisionsGradeEachStepFromTheTrail(t *testing.T) {
 			detail:   "no " + string(evidence.KindPolicyDecided),
 		},
 		{
-			name:   "two proposals carrying one step id cannot be graded as one",
-			expect: labspec.DecisionExpectation{Verdict: "DENY"},
-			recorded: trail(
-				decided{step: 1, requestID: "r1", verdict: "DENY", blocked: true},
-				decided{step: 1, requestID: "r2", verdict: "ALLOW"},
-			),
-			want:   assertion.Fail,
-			detail: "r1",
-		},
-		{
 			name:     "a verdict other than the one expected",
 			expect:   labspec.DecisionExpectation{Verdict: "DENY"},
 			recorded: trail(decided{step: 1, requestID: "r1", verdict: "ALLOW"}),

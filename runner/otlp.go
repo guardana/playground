@@ -19,8 +19,7 @@ var errNoEvidence = errors.New("collector export holds no evidence")
 
 // writeEvidenceFromCollector reads the collector file exporter's output at
 // otlpPath, decodes it under namespace, and writes the run's evidence.jsonl at
-// evidencePath, one event per line, so every check keeps citing file:line the
-// same way it does against the stub gateway's own JSONL.
+// evidencePath, one event per line, so every check can cite file:line.
 //
 // A decode error, or a source with no evidence to write, is returned as is
 // and evidencePath is left untouched: a trail half written, or emptied, on

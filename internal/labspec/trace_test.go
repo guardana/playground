@@ -16,7 +16,7 @@ const (
 func TestATraceComesWithItsContractAndItsExpectation(t *testing.T) {
 	traced := strings.Replace(strings.Replace(heldScenario, "profile: [core, enforcer]", "profile: [core, enforcer, trace]", 1),
 		"expect:\n", traceLine+"expect:\n"+traceExpectLine, 1)
-	if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", traced)); err != nil {
+	if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", traced)); err != nil {
 		t.Fatalf("a traced scenario was refused: %v", err)
 	}
 	for name, body := range map[string]string{
@@ -35,7 +35,7 @@ func TestATraceComesWithItsContractAndItsExpectation(t *testing.T) {
 			if body == traced {
 				t.Fatal("the mutation did not apply")
 			}
-			if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+			if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
 		})
@@ -48,11 +48,11 @@ func TestATraceExpectationNamesTheContractItGrades(t *testing.T) {
 	traced := strings.Replace(strings.Replace(heldScenario, "profile: [core, enforcer]", "profile: [core, enforcer, trace]", 1),
 		"expect:\n", traceLine+"expect:\n", 1)
 	wanted := "  trace: { exit_code: 1, findings_include: [ { rule_id: contract.lab.needs-approval, severity: HIGH } ] }\n"
-	if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", strings.Replace(traced, "expect:\n", "expect:\n"+wanted, 1))); err != nil {
+	if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", strings.Replace(traced, "expect:\n", "expect:\n"+wanted, 1))); err != nil {
 		t.Fatalf("a trace expecting a contract finding was refused: %v", err)
 	}
 	for _, expectation := range []string{"  trace: { exit_code: 9, findings_exclude: [contract.lab.x] }\n", "  trace: { exit_code: 0 }\n"} {
-		_, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", strings.Replace(traced, "expect:\n", "expect:\n"+expectation, 1)))
+		_, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", strings.Replace(traced, "expect:\n", "expect:\n"+expectation, 1)))
 		if err == nil || !strings.Contains(err.Error(), "expect.trace") || strings.Contains(err.Error(), "expect.verifier") {
 			t.Errorf("%s was refused with %v, want an error naming expect.trace", strings.TrimSpace(expectation), err)
 		}

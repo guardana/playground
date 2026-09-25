@@ -159,12 +159,14 @@ func TestStepResolveLeavesTheLoadedStepAlone(t *testing.T) {
 }
 
 const goodScenario = `schema_version: 1
-id: stub-01-allow-read
-title: A read the stub allows reaches the victim and is recorded
-profile: [core, stub]
+id: case-01-allow-read
+title: A read the enforcer allows reaches the victim and is recorded
+profile: [core, enforcer]
 enforcement_mode: enforce
-trajectory: trajectories/stub-01-allow-read.yaml
-stub: { verdicts: config/stub-gateway/stub-01.yaml }
+trajectory: trajectories/case-01-allow-read.yaml
+gateway:
+  config: config/gateway/scenarios/case-01-allow-read.yaml
+  policy: config/policies/case-01-allow-read.json
 expect:
   decisions:
     1: { verdict: ALLOW, reason_codes_include: [RULE_ALLOW] }
@@ -181,7 +183,7 @@ expect:
 `
 
 func TestLoadScenarioReadsExpectations(t *testing.T) {
-	got, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", goodScenario))
+	got, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", goodScenario))
 	if err != nil {
 		t.Fatalf("LoadScenario: %v", err)
 	}
@@ -208,7 +210,7 @@ func TestLoadScenarioRefusesIdentifierThatIsNotTheFileName(t *testing.T) {
 
 func TestLoadScenarioRefusesUnknownVerdict(t *testing.T) {
 	body := strings.Replace(goodScenario, "verdict: ALLOW,", "verdict: PROBABLY,", 1)
-	_, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body))
+	_, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body))
 	if !errors.Is(err, labspec.ErrInvalid) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
@@ -216,7 +218,7 @@ func TestLoadScenarioRefusesUnknownVerdict(t *testing.T) {
 
 func TestLoadScenarioRefusesUnknownEnforcementMode(t *testing.T) {
 	body := strings.Replace(goodScenario, "enforcement_mode: enforce", "enforcement_mode: audit", 1)
-	_, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body))
+	_, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body))
 	if !errors.Is(err, labspec.ErrInvalid) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
@@ -226,7 +228,7 @@ func TestLoadScenarioRefusesUnknownEnforcementMode(t *testing.T) {
 // so each test states only the scenario it is varying.
 func loadPair(t *testing.T, scenario string) (labspec.Scenario, labspec.Trajectory) {
 	t.Helper()
-	s, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", scenario))
+	s, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", scenario))
 	if err != nil {
 		t.Fatalf("LoadScenario: %v", err)
 	}

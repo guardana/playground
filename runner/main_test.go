@@ -39,10 +39,7 @@ func TestParseTakesATimeoutForASlowerMachine(t *testing.T) {
 }
 
 func TestExecuteAllReportsEveryScenarioAndFailsIfAnyDid(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, compose, scenario := enforcerLab(t)
 
 	var out strings.Builder
 	if err := executeAll(context.Background(), subject, []string{scenario}, &out); err != nil {
@@ -52,7 +49,7 @@ func TestExecuteAllReportsEveryScenarioAndFailsIfAnyDid(t *testing.T) {
 		t.Errorf("the summary is %q", out.String())
 	}
 
-	compose.trail = ""
+	compose.collector = ""
 	out.Reset()
 	err := executeAll(context.Background(), subject, []string{scenario}, &out)
 	if err == nil {
@@ -65,10 +62,7 @@ func TestExecuteAllReportsEveryScenarioAndFailsIfAnyDid(t *testing.T) {
 
 // A scenario that could not even be read is a red run and not a skipped one.
 func TestExecuteAllFailsOnAScenarioItCannotLoad(t *testing.T) {
-	root := t.TempDir()
-	compose := workingCompose(filepath.Join(root, "reports"))
-	subject, _ := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, _, _ := enforcerLab(t)
 	missing := filepath.Join(subject.root, "scenarios/flow/absent.yaml")
 	writeFile(missing, "schema_version: 2\n")
 

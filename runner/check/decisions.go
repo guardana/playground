@@ -17,8 +17,7 @@ import (
 //
 // A step is joined to its trail through the record and never through the
 // agent: trails pair with the steps that open one in the order they were
-// opened, and where a proposed envelope also carries a step number, as the stub
-// writes one, the two have to agree.
+// opened, each proposing the tool its step calls.
 type Decisions struct {
 	Scenario labspec.Scenario
 	// Trajectory names the tool each step calls, which the proposal paired

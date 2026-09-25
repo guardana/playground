@@ -37,9 +37,7 @@ func TestReadPinsRefusesALineThatIsNotAPin(t *testing.T) {
 }
 
 func TestTheReportCarriesWhatProducedTheRun(t *testing.T) {
-	compose := workingCompose("")
-	subject, scenario := labUnderTest(t, compose)
-	compose.reports = subject.reports
+	subject, _, scenario := enforcerLab(t)
 	subject.describe = func(ctx context.Context) report.Provenance {
 		if _, ok := ctx.Deadline(); !ok {
 			t.Error("the provenance lookups were given no deadline")

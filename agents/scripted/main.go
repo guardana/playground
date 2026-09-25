@@ -79,7 +79,7 @@ func parse(args []string, out io.Writer) (options, error) {
 	set := flag.NewFlagSet(agentName, flag.ContinueOnError)
 	set.SetOutput(out)
 	set.StringVar(&settings.trajectory, "trajectory", "", "path to the trajectory to replay")
-	set.StringVar(&settings.gateway, "gateway", "", "the gateway's MCP endpoint, for example http://stub-gateway:8080/mcp")
+	set.StringVar(&settings.gateway, "gateway", "", "the gateway's MCP endpoint, for example http://enforcer:8080/mcp")
 	set.StringVar(&settings.runID, "run-id", "", "the identifier of this run, minted by the runner")
 	set.StringVar(&settings.namespace, "namespace", "",
 		"the enforcer's namespace, under which its gateway marks an answer it made itself, for example guardana.control")

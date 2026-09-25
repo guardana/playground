@@ -12,8 +12,7 @@ import (
 
 // TrailClaims grades two things the enforcer's trail claims apart from any one
 // step: the mode every event was enforced under, and that what ran is what was
-// decided. The stub writes neither, so only a run the enforcer decides is
-// graded by it.
+// decided.
 type TrailClaims struct {
 	Scenario     labspec.Scenario
 	EvidenceFile string

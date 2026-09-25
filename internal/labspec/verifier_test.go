@@ -82,10 +82,9 @@ func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testi
 		"an empty rule excluded":     {"[guardana.mcp.cache_scope]", "['']"},
 		"a probed server unstated":   {"    victim-fs: { calls_served: {} }\n", "    victim-crm: { calls_served: {} }\n"},
 		"a profile beside verifier":  {"profile: [verifier]", "profile: [verifier, core]"},
-		"another profile":            {"profile: [verifier]", "profile: [core, stub]"},
+		"another profile":            {"profile: [verifier]", "profile: [core, enforcer]"},
 		"a trajectory beside it":     {"profile: [verifier]", "profile: [verifier]\ntrajectory: trajectories/x.yaml"},
 		"an enforcement mode":        {"profile: [verifier]", "profile: [verifier]\nenforcement_mode: enforce"},
-		"declared stub verdicts":     {"profile: [verifier]", "profile: [verifier]\nstub: { verdicts: config/x.yaml }"},
 		"a tolerance":                {"profile: [verifier]", "profile: [verifier]\ntolerance: { allow_indeterminate_for_steps: [1] }"},
 		"decisions to grade":         {"  verifier:\n    1:", "  decisions: { 1: { verdict: ALLOW } }\n  verifier:\n    1:"},
 		"an evidence expectation":    {"  verifier:\n    1:", "  evidence: { chain_complete: false }\n  verifier:\n    1:"},
@@ -111,7 +110,7 @@ func TestAnUngradedVerifierStepIsNamed(t *testing.T) {
 
 func TestAVerifierScenarioIsNeverAGap(t *testing.T) {
 	body := verifierScenario + "gap: { wanted: { 1: { verdict: DENY } }, why: x }\n"
-	if _, err := labspec.LoadScenario(writeGap(t, "gaps", strings.Replace(body, "verify-01-drift", "stub-01-allow-read", 1))); !errors.Is(err, labspec.ErrInvalid) {
+	if _, err := labspec.LoadScenario(writeGap(t, "gaps", strings.Replace(body, "verify-01-drift", "case-01-allow-read", 1))); !errors.Is(err, labspec.ErrInvalid) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
 }
@@ -126,7 +125,7 @@ func TestATrajectoryScenarioStatesItsEvidenceAndNoVerifierGrades(t *testing.T) {
 			if body == goodScenario {
 				t.Fatal("the replacement changed nothing")
 			}
-			if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+			if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
 		})

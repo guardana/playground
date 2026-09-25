@@ -77,26 +77,6 @@ func TestEveryTrajectoryLoadsAndIsUsed(t *testing.T) {
 	}
 }
 
-// The verdicts a scenario hands the stub gateway are declared, not decided. A
-// scenario that names a file which is not there boots a stub with nothing to
-// replay, which the stub answers as INDETERMINATE; catching it here says so
-// while the file is still in front of the person who wrote it.
-func TestEveryDeclaredVerdictFileExists(t *testing.T) {
-	scenarios := filesUnder(t, "scenarios")
-	if len(scenarios) == 0 {
-		t.Fatal("no scenarios found; this guard inspected nothing")
-	}
-	for _, path := range scenarios {
-		scenario, err := labspec.LoadScenario(path)
-		if err != nil || scenario.Stub.Verdicts == "" {
-			continue
-		}
-		if _, err := os.Stat(filepath.Join(repoRoot, scenario.Stub.Verdicts)); err != nil {
-			t.Errorf("%s names verdicts %s, which does not exist", relative(path), scenario.Stub.Verdicts)
-		}
-	}
-}
-
 func filesUnder(t *testing.T, directory string) []string {
 	t.Helper()
 	var found []string

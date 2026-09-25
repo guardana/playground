@@ -26,10 +26,8 @@ func (l lab) gradeTrajectory(
 	if spec.Trace != nil {
 		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
 	}
-	if spec.UsesEnforcer() {
-		checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
-			check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl")})
-	}
+	checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
+		check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl")})
 	records, unreadable := l.collect(spec, boot, runID, runDir)
 
 	trail := filepath.Join(runDir, "evidence.jsonl")
@@ -39,7 +37,6 @@ func (l lab) gradeTrajectory(
 		check.Effects{Scenario: spec, JournalDir: filepath.Join(runDir, "journals")},
 		check.Evidence{
 			Scenario: spec, EvidenceFile: trail, ReadError: unreadable,
-			Unstamped: spec.UsesEnforcer(),
 			// The trail is read from runDir, which execute created for this run
 			// and refuses when it already exists.
 			FreshTrail: true,
@@ -71,7 +68,7 @@ func (l lab) replay(
 	source := filepath.Join(runDir, "replay.log")
 	args := []string{
 		"-trajectory", inContainer(spec.Trajectory),
-		"-gateway", "http://" + gatewayHost(spec) + ":" + servicePort + "/mcp",
+		"-gateway", "http://" + enforcerService + ":" + servicePort + "/mcp",
 		"-run-id", runID,
 		"-namespace", l.namespace,
 		"-out", path.Join(containerReports, runID, "agent", "agent.jsonl"),

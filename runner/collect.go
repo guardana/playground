@@ -53,27 +53,13 @@ func load(space workspace, scenarioPath string) (labspec.Scenario, labspec.Traje
 	return spec, trajectory, nil
 }
 
-// mountable refuses a scenario naming a file the containers cannot see.
-//
-// The agent and the gateway get two directories, mounted at their own names, so
-// inContainer turns a repository path into a container path by putting a slash
-// in front of it. That holds only for a file under one of those two
-// directories, and a scenario naming one elsewhere would otherwise boot a
-// gateway pointed at a path that is not there — which is how the first run of
-// this lab failed, with the gateway exiting before it could write a single
-// evidence record.
+// mountable refuses a trajectory the agent cannot see. Compose mounts
+// trajectories/ at its own name, so inContainer turns a repository path into a
+// container path only for a file under it; any other path would hand the agent
+// a file that is not there.
 func mountable(spec labspec.Scenario) error {
-	for _, named := range []struct{ field, value, directory string }{
-		{"trajectory", spec.Trajectory, "trajectories/"},
-		{"stub.verdicts", spec.Stub.Verdicts, "config/"},
-	} {
-		if named.value == "" {
-			continue
-		}
-		if !strings.HasPrefix(named.value, named.directory) {
-			return fmt.Errorf("%s is %q; the containers see only %s, so it has to live there",
-				named.field, named.value, named.directory)
-		}
+	if spec.Trajectory != "" && !strings.HasPrefix(spec.Trajectory, trajectoriesDir) {
+		return fmt.Errorf("trajectory is %q; the agent sees only %s, so it has to live there", spec.Trajectory, trajectoriesDir)
 	}
 	return nil
 }
@@ -124,8 +110,8 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 
 // What a run directory holds and who writes into it.
 //
-// The directory is one run's own scratch output: the evidence trail the stub
-// gateway wrote, one journal per victim, the boot and probe records, and the
+// The directory is one run's own scratch output: the evidence trail the
+// collector exported, one journal per victim, the boot and probe records, and the
 // two reports. Nothing in it is secret — the fixtures are synthetic and the
 // canary tokens are planted to be found — and reports/ is not tracked.
 //

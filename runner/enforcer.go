@@ -30,19 +30,8 @@ func victims() []string {
 	return []string{"victim-crm", "victim-db", "victim-fs", "victim-shell", "victim-mail", "victim-web"}
 }
 
-// gatewayHost is the service the agent talks to: the enforcer, or the stub.
-func gatewayHost(spec labspec.Scenario) string {
-	if spec.UsesEnforcer() {
-		return enforcerService
-	}
-	return gatewayService
-}
-
 // sealedFromAgent are the services a run boots that the agent must not reach.
 func sealedFromAgent(spec labspec.Scenario) []string {
-	if !spec.UsesEnforcer() {
-		return nil
-	}
 	sealed := []string{"collector:4318", "enforcer:8081"}
 	if spec.Gateway.PDPScript != "" {
 		sealed = append(sealed, "pdp-double:8443")

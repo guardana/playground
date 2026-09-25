@@ -18,7 +18,7 @@ import (
 func (l lab) probes(
 	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
 ) (check.Probe, check.Probe, []check.Probe, string) {
-	gateway := l.probe(ctx, compose, spec.Profile, gatewayHost(spec)+":"+servicePort)
+	gateway := l.probe(ctx, compose, spec.Profile, enforcerService+":"+servicePort)
 	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
 	proxies, unnamed := l.sealedProxies(spec)
 	var sealed []check.Probe

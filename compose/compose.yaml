@@ -1,13 +1,13 @@
 # The lab's world: six victim tool servers, a page that attacks them, a mail
-# sink, a gateway (the stub or the enforcer), the agent, the verifier, the
-# collector the enforcer's trail lands on, the decision point double, the
-# approver and the proxy chaos scenarios put in front of a victim.
+# sink, the enforcer, the agent, the verifier, the collector the enforcer's
+# trail lands on, the decision point double, the approver and the proxy chaos
+# scenarios put in front of a victim.
 #
-# Six networks, all internal: agent-net holds the agent and one gateway;
-# tool-net the gateway, the victims and what they reach; evidence-net the
+# Six networks, all internal: agent-net holds the agent and the enforcer;
+# tool-net the enforcer, the victims and what they reach; evidence-net the
 # collector and the enforcer; pdp-net the enforcer and the double;
-# approver-net the approver alone; trace-net the trace verifier alone. Nothing in the lab has a route out; the
-# agent can reach the gateway and nothing else. That is the property every
+# approver-net the approver alone; trace-net the trace verifier alone. Nothing
+# in the lab has a route out; the agent can reach the enforcer and nothing else. That is the property every
 # scenario depends on, and the runner proves it from inside `agent-net` on
 # every run rather than trusting this file.
 #
@@ -195,57 +195,6 @@ services:
       timeout: 3s
       retries: 15
       start_period: 2s
-
-  # The only service on both networks, and the only way anything on `agent-net`
-  # reaches a tool. It decides nothing: it replays the verdicts declared in the
-  # file at LAB_STUB_VERDICTS and records what it did.
-  stub-gateway:
-    image: ${LAB_IMAGE_PREFIX}-stub-gateway
-    <<: *hardened
-    build:
-      context: ..
-      dockerfile: compose/Dockerfile.go-service
-      args:
-        <<: *build-args
-        TARGET: ./services/stub-gateway
-    networks: [agent-net, tool-net]
-    profiles: [stub]
-    # It writes evidence.jsonl at the top of the run directory, so it sees the
-    # run's directory; a stub run has no collector/ or pki/ in it.
-    volumes:
-      - ${LAB_RUN_HOST_DIR:-../reports/manual}:/reports/${LAB_RUN_ID:-manual}
-      - ../config:/config:ro
-    environment:
-      <<: *server-env
-      LAB_SERVER_NAME: stub-gateway
-      # The runner points this at the scenario's declared verdicts. The default
-      # declares none, so a lab brought up by hand answers every call
-      # INDETERMINATE and writes down that nobody stated a verdict.
-      LAB_STUB_VERDICTS: ${LAB_STUB_VERDICTS:-/config/stub-gateway/verdicts.yaml}
-      LAB_UPSTREAMS: >-
-        victim-crm=http://victim-crm:8080/mcp,
-        victim-db=http://victim-db:8080/mcp,
-        victim-fs=http://victim-fs:8080/mcp,
-        victim-shell=http://victim-shell:8080/mcp,
-        victim-mail=http://victim-mail:8080/mcp,
-        victim-web=http://victim-web:8080/mcp
-    healthcheck:
-      test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
-      interval: 2s
-      timeout: 3s
-      retries: 15
-      start_period: 2s
-    # Every victim, healthy, before the gateway starts: it lists the upstreams'
-    # tools at startup and refuses to run without them, because a gateway
-    # missing a victim's tools answers "no such tool" and no scenario declared
-    # that.
-    depends_on:
-      victim-crm: {condition: service_healthy}
-      victim-db: {condition: service_healthy}
-      victim-fs: {condition: service_healthy}
-      victim-shell: {condition: service_healthy}
-      victim-mail: {condition: service_healthy}
-      victim-web: {condition: service_healthy}
 
   # Not in the core profile: the agent is run for one trajectory and exits, so
   # the runner starts it with `docker compose run` and its arguments.

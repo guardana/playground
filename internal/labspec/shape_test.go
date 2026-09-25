@@ -14,14 +14,14 @@ import (
 // heldScenario grades an approval held at step 1, resumed by step 3 after a
 // pending retry at step 2 that opens no trail.
 const heldScenario = `schema_version: 1
-id: stub-01-allow-read
+id: case-01-allow-read
 title: a held call resumes once
 profile: [core, enforcer]
 enforcement_mode: enforce
-trajectory: trajectories/stub-01-allow-read.yaml
+trajectory: trajectories/case-01-allow-read.yaml
 gateway:
-  config: config/gateway/scenarios/stub-01-allow-read.yaml
-  policy: config/policies/stub-01-allow-read.json
+  config: config/gateway/scenarios/case-01-allow-read.yaml
+  policy: config/policies/case-01-allow-read.json
 expect:
   decisions:
     1: { verdict: REQUIRE_APPROVAL, trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_DECIDED, ACTION_STARTED, ACTION_COMPLETED] }
@@ -68,7 +68,7 @@ func TestAStepShapeThatGradesNothingIsRefused(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			body := strings.Replace(heldScenario, "2: { opens: none }", step, 1)
-			_, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body))
+			_, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body))
 			if !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
@@ -113,7 +113,7 @@ func writeGap(t *testing.T, class, body string) string {
 	if err := os.Mkdir(directory, 0o750); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(directory, "stub-01-allow-read.yaml")
+	path := filepath.Join(directory, "case-01-allow-read.yaml")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -183,28 +183,27 @@ func TestStepTimingIsReadAndBounded(t *testing.T) {
 	}
 }
 
-func TestOneThingDecidesATrajectoryScenario(t *testing.T) {
-	stub := "stub: { verdicts: config/scenarios/stub-01.yaml }\n"
+func TestTheEnforcerDecidesATrajectoryScenario(t *testing.T) {
 	for name, body := range map[string]string{
-		"both":                  strings.Replace(heldScenario, "gateway:\n", stub+"gateway:\n", 1),
-		"neither":               strings.Replace(heldScenario, "gateway:\n  config: config/gateway/scenarios/stub-01-allow-read.yaml\n  policy: config/policies/stub-01-allow-read.json\n", "", 1),
+		"no enforcer profile":   strings.Replace(heldScenario, "profile: [core, enforcer]", "profile: [core]", 1),
+		"no gateway":            strings.Replace(heldScenario, "gateway:\n  config: config/gateway/scenarios/case-01-allow-read.yaml\n  policy: config/policies/case-01-allow-read.json\n", "", 1),
 		"config elsewhere":      strings.Replace(heldScenario, "config: config/gateway/scenarios/", "config: config/", 1),
 		"policy elsewhere":      strings.Replace(heldScenario, "policy: config/policies/", "policy: config/gateway/", 1),
-		"a climb":               strings.Replace(heldScenario, "config/policies/stub-01", "config/policies/../../x/stub-01", 1),
-		"an unclassified typo":  strings.Replace(heldScenario, "  policy: config/policies/stub-01-allow-read.json\n", "  policy: config/policies/stub-01-allow-read.json\n  unclassified: [victim-shell.shell.exec]\n", 1),
-		"an unclassified twice": strings.Replace(heldScenario, "  policy: config/policies/stub-01-allow-read.json\n", "  policy: config/policies/stub-01-allow-read.json\n  unclassified: [victim-shell/shell.exec, victim-shell/shell.exec]\n", 1),
+		"a climb":               strings.Replace(heldScenario, "config/policies/case-01", "config/policies/../../x/case-01", 1),
+		"an unclassified typo":  strings.Replace(heldScenario, "  policy: config/policies/case-01-allow-read.json\n", "  policy: config/policies/case-01-allow-read.json\n  unclassified: [victim-shell.shell.exec]\n", 1),
+		"an unclassified twice": strings.Replace(heldScenario, "  policy: config/policies/case-01-allow-read.json\n", "  policy: config/policies/case-01-allow-read.json\n  unclassified: [victim-shell/shell.exec, victim-shell/shell.exec]\n", 1),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if body == heldScenario {
 				t.Fatal("the mutation did not apply")
 			}
-			if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+			if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
 		})
 	}
-	withUnclassified := strings.Replace(heldScenario, "  policy: config/policies/stub-01-allow-read.json\n", "  policy: config/policies/stub-01-allow-read.json\n  unclassified: [victim-shell/shell.exec]\n", 1)
-	scenario, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", withUnclassified))
+	withUnclassified := strings.Replace(heldScenario, "  policy: config/policies/case-01-allow-read.json\n", "  policy: config/policies/case-01-allow-read.json\n  unclassified: [victim-shell/shell.exec]\n", 1)
+	scenario, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", withUnclassified))
 	if err != nil || !scenario.UsesEnforcer() || scenario.Gateway.Unclassified[0] != "victim-shell/shell.exec" {
 		t.Fatalf("a gateway scenario did not load as one: %+v, %v", scenario.Gateway, err)
 	}

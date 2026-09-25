@@ -56,7 +56,7 @@ func TestCallsRefusedRefusesACountThatStatesNothing(t *testing.T) {
 		"misspelled":   "{ calls_served: { fs.read: 1 }, calls_refuse: { fs.read: 1 } }",
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", withFSEffects(entry)))
+			_, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", withFSEffects(entry)))
 			if !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
@@ -71,7 +71,7 @@ func TestCallsRefusedHoldsForADoubleAndAVerifierScenario(t *testing.T) {
 	body := strings.Replace(withDouble("approver", "approvals", "approver_script"),
 		"approver: { calls_served: { approve: 1 } }",
 		"approver: { calls_served: { approve: 1 }, calls_refused: { deny: 0 } }", 1)
-	if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+	if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 		t.Errorf("double: err = %v, want ErrInvalid", err)
 	}
 	verifier := strings.Replace(verifierScenario, "victim-fs: { calls_served: {} }",

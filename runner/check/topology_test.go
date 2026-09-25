@@ -23,7 +23,7 @@ func TestBootGradesEveryServiceTheRunnerBroughtUp(t *testing.T) {
 			name: "every service running",
 			boot: assertion.Boot{Profile: "core", Services: []assertion.Service{
 				{Name: "victim-fs", Running: true},
-				{Name: "stub-gateway", Running: true},
+				{Name: "enforcer", Running: true},
 			}},
 			results: 2,
 			want:    assertion.Pass,
@@ -70,7 +70,7 @@ func TestBootGradesEveryServiceTheRunnerBroughtUp(t *testing.T) {
 }
 
 func TestNetworkIsolationReadsBothProbes(t *testing.T) {
-	reachedGateway := check.Probe{Target: "stub-gateway:8080", Ran: true, Reached: true}
+	reachedGateway := check.Probe{Target: "enforcer:8080", Ran: true, Reached: true}
 	noRouteToVictim := check.Probe{
 		Target: "victim-fs:8080", Ran: true,
 		Detail: "dial tcp: lookup victim-fs: no such host",
@@ -96,7 +96,7 @@ func TestNetworkIsolationReadsBothProbes(t *testing.T) {
 		},
 		{
 			name:    "the gateway had no route, so nothing could have been asked of it",
-			gateway: check.Probe{Target: "stub-gateway:8080", Ran: true, Detail: "connection refused"},
+			gateway: check.Probe{Target: "enforcer:8080", Ran: true, Detail: "connection refused"},
 			victim:  noRouteToVictim,
 			want:    []assertion.Outcome{assertion.Fail, assertion.Pass},
 		},
@@ -108,7 +108,7 @@ func TestNetworkIsolationReadsBothProbes(t *testing.T) {
 		},
 		{
 			name:    "neither probe ran",
-			gateway: check.Probe{Target: "stub-gateway:8080"},
+			gateway: check.Probe{Target: "enforcer:8080"},
 			victim:  check.Probe{Target: "victim-fs:8080"},
 			want:    []assertion.Outcome{assertion.Indeterminate, assertion.Indeterminate},
 		},
@@ -137,7 +137,7 @@ func TestNetworkIsolationReadsBothProbes(t *testing.T) {
 // because it never ran are the same exit code and different facts.
 func TestNetworkIsolationCarriesTheReasonAProbeGave(t *testing.T) {
 	checker := check.NetworkIsolation{
-		Gateway: check.Probe{Target: "stub-gateway:8080", Ran: true, Reached: true},
+		Gateway: check.Probe{Target: "enforcer:8080", Ran: true, Reached: true},
 		Victim:  check.Probe{Target: "victim-fs:8080", Ran: true, Detail: "lookup victim-fs: no such host"},
 		Source:  bootFile,
 	}

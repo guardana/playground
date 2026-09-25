@@ -194,12 +194,3 @@ func TestABlockIsReadFromItsOwnRecord(t *testing.T) {
 		t.Errorf("a block with the wrong reason code was %s: %s", result.Outcome, result.Detail)
 	}
 }
-
-func TestAStepNumberTheTrailCarriesMustAgreeWithTheOrder(t *testing.T) {
-	events := trail(decided{step: 2, requestID: "r1", verdict: "ALLOW"}, decided{step: 1, requestID: "r2", verdict: "ALLOW"})
-	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}, 2: {Verdict: "ALLOW"}})
-	graded := grade(t, spec, events)
-	if result := graded["decisions/step-1"]; result.Outcome != assertion.Fail || !strings.Contains(result.Detail, "says it is step 2") {
-		t.Errorf("a trail stamped step 2 was graded as step 1: %+v", result)
-	}
-}

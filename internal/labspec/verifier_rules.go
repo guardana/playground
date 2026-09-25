@@ -32,7 +32,6 @@ func (s Scenario) validateVerifier() error {
 	}{
 		{"trajectory", s.Trajectory != ""},
 		{"enforcement_mode", s.EnforcementMode != ""},
-		{"stub", s.Stub != (Stub{})},
 		{"gap", s.Gap != nil},
 		{"tolerance", len(s.Tolerance.AllowIndeterminateForSteps) > 0},
 		{"expect.decisions", len(s.Expect.Decisions) > 0},

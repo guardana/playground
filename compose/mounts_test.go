@@ -63,7 +63,6 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"victim-fs": {runDir + "/journals"}, "victim-shell": {runDir + "/journals"},
 		"victim-mail": {runDir + "/journals"}, "victim-web": {runDir + "/journals"},
 		"scripted-agent":  {runDir + "/agent", workspace + "/trajectories"},
-		"stub-gateway":    {runDir, "../config"},
 		"pdp-double":      {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
 		"approver":        {runDir + "/journals", workspace + "/config/approver", "approvals"},
 		"collector":       {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector"},
@@ -106,7 +105,7 @@ func members(t *testing.T, belongs func(networks []string, volumes []string) boo
 	return found
 }
 
-// The agent reaches one gateway, the decision point double only the
+// The agent reaches the enforcer alone, the decision point double only the
 // enforcer, and the approver and the trace verifier nothing; the approvals directory is the plane's
 // and the approver's alone.
 func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
@@ -114,7 +113,7 @@ func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
 		return func(networks, _ []string) bool { return slices.Contains(networks, network) }
 	}
 	for what, want := range map[string][]string{
-		"agent-net":    {"enforcer", "scripted-agent", "stub-gateway"},
+		"agent-net":    {"enforcer", "scripted-agent"},
 		"pdp-net":      {"enforcer", "pdp-double"},
 		"approver-net": {"approver"},
 		"trace-net":    {"trace-verifier"},
@@ -126,12 +125,6 @@ func TestWhoSharesEachNetworkAndTheApprovalsVolume(t *testing.T) {
 	approvals := members(t, func(_, volumes []string) bool { return slices.Contains(volumes, "approvals") })
 	if !slices.Equal(approvals, []string{"approver", "enforcer"}) {
 		t.Errorf("the approvals volume is mounted by %v, want the enforcer and the approver", approvals)
-	}
-	services := readMounts(t).Services
-	for _, profile := range services["stub-gateway"].Profiles {
-		if slices.Contains(services["enforcer"].Profiles, profile) {
-			t.Errorf("profile %s starts both gateways, so the agent would reach two", profile)
-		}
 	}
 }
 

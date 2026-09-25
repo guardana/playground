@@ -107,10 +107,9 @@ classify-victims:
 
 # The lab itself. `up` and `down` are for working on a scenario by hand; a
 # scenario run brings up what it needs and takes it down again. `core` is the
-# victims alone; PROFILE="core stub" adds the stub gateway. The enforcer's
-# profiles need a run the runner prepares (the signed bundle, the assembled
-# configuration): `go run ./runner -scenario <id> -keep` leaves one up. By
-# hand, the services write under reports/manual.
+# victims alone. The enforcer's profiles need a run the runner prepares (the
+# signed bundle, the assembled configuration): `go run ./runner -scenario <id>
+# -keep` leaves one up. By hand, the services write under reports/manual.
 up:
 	mkdir -p reports/manual/journals reports/manual/agent
 	chmod 777 reports/manual reports/manual/journals reports/manual/agent

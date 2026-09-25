@@ -70,7 +70,7 @@ func TestAStepNamesTheDecisionPointItsDecisionConsulted(t *testing.T) {
 		"https://pdp-double:8443": "1: { verdict: REQUIRE_APPROVAL, pdp_instance: 'https://pdp-double:8443',",
 	} {
 		body := strings.Replace(heldScenario, "1: { verdict: REQUIRE_APPROVAL,", step, 1)
-		scenario, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body))
+		scenario, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body))
 		if err != nil {
 			t.Fatalf("LoadScenario: %v", err)
 		}
@@ -95,7 +95,7 @@ func TestAPDPInstanceWithNothingToReadOrNoIdentifierIsRefused(t *testing.T) {
 			if body == heldScenario {
 				t.Fatal("the replacement matched nothing")
 			}
-			if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+			if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
 		})

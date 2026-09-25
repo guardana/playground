@@ -1,5 +1,5 @@
-# Every service the lab builds itself: the six victims, the scripted agent and
-# the stub gateway. They are all the same shape — a Go package in this module,
+# Every Go service the lab builds itself: the six victims, the scripted agent
+# and the decision point double. They are all the same shape — a Go package in this module,
 # built static and run on a base with no shell — so they are one file with the
 # package as an argument.
 #

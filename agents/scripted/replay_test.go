@@ -12,7 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// fakeGateway stands in for the stub gateway. It records what it was sent and
+// fakeGateway stands in for the enforcer's gateway. It records what it was sent and
 // answers from a script, so a test can put a denial or a transport failure at
 // any step without a network.
 type fakeGateway struct {

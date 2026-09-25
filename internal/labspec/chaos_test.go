@@ -22,7 +22,7 @@ func chaosScenario() string {
 }
 
 func TestAChaosScenarioLoadsWithEveryFault(t *testing.T) {
-	scenario, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", chaosScenario()))
+	scenario, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", chaosScenario()))
 	if err != nil {
 		t.Fatalf("LoadScenario: %v", err)
 	}
@@ -62,15 +62,12 @@ func TestAChaosFaultThatSaysNothingExactIsRefused(t *testing.T) {
 		"a hang with a latency":   strings.Replace(good, "type: hang", "type: hang, latency: 1s", 1),
 		"a relist of no victim":   strings.Replace(good, "relist: victim-fs", "relist: enforcer", 1),
 		"a relist twice":          strings.Replace(good, "  - relist: victim-fs\n", "  - relist: victim-fs\n  - relist: victim-fs\n", 1),
-		"chaos under the stub": strings.Replace(strings.Replace(good, "profile: [core, enforcer, chaos]", "profile: [core, stub, chaos]", 1),
-			"gateway:\n  config: config/gateway/scenarios/stub-01-allow-read.yaml\n  policy: config/policies/stub-01-allow-read.json\n",
-			"stub: { verdicts: config/scenarios/stub-01-allow-read.yaml }\n", 1),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if body == good {
 				t.Fatal("the mutation did not apply")
 			}
-			if _, err := labspec.LoadScenario(writeFile(t, "stub-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
+			if _, err := labspec.LoadScenario(writeFile(t, "case-01-allow-read.yaml", body)); !errors.Is(err, labspec.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
 		})

@@ -1,6 +1,6 @@
-# Step 3's body is step 2's output, so the message the gateway has to stop
-# carries the private bytes themselves. A scenario that sent a summary instead
-# would be asserting about a flow it never built.
+# Untrusted content, then a private read, then a send whose body is that read's
+# output: the message the gateway has to stop carries the private bytes
+# themselves, not a summary of them.
 schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
 principal: { id: user_412, type: human, tenant_id: tenant_a }

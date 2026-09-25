@@ -14,7 +14,7 @@ func TestAnUnstampedTrailIsAssertedToNameNoRun(t *testing.T) {
 	events := heldThenResumed().events
 	spec := heldSpec()
 	run := func(events []evidence.Event) assertion.Result {
-		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, Unstamped: true, FreshTrail: true}.
+		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true}.
 			Run(context.Background(), records(events, nil))
 		if err != nil {
 			t.Fatal(err)
@@ -34,13 +34,19 @@ func TestAnUnstampedTrailIsAssertedToNameNoRun(t *testing.T) {
 	if result := run(events); result.Outcome != assertion.Fail || !strings.Contains(result.Detail, "run-elsewhere") {
 		t.Errorf("an event naming a run in an unstamped trail was %s: %s", result.Outcome, result.Detail)
 	}
+	// The enforcer writes no run id at all, so even this run's own is a record
+	// the trail was not expected to carry.
+	events[4].RunID = thisRun
+	if result := run(events); result.Outcome != assertion.Fail {
+		t.Errorf("an event naming this run was %s: %s", result.Outcome, result.Detail)
+	}
 }
 
 func TestEventsWithNoRequestAreGradedApartFromTheChains(t *testing.T) {
 	spec := heldSpec()
 	spec.Expect.Evidence.ChainComplete = true
 	find := func(events []evidence.Event) (assertion.Result, int) {
-		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, Unstamped: true, FreshTrail: true}.
+		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true}.
 			Run(context.Background(), records(events, nil))
 		if err != nil {
 			t.Fatal(err)
@@ -71,7 +77,7 @@ func TestEventsWithNoRequestAreGradedApartFromTheChains(t *testing.T) {
 
 func TestAnUnstampedTrailIsOnlyThisRunsWhenTheRunnerMadeItsDirectory(t *testing.T) {
 	for _, fresh := range []bool{false, true} {
-		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, Unstamped: true, FreshTrail: fresh}.
+		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: fresh}.
 			Run(context.Background(), records(heldThenResumed().events, nil))
 		if err != nil {
 			t.Fatal(err)

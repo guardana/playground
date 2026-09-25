@@ -57,9 +57,6 @@ func (s Scenario) validateChaos() error {
 	if slices.Contains(s.Profile, ChaosProfile) != (len(s.Proxied()) > 0) {
 		return fmt.Errorf("%w: profile %s and a toxic go together", ErrInvalid, ChaosProfile)
 	}
-	if len(s.Chaos) > 0 && s.Gateway == nil {
-		return fmt.Errorf("%w: chaos acts on the enforcer's paths, and the stub decides this run", ErrInvalid)
-	}
 	seen := map[string]bool{}
 	for i, fault := range s.Chaos {
 		name, err := fault.validate(i)

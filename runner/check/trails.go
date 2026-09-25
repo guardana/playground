@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/guardana/playground/internal/assertion"
@@ -18,7 +17,6 @@ import (
 type opening struct {
 	requestID string
 	line      int
-	stepID    string
 	tool      string
 	proposals int
 }
@@ -69,13 +67,8 @@ func pairTrails(spec labspec.Scenario, trajectory labspec.Trajectory, events []e
 
 func openingOf(event evidence.Event, line int) opening {
 	found := opening{requestID: event.RequestID, line: line, proposals: 1}
-	if proposed := event.Proposed; proposed != nil {
-		if proposed.Context != nil {
-			found.stepID = proposed.Context.StepID
-		}
-		if proposed.Action != nil {
-			found.tool = proposed.Action.Name
-		}
+	if proposed := event.Proposed; proposed != nil && proposed.Action != nil {
+		found.tool = proposed.Action.Name
 	}
 	return found
 }
@@ -94,16 +87,9 @@ func (p pairing) trailOf(step int, want labspec.DecisionExpectation) (opening, s
 		owner = want.Resumes
 	}
 	found, paired := p.byStep[owner]
-	if claims := p.claiming(owner); len(claims) > 1 {
-		return found, fmt.Sprintf("step %d is claimed by %d proposed envelopes (%s), so no one trail is its own",
-			owner, len(claims), strings.Join(claims, ", "))
-	}
 	switch {
 	case !paired:
 		return opening{}, fmt.Sprintf("step %d's trail was never opened: %s", owner, p.counts())
-	case found.stepID != "" && found.stepID != strconv.Itoa(owner):
-		return found, fmt.Sprintf("step %d is paired by order with the trail at line %d, which says it is step %s",
-			owner, found.line, found.stepID)
 	case found.proposals > 1:
 		return found, fmt.Sprintf("request %q carries %d %s events, so its trail was opened more than once",
 			found.requestID, found.proposals, evidence.KindActionProposed)
@@ -125,17 +111,6 @@ func (p pairing) toolDefect(step int, found opening) string {
 			step, want, found.line, found.tool)
 	}
 	return ""
-}
-
-// claiming lists the openings whose own step number names the step.
-func (p pairing) claiming(step int) []string {
-	var claims []string
-	for _, found := range p.openings {
-		if found.stepID == strconv.Itoa(step) {
-			claims = append(claims, fmt.Sprintf("%q at line %d", found.requestID, found.line))
-		}
-	}
-	return claims
 }
 
 // Trails asserts the run opened exactly one trail per step that opens one, each
