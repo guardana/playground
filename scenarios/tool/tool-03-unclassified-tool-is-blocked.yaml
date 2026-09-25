@@ -16,6 +16,7 @@
 schema_version: 1
 id: tool-03-unclassified-tool-is-blocked
 title: A listed tool nobody classified is blocked, whatever the policy says about it
+maps_to: { failure_catalog: [AUTH-04] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/tool-03-unclassified-tool-is-blocked.yaml

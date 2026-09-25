@@ -14,6 +14,7 @@
 schema_version: 1
 id: gaps-01-toxic-flow-to-external-mail-is-undetermined
 title: "Gap: a private read mailed out is undetermined, not denied as a toxic flow"
+maps_to: { failure_catalog: [FLOW-01, INJ-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/gaps-01-toxic-flow-to-external-mail-is-undetermined.yaml

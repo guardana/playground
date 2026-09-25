@@ -20,6 +20,7 @@
 schema_version: 1
 id: trace-02-a-policy-that-skips-the-approval-breaks-the-contract
 title: The trace of a payout change a widened policy let run unapproved breaks the contract
+maps_to: { failure_catalog: [APPR-01, FLOW-02] }
 profile: [core, enforcer, trace]
 enforcement_mode: enforce
 trajectory: trajectories/trace-01-an-approved-payout-change-meets-the-contract.yaml

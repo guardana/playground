@@ -10,6 +10,7 @@
 schema_version: 1
 id: chaos-01-a-slow-victim-within-the-call-timeout-still-runs
 title: A victim slower than usual but inside the call timeout is answered and recorded
+maps_to: { failure_catalog: [AVAIL-03] }
 profile: [core, enforcer, chaos]
 enforcement_mode: enforce
 trajectory: trajectories/chaos-01-a-slow-victim-within-the-call-timeout-still-runs.yaml

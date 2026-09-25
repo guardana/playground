@@ -14,6 +14,7 @@
 schema_version: 1
 id: mode-02-lockdown-blocks-material-calls
 title: Under LOCKDOWN an allowed command is blocked, and reads are decided as the policy says
+maps_to: { failure_catalog: [DEST-01, AVAIL-04] }
 profile: [core, enforcer]
 enforcement_mode: lockdown
 trajectory: trajectories/mode-02-lockdown-blocks-material-calls.yaml

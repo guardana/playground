@@ -19,6 +19,7 @@
 schema_version: 1
 id: pdp-01-the-decision-point-vetoes-what-the-bundle-allows
 title: The decision point takes away what the bundle allows and never hears about a call no veto covers
+maps_to: { failure_catalog: [AUTH-01, AUTH-06] }
 profile: [core, enforcer, pdp]
 enforcement_mode: enforce
 trajectory: trajectories/pdp-01-the-decision-point-vetoes-what-the-bundle-allows.yaml

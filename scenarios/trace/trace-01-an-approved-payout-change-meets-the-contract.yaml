@@ -20,6 +20,7 @@
 schema_version: 1
 id: trace-01-an-approved-payout-change-meets-the-contract
 title: The trace of a payout change approved before it ran meets the contract that requires it
+maps_to: { failure_catalog: [APPR-01, FLOW-02] }
 profile: [core, enforcer, approvals, trace]
 enforcement_mode: enforce
 trajectory: trajectories/trace-01-an-approved-payout-change-meets-the-contract.yaml

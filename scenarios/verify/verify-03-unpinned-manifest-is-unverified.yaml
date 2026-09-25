@@ -8,7 +8,7 @@
 schema_version: 1
 id: verify-03-unpinned-manifest-is-unverified
 title: A manifest probed with no pin is reported unverified, not clean
-maps_to: { owasp_asi: [ASI04] }
+maps_to: { failure_catalog: [DRIFT-02], owasp_asi: [ASI04] }
 profile: [verifier]
 verifier:
   - probe: { server: victim-crm }

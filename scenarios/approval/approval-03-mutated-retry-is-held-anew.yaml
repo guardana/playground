@@ -13,6 +13,7 @@
 schema_version: 1
 id: approval-03-mutated-retry-is-held-anew
 title: A mail altered after its approval is held anew and is not sent on that approval
+maps_to: { failure_catalog: [APPR-03] }
 profile: [core, enforcer, approvals]
 enforcement_mode: enforce
 trajectory: trajectories/approval-03-mutated-retry-is-held-anew.yaml

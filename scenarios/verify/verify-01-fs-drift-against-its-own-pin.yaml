@@ -10,7 +10,7 @@
 schema_version: 1
 id: verify-01-fs-drift-against-its-own-pin
 title: A manifest that changes after it was pinned is reported as drift
-maps_to: { owasp_asi: [ASI04] }
+maps_to: { failure_catalog: [DRIFT-01], owasp_asi: [ASI04] }
 profile: [verifier]
 verifier:
   - probe: { server: victim-fs, write_pin: true }

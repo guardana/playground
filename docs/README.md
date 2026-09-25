@@ -19,6 +19,11 @@ with `make docs-gen`; an edit made here does not survive the next run.
 - [Bring your own policy](runbooks/bring-your-own-policy.md): Run a policy of your own through the pinned enforcer against the lab's victims, and see what it allows, denies and holds.
 - [Quickstart](runbooks/quickstart.md): From a fresh clone to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 
+## Reference
+
+- [Failure modes](reference/failure-modes.md): How an agent deployment goes wrong, which kind of tooling must catch each failure, and the scenarios that simulate it today.
+- [Agent use cases](reference/use-cases.md): The agent deployments the lab simulates or plans to, what each acts through, the failure modes it meets, and what the lab covers of it today.
+
 ## Contracts
 
 - [Trajectory and scenario files](lab-files.md): The two files a run is written in, the checks each expectation becomes, and how a workspace outside the clone holds your own.

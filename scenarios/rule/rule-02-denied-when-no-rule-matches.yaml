@@ -11,6 +11,7 @@
 schema_version: 1
 id: rule-02-denied-when-no-rule-matches
 title: A command no rule allows is denied, and the read the policy allows runs
+maps_to: { failure_catalog: [AUTH-01, DEST-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/rule-02-denied-when-no-rule-matches.yaml

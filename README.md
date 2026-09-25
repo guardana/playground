@@ -6,13 +6,15 @@ Two systems are under test. [Guardana](https://github.com/guardana/guardana)
 grades a run after it happened. The enforcement plane decides one tool call as
 it is made. This repository builds a small, hostile world around both of them —
 tool servers that lie about what they do, web pages carrying injected
-instructions, a payment service that times out after it has already charged the
-card — replays scripted agent trajectories through it, and checks the records
-they left behind.
+instructions, a decision point that stops answering mid-run — replays scripted
+agent trajectories through it, and checks the records they left behind.
 
 It serves two readers: the maintainers, who run it against every release of
 both systems, and a team deploying either one, who runs its own policy, gateway
 configuration or verifier contract here before production.
+[docs/reference/use-cases.md](docs/reference/use-cases.md) lists the agent
+deployments it simulates and the [failure modes](docs/reference/failure-modes.md)
+each one meets.
 
 **Status: experimental.** The catalogue of 34 scenarios runs against the
 enforcer and the verifier at the versions `versions.env` pins; two of them are

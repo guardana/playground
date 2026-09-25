@@ -13,6 +13,7 @@
 schema_version: 1
 id: chaos-03-the-trail-waits-out-a-collector-outage
 title: Calls decided while the collector is down reach it whole once it returns
+maps_to: { failure_catalog: [EVID-03] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/chaos-03-the-trail-waits-out-a-collector-outage.yaml

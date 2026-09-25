@@ -19,6 +19,7 @@
 schema_version: 1
 id: pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs
 title: A decision point that times out, fails or answers unreadably blocks every call it governs, reads under fail-open too
+maps_to: { failure_catalog: [AVAIL-01] }
 profile: [core, enforcer, pdp]
 enforcement_mode: enforce
 trajectory: trajectories/pdp-02-silence-from-the-decision-point-blocks-every-call-it-governs.yaml

@@ -9,7 +9,7 @@
 schema_version: 1
 id: verify-02-stable-manifest-against-its-own-pin
 title: A manifest compared with its own pin is reported as not drifted
-maps_to: { owasp_asi: [ASI04] }
+maps_to: { failure_catalog: [DRIFT-02], owasp_asi: [ASI04] }
 profile: [verifier]
 verifier:
   - probe: { server: victim-crm, write_pin: true }

@@ -90,6 +90,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A failure-mode catalogue (`docs/reference/failure-modes.md`) and a use-case
+  catalogue (`docs/reference/use-cases.md`), written for any gate, grader or
+  monitor, not only the two systems under test here. Every scenario names its
+  modes in `maps_to.failure_catalog`, which now resolves: a test fails on an
+  identifier no row defines, a scenario no row lists, or a row listing a
+  scenario that does not map to it. `ROADMAP.md` is rewritten around the
+  catalogue's planned rows.
 - Runbooks for a stranger and an adopting team: `docs/runbooks/quickstart.md`
   (from `git clone` to one green scenario, reading the report, what a red
   run means, cleaning up) and one page each for bringing your own policy,

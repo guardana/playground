@@ -10,6 +10,7 @@
 schema_version: 1
 id: rule-01-denied-by-a-rule
 title: A send a rule denies by name is blocked, and a send the policy allows runs
+maps_to: { failure_catalog: [AUTH-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/rule-01-denied-by-a-rule.yaml

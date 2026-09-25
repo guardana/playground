@@ -18,6 +18,7 @@
 schema_version: 1
 id: approval-05-unanswered-hold-expires
 title: A held mail nobody answers expires, is closed when the next call arrives, and that call is held anew
+maps_to: { failure_catalog: [APPR-04] }
 profile: [core, enforcer, approvals]
 enforcement_mode: enforce
 trajectory: trajectories/approval-05-unanswered-hold-expires.yaml

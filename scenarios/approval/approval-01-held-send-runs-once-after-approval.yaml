@@ -14,6 +14,7 @@
 schema_version: 1
 id: approval-01-held-send-runs-once-after-approval
 title: A mail held for an approval is sent once, on the held trail, after the approver says yes
+maps_to: { failure_catalog: [APPR-01] }
 profile: [core, enforcer, approvals]
 enforcement_mode: enforce
 trajectory: trajectories/approval-01-held-send-runs-once-after-approval.yaml

@@ -14,6 +14,7 @@
 schema_version: 1
 id: mode-01-observe-runs-what-it-records
 title: Under OBSERVE a denied send and an unclassified command run and are recorded
+maps_to: { failure_catalog: [AUTH-04, EVID-02, AVAIL-04] }
 profile: [core, enforcer]
 enforcement_mode: observe
 trajectory: trajectories/mode-01-observe-runs-what-it-records.yaml

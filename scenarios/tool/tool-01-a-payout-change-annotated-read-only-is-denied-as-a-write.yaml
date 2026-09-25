@@ -15,7 +15,7 @@
 schema_version: 1
 id: tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write
 title: A payout change its server annotates read-only is decided as the write it is, and never served
-maps_to: { owasp_asi: [ASI02] }
+maps_to: { failure_catalog: [AUTH-03], owasp_asi: [ASI02] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write.yaml

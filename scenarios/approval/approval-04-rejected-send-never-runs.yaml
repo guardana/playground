@@ -12,6 +12,7 @@
 schema_version: 1
 id: approval-04-rejected-send-never-runs
 title: A mail the approver rejects is closed on its held trail and never sent
+maps_to: { failure_catalog: [APPR-01] }
 profile: [core, enforcer, approvals]
 enforcement_mode: enforce
 trajectory: trajectories/approval-04-rejected-send-never-runs.yaml

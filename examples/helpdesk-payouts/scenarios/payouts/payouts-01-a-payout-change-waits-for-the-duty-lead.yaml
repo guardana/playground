@@ -35,6 +35,7 @@
 schema_version: 1
 id: payouts-01-a-payout-change-waits-for-the-duty-lead
 title: A payout account change runs once, after the duty lead approved it, and the record is never mailed out
+maps_to: { failure_catalog: [APPR-01, FLOW-02] }
 profile: [core, enforcer, approvals, trace]
 enforcement_mode: enforce
 trajectory: trajectories/payouts-01-a-payout-change-waits-for-the-duty-lead.yaml

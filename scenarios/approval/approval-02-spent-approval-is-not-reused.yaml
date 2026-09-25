@@ -13,6 +13,7 @@
 schema_version: 1
 id: approval-02-spent-approval-is-not-reused
 title: An approval spent on one send does not let the identical mail be sent again
+maps_to: { failure_catalog: [APPR-02] }
 profile: [core, enforcer, approvals]
 enforcement_mode: enforce
 trajectory: trajectories/approval-02-spent-approval-is-not-reused.yaml

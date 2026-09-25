@@ -10,6 +10,7 @@
 schema_version: 1
 id: tenant-03-material-call-to-an-untenanted-server-is-undetermined
 title: A send to a server that names no tenant is undetermined and blocked, and a read is not
+maps_to: { failure_catalog: [TEN-02] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/tenant-03-material-call-to-an-untenanted-server-is-undetermined.yaml

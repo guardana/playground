@@ -18,6 +18,7 @@
 schema_version: 1
 id: chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout
 title: A victim whose answer never arrives is cut off at the call timeout and recorded as failed
+maps_to: { failure_catalog: [AVAIL-03] }
 profile: [core, enforcer, chaos]
 enforcement_mode: enforce
 trajectory: trajectories/chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout.yaml

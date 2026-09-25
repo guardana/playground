@@ -25,6 +25,7 @@
 schema_version: 1
 id: evidence-02-full-spool-lets-a-read-run-unrecorded
 title: With no room to record a start, a read allowed to run unrecorded runs and a command does not
+maps_to: { failure_catalog: [EVID-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/evidence-02-full-spool-lets-a-read-run-unrecorded.yaml

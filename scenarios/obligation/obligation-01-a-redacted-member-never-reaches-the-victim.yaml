@@ -14,6 +14,7 @@
 schema_version: 1
 id: obligation-01-a-redacted-member-never-reaches-the-victim
 title: A member a redaction obligation names never reaches the victim, and an obligation nothing applies denies
+maps_to: { failure_catalog: [FLOW-04] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/obligation-01-a-redacted-member-never-reaches-the-victim.yaml

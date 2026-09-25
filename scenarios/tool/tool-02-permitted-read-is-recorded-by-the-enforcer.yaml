@@ -7,6 +7,7 @@
 schema_version: 1
 id: tool-02-permitted-read-is-recorded-by-the-enforcer
 title: A read the policy allows runs through the enforcer and every record shows it
+maps_to: { failure_catalog: [EVID-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/tool-02-permitted-read-is-recorded-by-the-enforcer.yaml

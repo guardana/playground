@@ -18,6 +18,7 @@
 schema_version: 1
 id: pdp-03-a-covered-call-without-a-resource-id-is-never-asked
 title: A call a veto covers that names no resource is never sent to the decision point and is blocked
+maps_to: { failure_catalog: [AUTH-06] }
 profile: [core, enforcer, pdp]
 enforcement_mode: enforce
 trajectory: trajectories/pdp-03-a-covered-call-without-a-resource-id-is-never-asked.yaml

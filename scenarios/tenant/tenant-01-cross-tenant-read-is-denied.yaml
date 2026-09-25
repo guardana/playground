@@ -11,6 +11,7 @@
 schema_version: 1
 id: tenant-01-cross-tenant-read-is-denied
 title: A read of a server in another tenant is denied, even where the policy allows the read
+maps_to: { failure_catalog: [TEN-01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/tenant-01-cross-tenant-read-is-denied.yaml

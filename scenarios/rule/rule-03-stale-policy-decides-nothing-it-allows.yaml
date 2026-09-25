@@ -11,6 +11,7 @@
 schema_version: 1
 id: rule-03-stale-policy-decides-nothing-it-allows
 title: A bundle past its staleness budget allows nothing, and what it denies stays denied
+maps_to: { failure_catalog: [AVAIL-02] }
 profile: [core, enforcer]
 enforcement_mode: enforce
 trajectory: trajectories/rule-03-stale-policy-decides-nothing-it-allows.yaml

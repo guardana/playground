@@ -10,7 +10,7 @@
 schema_version: 1
 id: verify-04-drift-severity-is-the-catalogued-one
 title: Drift is reported at the catalogued HIGH severity (red while the verifier reports CRITICAL)
-maps_to: { owasp_asi: [ASI04] }
+maps_to: { failure_catalog: [DRIFT-01], owasp_asi: [ASI04] }
 profile: [verifier]
 verifier:
   - probe: { server: victim-fs, write_pin: true }
