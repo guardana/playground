@@ -11,6 +11,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   chaos scenario runs inside a victim is its own command, `relist`, and
   `compose/healthprobe`, which the enforcer image builds without the lab's
   module, is held to the standard library by a test.
+- On a Linux host the runner can read what the lab's services write: every
+  victim's journal, both doubles' journals and the scripted agent's log and
+  trace are created mode 0644 whatever the umask, where they were 0600 and
+  owned by the services' uid, so a runner under any other uid graded every
+  effect as "no journal". Docker Desktop hid this by mapping every access to
+  the invoking user. Directories keep their modes.
 
 ### Changed
 

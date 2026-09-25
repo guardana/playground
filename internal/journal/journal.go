@@ -43,6 +43,10 @@ func (s Status) Known() bool { return s == Served || s == Refused }
 // whose length a caller controls.
 const MaxLineBytes = 1 << 20
 
+// fileMode lets the runner read a journal a server wrote as another uid, as it
+// does on a Linux host. Only the server writes it; nothing in it is secret.
+const fileMode = 0o644
+
 var (
 	// ErrInvalidEntry reports a line this package will not write, because it
 	// would be a record nothing can be counted from.
@@ -84,9 +88,14 @@ func Open(path, server string) (*Writer, error) {
 	if server == "" {
 		return nil, fmt.Errorf("%w: no server name", ErrInvalidEntry)
 	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) // #nosec G304 -- the path is the journal the caller configured.
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, fileMode) // #nosec G302,G304 -- the path is the journal the caller configured; see fileMode.
 	if err != nil {
 		return nil, err
+	}
+	// The umask narrows the mode at creation, and a journal the runner cannot
+	// read is graded as one that was never written.
+	if err := file.Chmod(fileMode); err != nil { // #nosec G302 -- see fileMode.
+		return nil, errors.Join(err, file.Close())
 	}
 	return &Writer{server: server, file: file}, nil
 }

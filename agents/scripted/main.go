@@ -165,6 +165,18 @@ func createLog(path string) (*os.File, error) {
 			return nil, err
 		}
 	}
-	// #nosec G304 -- the path is the log the caller asked for.
-	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	// #nosec G302,G304 -- the path is the log the caller asked for; see logMode.
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, logMode)
+	if err != nil {
+		return nil, err
+	}
+	// The umask narrows the mode at creation.
+	if err := file.Chmod(logMode); err != nil { // #nosec G302 -- see logMode.
+		return nil, errors.Join(err, file.Close())
+	}
+	return file, nil
 }
+
+// logMode lets the runner, another uid on a Linux host, read what the agent
+// wrote. Only the agent writes it; nothing in it is secret.
+const logMode = 0o644

@@ -133,7 +133,13 @@ func TestRunSettlesAnAnswerCutShortAtShutdown(t *testing.T) {
 // journal.
 func runFor(t *testing.T, lab *fakeLab, deadline time.Duration) [][3]string {
 	t.Helper()
-	reports := t.TempDir()
+	return runIn(t, lab, deadline, t.TempDir())
+}
+
+// runIn runs the service with its reports under reports and returns its
+// journal.
+func runIn(t *testing.T, lab *fakeLab, deadline time.Duration, reports string) [][3]string {
+	t.Helper()
 	scriptPath := filepath.Join(t.TempDir(), "approver.yaml")
 	if err := os.WriteFile(scriptPath, []byte(approveRefunds), 0o600); err != nil {
 		t.Fatal(err)
