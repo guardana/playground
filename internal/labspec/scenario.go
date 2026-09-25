@@ -51,6 +51,8 @@ type Expect struct {
 	Verifier map[int]VerifierExpectation `json:"verifier,omitempty"`
 	// Trace grades the verifier's analysis of the agent's own trace.
 	Trace *VerifierExpectation `json:"trace,omitempty"`
+	// Health grades the enforcer's own /healthz counters after the replay.
+	Health *HealthExpectation `json:"health,omitempty"`
 }
 
 // DecisionExpectation is what one step's decision has to say. The reason codes
@@ -120,7 +122,7 @@ func (s Scenario) validate(fileName string) error {
 	if len(s.Profile) == 0 {
 		return fmt.Errorf("%w: profile is empty", ErrInvalid)
 	}
-	if err := s.validateEffectCounts(); err != nil {
+	if err := first(s.validateEffectCounts(), s.validateHealth()); err != nil {
 		return err
 	}
 	if s.IsVerifier() {

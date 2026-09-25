@@ -8,8 +8,17 @@
 #   Under on_unwritable: allow_reads a read runs unrecorded, and its closing
 #     event is not attempted: docs/concepts/evidence-and-the-spool.md:80,
 #     docs/reference/configuration.md:78.
-# The unrecorded read is counted only in /healthz; what is graded is the trail
-# stopping at the decision and the listing reaching its server.
+#   /healthz counts blocks by reason code, sink failures before an effect and
+#     unrecorded reads under pipeline: docs/guides/run-the-gateway.md:134-142.
+# The block and the unrecorded read are counted only in /healthz, which is
+# graded after the replay: one block for the command, one read run unrecorded,
+# and both refused starts counted as sink failures before an effect. The trail
+# stops at the decision and the listing reaches its server.
+# The docs name the counters but not that an unrecorded block or a refused
+# start adds one to them; the counts are the lab's reading of the source at the
+# pin: internal/gateway/stats.go:11-31 (a block a refused record kept off its
+# trail is counted; each append that failed before anything ran is a sink
+# failure) and internal/gateway/admit.go:205-220 (one failed append per call).
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
 # (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
 # the principal's own tenant.
@@ -36,6 +45,10 @@ expect:
   effects:
     victim-shell: { calls_served: {} }
     victim-fs: { calls_served: { fs.list: 1 } }
+  health:
+    blocks: { EVIDENCE_UNAVAILABLE: 1 }
+    reads_unrecorded: 1
+    sink_failures_before_effect: 2
   evidence:
     chain_complete: true
     policy_digest_present: true

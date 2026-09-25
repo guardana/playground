@@ -18,6 +18,7 @@ const (
 	enforcerService  = "enforcer"
 	collectorOutput  = "collector/otlp-logs.json"
 	collectorService = "collector"
+	healthRecord     = "healthz.json"
 	drainTimeout     = 90 * time.Second
 	drainPoll        = 250 * time.Millisecond
 )
@@ -53,7 +54,8 @@ func (l lab) drainPlane(ctx context.Context, compose Compose, profiles []string,
 	fmt.Fprintf(&log, "image running %s, pinned %s built from %s, tree label %q, ENFORCER_TREE %q: %s\n",
 		plane.RunningImage, plane.PinnedImage, plane.PinnedLabel, plane.RunningTree, plane.TreePin, plane.ImageDetail)
 	health, err := l.waitHandedOver(ctx, compose, profiles)
-	fmt.Fprintf(&log, "healthz %s\nhanded over: %v\n", strings.TrimSpace(health), err)
+	fmt.Fprintf(&log, "healthz %s\nhanded over: %v\n", strings.TrimSpace(string(health)), err)
+	keepHealth(&log, runDir, health)
 	if err == nil {
 		// The collector acknowledges a delivery before its file exporter has
 		// written it; stopping it is what flushes the file.
@@ -75,29 +77,44 @@ func (l lab) drainPlane(ctx context.Context, compose Compose, profiles []string,
 
 // waitHandedOver polls /healthz until the spool holds nothing
 // unacknowledged, then requires that nothing was lost on the way. A lossy or
-// unreadable answer ends the wait at once: a quarantine does not drain.
-func (l lab) waitHandedOver(ctx context.Context, compose Compose, profiles []string) (string, error) {
+// unreadable answer ends the wait at once: a quarantine does not drain. It
+// returns the last answer it read, nil when it read none.
+func (l lab) waitHandedOver(ctx context.Context, compose Compose, profiles []string) ([]byte, error) {
+	var answer []byte
 	var last string
 	for {
 		body, err := l.planeGet(ctx, compose, profiles, "/healthz")
 		if err != nil {
 			last = err.Error()
 		} else {
+			answer = body
 			health, err := readHealth(body)
 			switch {
 			case err != nil:
-				return string(body), err
+				return answer, err
 			case health.unacknowledged() == 0:
-				return string(body), health.lost()
+				return answer, health.lost()
 			}
 			last = fmt.Sprintf("%d bytes", health.unacknowledged())
 		}
 		select {
 		case <-ctx.Done():
-			return last, fmt.Errorf("%w: %s when the wait ended", errNotDrained, last)
+			return answer, fmt.Errorf("%w: %s when the wait ended", errNotDrained, last)
 		case <-time.After(drainPoll):
 		}
 	}
+}
+
+// keepHealth writes the /healthz answer read after the replay into the run
+// directory, where the health check reads it. No answer leaves no record.
+func keepHealth(log *strings.Builder, runDir string, health []byte) {
+	if health == nil {
+		fmt.Fprintf(log, "healthz kept: no answer was read\n")
+		return
+	}
+	// #nosec G703 -- inside the run directory.
+	err := os.WriteFile(filepath.Join(runDir, healthRecord), health, 0o600)
+	fmt.Fprintf(log, "healthz kept in %s: %v\n", healthRecord, err)
 }
 
 // planeGet reads one of the enforcer's health endpoints from inside its own

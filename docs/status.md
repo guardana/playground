@@ -67,9 +67,11 @@ recorded as a finding for the enforcer: under `OBSERVE` a call whose decision
 refused its action digest completes with an executed digest, as if the bytes
 sent were authorized. While it is red, a second regression in it goes unseen.
 Whether the decision point was asked is graded from its journal, since the
-decision names it for a question it could not send as well. Not asserted:
-the cause of `evidence-01`'s block and `evidence-02`'s unrecorded read, which
-only the enforcer's `/healthz` shows. A
+decision names it for a question it could not send as well. The cause of
+`evidence-01`'s blocks and `evidence-02`'s unrecorded read, which no trail
+records, is graded from the enforcer's `/healthz` after the replay
+(`expect.health`: blocks by reason code, `reads_unrecorded`,
+`sink_failures_before_effect`), kept in the run directory as `healthz.json`. A
 principal with no tenant cannot be configured at the pin (the gateway fills in
 its own), so only the other one-sided tenant case is graded (`tenant-03`).
 `plane/image` requires the image the run's enforcer container runs to carry

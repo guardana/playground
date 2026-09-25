@@ -28,6 +28,9 @@ func (l lab) gradeTrajectory(
 	}
 	checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
 		check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl")})
+	if spec.Expect.Health != nil {
+		checks = append(checks, check.Health{Expect: *spec.Expect.Health, Source: filepath.Join(runDir, healthRecord)})
+	}
 	records, unreadable := l.collect(spec, boot, runID, runDir)
 
 	trail := filepath.Join(runDir, "evidence.jsonl")

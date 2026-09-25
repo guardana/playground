@@ -197,6 +197,29 @@ file is flushed. The `plane` checks report the drain, that the running enforcer
 reports the pinned commit, and that the run's own enforcer container runs the
 image tagged with the pin, built from it.
 
+The last `/healthz` answer the drain reads is kept in the run directory as
+`healthz.json`. `expect.health`, optional and only in a scenario the enforcer
+decides, grades counters under its `pipeline`, each count exact:
+
+```yaml
+expect:
+  health:
+    blocks: { EVIDENCE_UNAVAILABLE: 2 }
+    reads_unrecorded: 0
+    sink_failures_before_effect: 2
+```
+
+A field left out is not asserted, and neither is a reason code `blocks` does
+not name; a reason code the answer's `blocks` never counted reads as 0. A
+`blocks` entry is a reason code in capitals with a count of at least 1, since a
+misspelled code stated at 0 would pass on every run. An `expect.health` stating
+no count is refused. Each count is a `health/<field>` check
+(`health/blocks/<code>` for a reason); a missing, unreadable or unparsed
+`healthz.json`, or an answer without the counter, fails it. The counters count
+from the enforcer's start, so a call it took before the replay is in them too.
+Use it for what no trail records: a block for want of room to record it, a
+read run unrecorded.
+
 ### Which trail a step is graded on
 
 The enforcer mints its own request ids and writes no step number, so a step is

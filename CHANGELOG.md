@@ -82,6 +82,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `expect.health` grades the enforcer's own `/healthz` counters after the
+  replay, each count exact: `blocks` by reason code, `reads_unrecorded`,
+  `sink_failures_before_effect`. The answer is kept in the run directory as
+  `healthz.json`; a missing or unreadable one fails every stated count.
+  `evidence-01` and `evidence-02` now assert the cause of their blocks and of
+  the read run unrecorded, which no trail records.
 - `LAB_WORKSPACE=<dir>` runs your own scenarios, trajectories, policies,
   gateway parts, contracts and double scripts from a directory outside the
   clone, laid out like the lab and in the unchanged format. The runner refuses
