@@ -37,10 +37,10 @@ func (a answer) state() string {
 }
 
 // match narrows a rule to approvals whose listing shows these values. An empty
-// field matches anything. Only what `approvals list` prints can be matched:
-// the upstream a call was held for is not in the listing. Unreadable matches
-// only the records the listing shows no readable fields for, which no other
-// rule matches.
+// field matches anything. Only what `approvals list` prints can be matched,
+// and the upstream it prints is not matched yet. Unreadable matches only the
+// records the listing shows no readable fields for, which no other rule
+// matches.
 type match struct {
 	Action      string `json:"action,omitempty"`
 	Resource    string `json:"resource,omitempty"`

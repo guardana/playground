@@ -6,9 +6,9 @@
 #   A rule constrains action.effect: docs/reference/policy-format.md:85; RULE_DENY
 #     when a rule matches and denies, RULE_ALLOW when one allows:
 #     docs/reference/reason-codes.md:30-31.
-#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:59; the trail
+#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:58; the trail
 #     ends ACTION_BLOCKED carrying the kernel's decision and the server is never
-#     called: docs/concepts/evidence-and-the-spool.md:30,67, docs/concepts/mcp-gateway.md:57-60.
+#     called: docs/concepts/evidence-and-the-spool.md:30,68, docs/concepts/mcp-gateway.md:57-60.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
 # (docs/concepts/how-a-call-is-decided.md:52), so victim-crm is put in the
 # principal's own tenant.

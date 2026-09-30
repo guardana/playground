@@ -62,14 +62,16 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"victim-crm": {runDir + "/journals"}, "victim-db": {runDir + "/journals"},
 		"victim-fs": {runDir + "/journals"}, "victim-shell": {runDir + "/journals"},
 		"victim-mail": {runDir + "/journals"}, "victim-web": {runDir + "/journals"},
-		"scripted-agent":  {runDir + "/agent", workspace + "/trajectories"},
-		"pdp-double":      {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
-		"approver":        {runDir + "/journals", workspace + "/config/approver", "approvals"},
-		"collector":       {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector"},
+		"scripted-agent": {runDir + "/agent", workspace + "/trajectories"},
+		"pdp-double":     {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
+		"approver":       {runDir + "/journals", workspace + "/config/approver", "approvals"},
+		"collector": {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector",
+			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector-tls"},
 		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
 		"toxiproxy-tools": {"./toxiproxy/proxies.json"},
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
-			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki", "spool", "approvals", "holds"},
+			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki",
+			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/export-ca", "spool", "approvals", "holds"},
 	}
 	for name, service := range readMounts(t).Services {
 		var got []string

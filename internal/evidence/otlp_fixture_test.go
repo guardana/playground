@@ -16,8 +16,8 @@ type attr struct{ key, value string }
 
 func a(name, value string) attr { return attr{namespace + "." + name, value} }
 
-// body is one event line as the enforcer writes it: compact, project p,
-// tenant t, mode ENFORCE, no run id.
+// body is one event line as the enforcer writes it, less the run id: compact,
+// project p, tenant t, mode ENFORCE.
 func body(id, request, kind, prev string) string {
 	line := `{"eventId":"` + id + `","kind":"` + kind + `","requestId":"` + request +
 		`","projectId":"p","tenantId":"t","enforcementMode":"ENFORCEMENT_MODE_ENFORCE"`

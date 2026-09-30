@@ -1,21 +1,22 @@
-# The gateway cannot see what the run read before a call (gaps-01); what it can
-# see is the sink's trust zone, which the lab classifies UNTRUSTED_EXTERNAL for
-# mail.send (config/gateway/classification.yaml). The send is allowed only with
+# The policy has no flow rule, so what the run read before the send decides
+# nothing here (gaps-01 is that case); what decides is the sink's trust zone,
+# which the lab classifies UNTRUSTED_EXTERNAL for mail.send
+# (config/gateway/classification.yaml). The send is allowed only with
 # deny_external_sink, which refuses it at that zone whatever was read before.
 # No lab tool is classified trusted, so a trusted sink passing is not shown.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   The override's trust zone is destination.trust_zone, which deny_external_sink
-#     reads; the gateway carries no run flow: docs/concepts/mcp-gateway.md:131.
+#     reads: docs/concepts/mcp-gateway.md:131.
 #   ALLOW_WITH_OBLIGATIONS names OBLIGATIONS_ATTACHED: docs/reference/policy-format.md:56,
 #     docs/reference/reason-codes.md:33; a non-advisory obligation by default:
 #     docs/reference/obligations.md:14-16.
 #   deny_external_sink is the MCP adapter's, and refuses a call whose destination
 #     trust zone is untrusted; a non-advisory one stops the call and the closing
-#     record says so: docs/reference/obligations.md:47, docs/extending/adapters.md:92-105.
+#     record says so: docs/reference/obligations.md:47, docs/extending/adapters.md:95-108.
 #   Under ENFORCE the call runs only with its obligations applied:
-#     docs/concepts/enforcement-modes.md:57. A call the adapter does not send is
-#     started, then closed ACTION_FAILED: docs/concepts/mcp-gateway.md:205,
-#     docs/concepts/evidence-and-the-spool.md:38,66.
+#     docs/concepts/enforcement-modes.md:56. A call the adapter does not send is
+#     started, then closed ACTION_FAILED: docs/concepts/mcp-gateway.md:212,
+#     docs/concepts/evidence-and-the-spool.md:38,67.
 #   The reads are allowed by the bundle: docs/reference/reason-codes.md:30.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
 # (docs/concepts/how-a-call-is-decided.md:52), so victim-mail is put in the

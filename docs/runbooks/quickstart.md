@@ -3,7 +3,7 @@ title: Quickstart
 summary: From a checkout to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 type: runbook
 audience: [engineering, product]
-covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/build-verifier.sh, scripts/lab-key.sh, scripts/smoke.sh, runner/main.go, runner/report/**]
+covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/build-enforcer.sh, scripts/build-verifier.sh, scripts/lab-key.sh, scripts/smoke.sh, runner/main.go, runner/report/**]
 ---
 
 # Quickstart
@@ -14,11 +14,12 @@ covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/b
   on Linux both work; on Linux, run as an ordinary user in the `docker` group.
 - The Go version `go.mod` names, git, make and bash.
 - A clone of the enforcer's repository that holds the commit `ENFORCER_COMMIT`
-  in `versions.env`. The lab builds the enforcer from that commit with
-  `git archive`, never from the clone's working tree, and refuses an archive
-  whose tree is not `ENFORCER_TREE`. The public repository at
-  `https://github.com/guardana/control` serves no ref for that commit today;
-  until it does, ask the maintainers for a clone that holds it.
+  in `versions.env`, the commit of the release `ENFORCER_RELEASE`.
+  `scripts/fetch-enforcer.sh <dir>` makes one from
+  `https://github.com/guardana/control` anonymously, after checking that the
+  release's tag there names that commit. The lab builds the enforcer from the
+  commit with `git archive`, never from a clone's working tree, and refuses an
+  archive whose tree is not `ENFORCER_TREE`.
 - A checkout of this lab. The public `guardana/playground` repository is empty
   today; ask the maintainers for the checkout until it is published.
 - Network for the first build: it pulls the base images and the verifier's
@@ -28,7 +29,8 @@ covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/b
 
 ```
 cd /path/to/playground
-export ENFORCER_SOURCE="/path/to/control-with-the-pinned-commit"
+scripts/fetch-enforcer.sh /path/to/control.git
+export ENFORCER_SOURCE=/path/to/control.git
 make images
 ```
 
@@ -110,6 +112,10 @@ fails the run as surely as a wrong verdict. Common causes:
 - `plane/drained` failed: the trail did not reach the collector in time; the
   machine was likely busy. Run the scenario again before reading anything into
   it.
+- `make quality` finds a private key in `reports/<run id>/collector-tls/`: the
+  collector's key for a run that is still up, was kept with `-keep`, or was
+  killed before it took its services down. A finished run removes it. Remove
+  that run's directory once its services are down.
 
 ## Clean up
 

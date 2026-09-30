@@ -286,14 +286,15 @@ the run ends.
 
 ### Named gaps
 
-Behaviour a system under test does not have yet is a named gap. Its scenario
-lives in `scenarios/gaps/`, asserts the verdict the system documents today, and
-names the verdict it should give:
+Behaviour a scenario cannot get from a system under test yet, because the
+system lacks it or the lab cannot configure it yet, is a named gap. Its scenario
+lives in `scenarios/gaps/`, asserts the verdict the system documents today for
+what the lab configures, and names the verdict it should give:
 
 ```yaml
 gap:
   wanted: { 3: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] } }
-  why: the gateway builds no run flow at its pin
+  why: the lab's classification declares no tool's returns, so the run's reading is unknown at the send
 ```
 
 The runner prints its suite as `known-gap`, and the report shows the wanted

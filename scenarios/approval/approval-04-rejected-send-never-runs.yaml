@@ -4,11 +4,11 @@
 #     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
 #   A retry that finds the approver said no closes the held trail with APPROVAL_DECIDED, then
 #     ACTION_BLOCKED with DENY and APPROVAL_REJECTED, and nothing runs:
-#     docs/concepts/approvals-and-the-held-call.md:178,184,198; docs/reference/reason-codes.md:58;
+#     docs/concepts/approvals-and-the-held-call.md:179,185,200; docs/reference/reason-codes.md:58;
 #     docs/concepts/evidence-and-the-spool.md:31,34.
 #   The approver answers each hold it lists once, as its script says, and journals the answer
 #     (services/approver/README.md); a retry before an answer is told the same approval_id and
-#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:176.
 schema_version: 1
 id: approval-04-rejected-send-never-runs
 title: A mail the approver rejects is closed on its held trail and never sent

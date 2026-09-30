@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ const (
 	gatewayDirName   = "gateway"
 	gatewayMount     = "/gateway"
 	enforcerSpoolDir = "/var/lib/lab/spool"
-	collectorLogs    = "http://collector:4318/v1/logs"
+	collectorLogs    = "https://" + collectorHost + ":4318/v1/logs"
 	classification   = "config/gateway/classification.yaml"
 	fingerprints     = "config/gateway/fingerprints.yaml"
 )
@@ -42,8 +43,9 @@ func sealedFromAgent(spec labspec.Scenario) []string {
 	return sealed
 }
 
-// prepareEnforcer writes the run's gateway directory and makes the ones the
-// collector and the decision point double write into.
+// prepareEnforcer writes the run's gateway directory and the collector's TLS
+// material, and makes the directories the collector and the decision point
+// double write into.
 func (l lab) prepareEnforcer(ctx context.Context, spec labspec.Scenario, runDir string) error {
 	for _, shared := range []string{"collector", "pki"} {
 		if err := makeShared(filepath.Join(runDir, shared)); err != nil {
@@ -54,8 +56,13 @@ func (l lab) prepareEnforcer(ctx context.Context, spec labspec.Scenario, runDir 
 	if err != nil {
 		return err
 	}
-	_, err = l.prepareGateway(ctx, spec.Gateway, routes, runDir)
-	return err
+	if _, err := l.prepareGateway(ctx, spec.Gateway, routes, runDir); err != nil {
+		return err
+	}
+	if err := writeCollectorTLS(runDir, time.Now()); err != nil {
+		return errors.Join(fmt.Errorf("the collector's certificate: %w", err), dropCollectorKey(runDir))
+	}
+	return nil
 }
 
 // unprepared is the report of a run whose enforcer could not be prepared: no

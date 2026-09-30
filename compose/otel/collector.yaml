@@ -1,11 +1,15 @@
-# The enforcer's only export target: OTLP/HTTP log records on :4318. gRPC and
-# every other receiver stay off, since a port this file does not open is a
-# port evidence-net does not need to be internal to defend.
+# The enforcer's only export target: OTLP/HTTP log records on :4318, over TLS
+# with the run's certificate. gRPC and every other receiver stay off, since a
+# port this file does not open is a port evidence-net does not need to be
+# internal to defend.
 receivers:
   otlp:
     protocols:
       http:
         endpoint: 0.0.0.0:4318
+        tls:
+          cert_file: /tls/cert.pem
+          key_file: /tls/key.pem
 
 # The file exporter writes one ExportLogsServiceRequest per delivery, which is
 # the shape internal/evidence.DecodeOTLP reads. The path is the one directory

@@ -28,8 +28,8 @@ type Evidence struct {
 	// the second one sends a reader to a file that turns out to be full.
 	ReadError error
 	// FreshTrail is set by the runner when the trail file lives in the run
-	// directory it has just created. The enforcer writes no run id, so without
-	// this nothing says the trail is this run's.
+	// directory it has just created. The run id the enforcer writes is one it
+	// minted, so without this nothing says the trail is this lab run's.
 	FreshTrail bool
 }
 

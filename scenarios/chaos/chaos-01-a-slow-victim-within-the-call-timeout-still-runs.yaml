@@ -1,8 +1,8 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
-#   upstream.call_timeout bounds a call to an upstream: docs/reference/configuration.md:89.
+#   upstream.call_timeout bounds a call to an upstream: docs/reference/configuration.md:92.
 #   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
 #   A run call's trail, proposed, decided, started, completed:
-#     docs/concepts/evidence-and-the-spool.md:25-39,65.
+#     docs/concepts/evidence-and-the-spool.md:25-39,66.
 #   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
 # The toxic delays victim-fs's answers by 1.5s, inside the 5s bound. The chaos
 # check holds the toxic to the trail: the fs.list result took at least 1.5s

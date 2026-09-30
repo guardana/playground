@@ -16,6 +16,7 @@ approval ANSWERED
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b
@@ -31,6 +32,7 @@ approval PURGE
   principal      user-2
   agent          agent-1
   action         delete_customer
+  upstream       victim-mail
   resource       customer cus-7
   effect class   EFFECT_CLASS_DELETE
   rule ids       rule-c
@@ -46,6 +48,7 @@ approval WAITING
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b

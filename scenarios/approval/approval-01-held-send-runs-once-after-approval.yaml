@@ -4,13 +4,13 @@
 #     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
 #   The held call writes ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED:
 #     docs/concepts/approvals-and-the-held-call.md:33-36.
-#   An approved retry writes no second ACTION_PROPOSED: docs/concepts/mcp-gateway.md:189-191.
+#   An approved retry writes no second ACTION_PROPOSED: docs/concepts/mcp-gateway.md:195-198.
 #   It consumes the approval once and writes APPROVAL_DECIDED, ACTION_STARTED, then the
-#     closing event on the held trail: docs/concepts/approvals-and-the-held-call.md:176,181,195;
+#     closing event on the held trail: docs/concepts/approvals-and-the-held-call.md:177,182,196;
 #     docs/concepts/evidence-and-the-spool.md:31,33,37.
 #   The approver answers each hold it lists once, as its script says, and journals the answer
 #     (services/approver/README.md); a retry before an answer is told the same approval_id and
-#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:176.
 schema_version: 1
 id: approval-01-held-send-runs-once-after-approval
 title: A mail held for an approval is sent once, on the held trail, after the approver says yes

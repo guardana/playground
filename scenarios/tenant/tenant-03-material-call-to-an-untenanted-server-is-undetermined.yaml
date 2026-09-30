@@ -3,7 +3,7 @@
 #     the comparison only: docs/reference/reason-codes.md:62; a cause in the
 #     request on a material class only: docs/concepts/how-a-call-is-decided.md:27,52.
 #   A cause in the request blocks every class: docs/concepts/how-a-call-is-decided.md:86,99;
-#     the kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:67.
+#     the kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:68.
 #   The read is decided by the bundle: docs/reference/reason-codes.md:30.
 # The principal's tenant is listener.principal.tenant_id
 # (docs/reference/configuration.md:45); no upstreams.N.tenant_id is set.

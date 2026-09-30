@@ -170,16 +170,17 @@ func TestDecisionsGradeEveryStepTheScenarioNames(t *testing.T) {
 	}
 }
 
-// A step is graded from the record of this run and never from a record that
-// happens to be in the file. An envelope stamped with another run's identifier
-// claims a step of that run, and reading it as this one's would grade a run on
-// whatever the last one left behind.
+// A step is graded from the trail's own run and never from a record another
+// process wrote that happens to be in the file, however well it fits the step.
 func TestDecisionsDoNotGradeAStepFromAnotherRunsTrail(t *testing.T) {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}})
-	yesterday := trail(decided{step: 1, requestID: "r1", verdict: "ALLOW", runID: "run-yesterday"})
+	events := trail(
+		decided{step: 1, requestID: "r1", verdict: "DENY", blocked: true},
+		decided{step: 1, requestID: "r2", verdict: "ALLOW", runID: "run-yesterday"},
+	)
 	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
 
-	results, err := checker.Run(context.Background(), records(yesterday, nil))
+	results, err := checker.Run(context.Background(), records(events, nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

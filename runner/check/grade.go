@@ -67,8 +67,8 @@ func pdpInstanceName(recorded string) string {
 // gradeBlock reads the one ACTION_BLOCKED on the request: the block a mode or
 // the plane made, which POLICY_DECIDED does not carry. It returns the defect,
 // empty when the block is as stated, and what was recorded.
-func gradeBlock(want labspec.BlockExpectation, events []evidence.Event, runID, requestID string) (string, string) {
-	blocks := eventsOn(events, runID, requestID, evidence.KindActionBlocked)
+func gradeBlock(want labspec.BlockExpectation, events []evidence.Event, run, requestID string) (string, string) {
+	blocks := eventsOn(events, run, requestID, evidence.KindActionBlocked)
 	if len(blocks) != 1 {
 		return fmt.Sprintf("request %q carries %d %s events, want one", requestID, len(blocks), evidence.KindActionBlocked),
 			"no one block"

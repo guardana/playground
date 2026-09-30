@@ -42,13 +42,13 @@ steps:
       tool: fs.read
       args: { path: "/data/private/customers.csv" }
 `
-	// evidenceFile is the trail as the enforcer at its pin writes it: the mode
-	// on every event, the action digest on the decision, the executed digest
-	// on the completion, and no run id anywhere.
-	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"}}}
-{"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","actionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
-{"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
-{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
+	// evidenceFile is the trail as the enforcer at its pin writes it: the run
+	// it minted and the mode on every event, the action digest on the
+	// decision, the executed digest on the completion.
+	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"}}}
+{"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","actionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
+{"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
+{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
 `
 	// ${RUN_ID} is what the fake victims stamp their journals with, the way the
 	// real ones stamp LAB_RUN_ID.
@@ -466,13 +466,14 @@ func TestRunRefusesARunDirectoryItDidNotJustMake(t *testing.T) {
 	}
 }
 
-// The enforcer names no run, so an event naming one came from something else;
-// a journal line naming another run is that run's. Neither is graded as this
-// run's, however complete it looks.
+// A trail event naming another run than the trail's came from another process;
+// a journal line naming another lab run is that run's. Neither is graded as
+// this run's, however complete it looks.
 func TestRunIsNotGreenOnRecordsAnotherRunWrote(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
 	compose.collector = otlpOf(t, strings.ReplaceAll(evidenceFile,
-		`"requestId":"r1","projectId"`, `"requestId":"r1","runId":"flow-01-yesterday-0badc0de","projectId"`))
+		`"kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"01PLANERUN"`,
+		`"kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"01OTHERPLANE"`))
 	compose.journals = map[string]string{
 		"victim-fs": strings.ReplaceAll(journalFile, "${RUN_ID}", "flow-01-yesterday-0badc0de"),
 	}
@@ -489,7 +490,7 @@ func TestRunIsNotGreenOnRecordsAnotherRunWrote(t *testing.T) {
 		if _, watched := named[result.Check]; watched && result.Outcome != assertion.Pass {
 			named[result.Check] = true
 		}
-		if result.Check == "evidence/run-id" && !strings.Contains(result.Detail, "flow-01-yesterday-0badc0de") {
+		if result.Check == "evidence/run-id" && !strings.Contains(result.Detail, "01OTHERPLANE") {
 			t.Errorf("the result does not name the run the trail belongs to: %+v", result)
 		}
 	}

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,8 +92,8 @@ func TestARunTheEnforcerDecidesIsGradedFromTheCollectorsTrail(t *testing.T) {
 			t.Errorf("%s is %s", name, found[name].Outcome)
 		}
 	}
-	if !strings.Contains(found["evidence/run-id"].Want, "no event names a run") {
-		t.Errorf("the trail was graded as a stamped one: %q", found["evidence/run-id"].Want)
+	if !strings.Contains(found["evidence/run-id"].Got, "01PLANERUN") {
+		t.Errorf("the trail's run was not the one it names: %q", found["evidence/run-id"].Got)
 	}
 }
 
@@ -111,10 +113,17 @@ func TestAnEnforcerRunIsPreparedAndDrainedThroughTheCollector(t *testing.T) {
 	if len(compose.stopped) != 1 || compose.stopped[0] != "collector" {
 		t.Errorf("the collector was not stopped before its file was read: %v", compose.stopped)
 	}
-	for _, made := range []string{"pki", "collector"} {
+	for _, made := range []string{"pki", "collector", collectorTLSDir, exportCADir} {
 		if info, err := os.Stat(filepath.Join(compose.env["LAB_RUN_HOST_DIR"], made)); err != nil || !info.IsDir() {
 			t.Errorf("the run directory holds no %s/ for the services to write into: %v", made, err)
 		}
+	}
+	tls := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], collectorTLSDir)
+	if _, err := os.Stat(filepath.Join(tls, "key.pem")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the collector's key outlived the run: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tls, "cert.pem")); err != nil {
+		t.Errorf("the collector's certificate is gone with its key: %v", err)
 	}
 }
 

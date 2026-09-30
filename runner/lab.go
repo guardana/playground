@@ -137,6 +137,9 @@ func (l lab) runScenario(
 			if err := compose.Down(down, spec.Profile); err != nil {
 				l.note("taking the profile down: %v", err)
 			}
+			if err := dropCollectorKey(runDir); err != nil {
+				l.note("removing the collector's key: %v", err)
+			}
 		}()
 	}
 

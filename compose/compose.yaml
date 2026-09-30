@@ -271,8 +271,10 @@ services:
   # could post its own log records here could forge evidence, so it is the
   # only service on evidence-net and evidence-net carries nothing else (the
   # enforcer joins it once a service runs that image). It decides nothing and
-  # holds no key, so a compromise of it forges no verdict, only the record of
-  # one.
+  # holds no signing key, so a compromise of it forges no verdict, only the
+  # record of one. It answers over TLS with the certificate the runner made for this run
+  # (runner/collectortls.go), since the enforcer sends plaintext to a loopback
+  # address only.
   collector:
     image: ${OTEL_COLLECTOR_IMAGE}
     <<: *hardened
@@ -284,6 +286,12 @@ services:
       - type: bind
         source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector
         target: /lab-run
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector-tls
+        target: /tls
+        read_only: true
         bind:
           create_host_path: false
 
@@ -320,8 +328,8 @@ services:
   # builds out of its pinned commit. It is told nothing the lab decided about
   # a verdict: the runner hands it a bundle signed for the run and a
   # configuration assembled from the scenario's part (runner/gateway), both
-  # read-only. It trusts the decision point double's CA and no other root: Go
-  # also reads SSL_CERT_DIR, so that points at a directory that does not exist.
+  # read-only. It trusts two roots and no other: the decision point double's CA
+  # in pki/, and in export-ca/ the CA the runner made for the collector.
   enforcer:
     image: ${ENFORCER_IMAGE}:${ENFORCER_COMMIT}
     pull_policy: never
@@ -338,7 +346,7 @@ services:
     profiles: [enforcer]
     environment:
       SSL_CERT_FILE: /pki/ca.pem
-      SSL_CERT_DIR: /pki/no-directory
+      SSL_CERT_DIR: /export-ca
     volumes:
       - type: bind
         source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway
@@ -349,6 +357,12 @@ services:
       - type: bind
         source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki
         target: /pki
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/export-ca
+        target: /export-ca
         read_only: true
         bind:
           create_host_path: false

@@ -4,7 +4,7 @@
 # against the team's contract.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   The principal and the agent a rule compares are the listener's, the same for
-#     every call: docs/guides/run-the-gateway.md:57-60,80-81.
+#     every call: docs/guides/run-the-gateway.md:55-58,85-86.
 #   An ALLOW rule decides RULE_ALLOW, a DENY rule RULE_DENY, a REQUIRE_APPROVAL
 #     rule APPROVAL_REQUIRED: docs/reference/policy-format.md:53-55,
 #     docs/reference/reason-codes.md:30-32; any DENY wins: docs/concepts/how-a-call-is-decided.md:14,33.
@@ -17,13 +17,13 @@
 #     docs/concepts/approvals-and-the-held-call.md:34. A retry before the answer
 #     is told the same approval, and the approved one resumes the held trail with
 #     APPROVAL_DECIDED, ACTION_STARTED and its close, writing no second
-#     ACTION_PROPOSED: docs/concepts/approvals-and-the-held-call.md:175-176,195,
-#     docs/concepts/mcp-gateway.md:189-191.
+#     ACTION_PROPOSED: docs/concepts/approvals-and-the-held-call.md:176-177,196,
+#     docs/concepts/mcp-gateway.md:195-198.
 #   A run call closes with ACTION_COMPLETED, a stopped one with ACTION_BLOCKED
-#     carrying the kernel's decision: docs/concepts/evidence-and-the-spool.md:30,37,67.
+#     carrying the kernel's decision: docs/concepts/evidence-and-the-spool.md:30,37,68.
 #   Each event links the one before it on its request (the chain):
-#     docs/concepts/evidence-and-the-spool.md:53; a decision carries its bundle's
-#     digest: docs/concepts/how-a-call-is-decided.md:148; no argument content is
+#     docs/concepts/evidence-and-the-spool.md:54; a decision carries its bundle's
+#     digest: docs/concepts/how-a-call-is-decided.md:189; no argument content is
 #     captured by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
 # And from the verifier's docs/usage-contracts.md at VERIFIER_VERSION:
 #   Each assertion is the rule contract.<name>.<assertion-id>: line 64.

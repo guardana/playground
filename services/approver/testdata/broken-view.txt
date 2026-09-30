@@ -16,6 +16,7 @@ approval ANSWERED
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b
@@ -31,6 +32,7 @@ approval CLOSED
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b
@@ -48,6 +50,7 @@ approval SPENT
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b
@@ -63,6 +66,7 @@ approval STALE
   principal      user-1
   agent          agent-1
   action         refund
+  upstream       victim-mail
   resource       payment pay-9
   effect class   EFFECT_CLASS_TRANSACT
   rule ids       rule-a, rule-b

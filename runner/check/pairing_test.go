@@ -62,15 +62,15 @@ func TestASecondProposalOnOneRequestFailsItsStep(t *testing.T) {
 	}
 }
 
-// A trail another run opened is no opening of this run: it neither takes the
-// step's place in the order nor counts as an unclaimed trail.
+// A trail another run opened is no opening of the trail's run: it neither
+// takes a step's place in the order nor counts as an unclaimed trail.
 func TestAnotherRunsOpeningIsNotPairedWithAStep(t *testing.T) {
 	events := trail(
-		decided{step: 1, requestID: "r0", verdict: "DENY", runID: "run-yesterday", blocked: true},
 		decided{step: 1, requestID: "r1", verdict: "ALLOW"},
+		decided{step: 2, requestID: "r0", verdict: "DENY", runID: "run-yesterday", blocked: true},
 	)
 	graded := grade(t, scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}}), events)
-	if step := graded["decisions/step-1"]; step.Outcome != assertion.Pass || step.Source != evidenceFile+":5" {
+	if step := graded["decisions/step-1"]; step.Outcome != assertion.Pass || step.Source != evidenceFile+":2" {
 		t.Errorf("step 1 was %s from %s: %s", step.Outcome, step.Source, step.Detail)
 	}
 	if opened := graded["trails/opened"]; opened.Outcome != assertion.Pass {

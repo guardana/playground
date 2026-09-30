@@ -22,13 +22,14 @@ its observed effects. Control and Guardana remain optional. The
 
 ## One green scenario
 
-You need this checkout, Docker with Compose v2 and buildx, Go, git, make, and
-a Control clone containing the pinned commit. The public Playground repository
-is empty, and the Control pin is not publicly available:
+You need this checkout, Docker with Compose v2 and buildx, Go, git and make.
+The public Playground repository is empty. Control is pinned to a public
+release, which `scripts/fetch-enforcer.sh` fetches anonymously:
 
 ```
 cd /path/to/playground
-export ENFORCER_SOURCE="/path/to/control-with-the-pinned-commit"
+scripts/fetch-enforcer.sh /path/to/control.git
+export ENFORCER_SOURCE=/path/to/control.git
 make images
 make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer

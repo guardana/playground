@@ -14,7 +14,7 @@ import (
 )
 
 // plane builds events the way the enforcer at its pin writes them: request ids
-// it minted, no run id, no step number, one project and tenant.
+// and a run id it minted, no step number, one project and tenant.
 type plane struct {
 	events []evidence.Event
 	tools  []string
@@ -29,11 +29,12 @@ func (p *plane) add(request string, kind evidence.Kind, decision *evidence.Decis
 	}
 	id := fmt.Sprintf("%s-%d", request, len(p.events))
 	event := evidence.Event{
-		EventID: id, Kind: kind, RequestID: request, ProjectID: thisProject, TenantID: thisTenant,
+		EventID: id, Kind: kind, RequestID: request, RunID: planeRun, ProjectID: thisProject, TenantID: thisTenant,
 		OccurredAt: time.Date(2026, 9, 24, 12, 0, len(p.events), 0, time.UTC), PrevEventID: prev, Decision: decision,
 	}
 	if kind == evidence.KindActionProposed {
-		event.Proposed = &evidence.ActionEnvelope{RequestID: request, Action: &evidence.Action{Name: p.proposing(), Protocol: "mcp"}}
+		event.Proposed = &evidence.ActionEnvelope{RequestID: request, Action: &evidence.Action{Name: p.proposing(), Protocol: "mcp"},
+			Context: &evidence.RunContext{Tags: computedFlow()}}
 	}
 	p.events = append(p.events, event)
 	return p

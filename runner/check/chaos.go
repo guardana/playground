@@ -184,15 +184,15 @@ func trailRead(calls []timedCall) []string {
 // two closings, or a result without its times. A call that never closed,
 // blocked before it ran, is neither.
 func (c Chaos) timedCalls(victim string, records assertion.Records) ([]timedCall, []int) {
-	paired := pairTrails(c.Scenario, c.Trajectory, records.Evidence, records.RunID)
+	paired := pairTrails(c.Scenario, c.Trajectory, records.Evidence)
 	var calls []timedCall
 	var untimed []int
 	for step, found := range paired.byStep {
 		if step > len(c.Trajectory.Steps) || c.Trajectory.Steps[step-1].Call.Server != victim {
 			continue
 		}
-		closing := append(eventsOn(records.Evidence, records.RunID, found.requestID, evidence.KindActionCompleted),
-			eventsOn(records.Evidence, records.RunID, found.requestID, evidence.KindActionFailed)...)
+		closing := append(eventsOn(records.Evidence, paired.run, found.requestID, evidence.KindActionCompleted),
+			eventsOn(records.Evidence, paired.run, found.requestID, evidence.KindActionFailed)...)
 		if len(closing) == 0 {
 			continue
 		}

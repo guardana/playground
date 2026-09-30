@@ -2,14 +2,14 @@
 #   A REQUIRE_APPROVAL rule decides with APPROVAL_REQUIRED: docs/reference/policy-format.md:55,
 #     docs/reference/reason-codes.md:32; the mail upstream is put in the principal's tenant, since a
 #     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62; POLICY_DECIDED carries the kernel's decision:
-#     docs/concepts/evidence-and-the-spool.md:60.
-#   The approved retry runs on the held trail: docs/concepts/approvals-and-the-held-call.md:176,195.
+#     docs/concepts/evidence-and-the-spool.md:61.
+#   The approved retry runs on the held trail: docs/concepts/approvals-and-the-held-call.md:177,196.
 #   The next identical call gets a trail of its own, proposed, decided and blocked, with DENY
-#     and APPROVAL_ALREADY_USED: docs/concepts/approvals-and-the-held-call.md:196,258-260;
-#     docs/reference/reason-codes.md:59; docs/concepts/mcp-gateway.md:193.
+#     and APPROVAL_ALREADY_USED: docs/concepts/approvals-and-the-held-call.md:198,271-273;
+#     docs/reference/reason-codes.md:59; docs/concepts/mcp-gateway.md:200.
 #   The approver answers each hold it lists once, as its script says, and journals the answer
 #     (services/approver/README.md); a retry before an answer is told the same approval_id and
-#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:175.
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:176.
 schema_version: 1
 id: approval-02-spent-approval-is-not-reused
 title: An approval spent on one send does not let the identical mail be sent again

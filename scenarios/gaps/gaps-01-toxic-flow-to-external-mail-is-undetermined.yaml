@@ -1,6 +1,11 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
-#   The gateway builds no run flow, so a flow constraint is unknown on every
-#     call it decides: docs/reference/mcp-coverage.md:56, docs/concepts/mcp-gateway.md:131.
+#   The gateway keeps what a run took in, and a call's result counts as its
+#     tool's `returns` declaration says, untrusted and of unknown sensitivity
+#     when absent. The lab's classification declares no `returns`, so after the
+#     page and the file the run's reading is unknown, and a DENY flow rule on a
+#     send to an untrusted destination is undetermined:
+#     docs/concepts/how-a-call-is-decided.md:144,150-156,160-168,
+#     docs/reference/mcp-coverage.md:56, docs/concepts/mcp-gateway.md:131.
 #   A DENY rule whose constraint is unknown, with no other constraint false,
 #     leaves the verdict INDETERMINATE with RULE_UNDETERMINED:
 #     docs/reference/reason-codes.md:61, docs/concepts/how-a-call-is-decided.md:55;
@@ -25,7 +30,7 @@ gateway:
 gap:
   wanted:
     3: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] }
-  why: the gateway builds no run flow at its pin, so a flow constraint is unknown on every call
+  why: the lab's classification declares no tool's returns, so the run's reading is unknown at the send
 expect:
   decisions:
     1:

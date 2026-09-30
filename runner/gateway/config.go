@@ -95,7 +95,7 @@ func Assemble(in Inputs) ([]byte, error) {
 	policy["bundle_id"], policy["bundle_file"] = in.BundleID, in.BundleFile
 	policy["key_id"], policy["public_key"] = in.Key.ID, in.Key.Public
 	evidence["dir"] = in.SpoolDir
-	config["export"] = map[string]any{"endpoint": in.Collector, "allow_plaintext": true, "in_flight": 1}
+	config["export"] = map[string]any{"endpoint": in.Collector, "in_flight": 1}
 	config["upstreams"] = upstreams
 	if len(in.Overrides) > 0 {
 		config["overrides"] = in.Overrides

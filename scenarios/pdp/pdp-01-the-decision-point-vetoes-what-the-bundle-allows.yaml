@@ -2,17 +2,17 @@
 #   victim-mail sits in the principal's tenant, since a material call naming a tenant on one side
 #     only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
 #   An answer only vetoes; every grant comes from a bundle rule:
-#     docs/guides/let-a-decision-point-veto.md:15-16, docs/adr/0017-an-external-decision-point-can-veto.md:38-43.
+#     docs/guides/let-a-decision-point-veto.md:15-16, docs/adr/0017-an-external-decision-point-can-veto.md:44-49.
 #   An allowing answer is ALLOW with RULE_ALLOW and PDP_ALLOW: docs/guides/let-a-decision-point-veto.md:67-68.
 #   A denying answer is PDP_DENY, DENY: docs/reference/policy-format.md:120, docs/reference/reason-codes.md:69.
 #   True with an obligation is OBLIGATION_NOT_UNDERSTOOD, DENY:
-#     docs/adr/0017-an-external-decision-point-can-veto.md:116-120,143-145,154, docs/reference/policy-format.md:121.
+#     docs/adr/0017-an-external-decision-point-can-veto.md:122-126,149-151,160, docs/reference/policy-format.md:121.
 #   A call no veto rule covers is never sent: docs/guides/let-a-decision-point-veto.md:50-51,
 #     docs/concepts/mcp-gateway.md:157-160.
 #   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
-#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:67.
+#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:68.
 #   A decision that consulted the decision point names its configured identifier in pdp_instance,
-#     one that consulted none leaves it empty: docs/contracts.md:589-591,
+#     one that consulted none leaves it empty: docs/contracts.md:590-592,
 #     docs/reference/policy-format.md:128-129.
 #   The double journals every question it is asked, by action (services/pdp-double/README.md), so
 #     the four covered calls are asked once each and fs.list never.

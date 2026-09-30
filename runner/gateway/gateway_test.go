@@ -17,7 +17,7 @@ func inputs(partial string) gateway.Inputs {
 		BundleID:   "lab-tool-11",
 		BundleFile: "/run/policy.bundle",
 		SpoolDir:   "/spool",
-		Collector:  "http://collector:4318/v1/logs",
+		Collector:  "https://collector:4318/v1/logs",
 		Upstreams:  []gateway.Upstream{{Name: "victim-crm", Endpoint: "http://victim-crm:8080/mcp"}},
 		Overrides: []gateway.Override{{Upstream: "victim-crm", Tool: "crm.read_customer", Fingerprint: "sha256:ff",
 			Effect: "READ", ResourceType: "customer", ResourceFrom: "/customer_id"}},
@@ -63,7 +63,7 @@ func TestAssembleJoinsTheScenarioWithWhatTheLabOwns(t *testing.T) {
 		"policy.key_id":      {got.Policy["key_id"], "ed25519-0011223344556677"},
 		"policy.max_stale":   {got.Policy["max_stale"], "2m"},
 		"evidence.dir":       {got.Evidence["dir"], "/spool"},
-		"export.endpoint":    {str(got.Export["endpoint"]), "http://collector:4318/v1/logs"},
+		"export.endpoint":    {str(got.Export["endpoint"]), "https://collector:4318/v1/logs"},
 		"upstreams.0.name":   {got.Upstreams[0]["name"], "victim-crm"},
 		"overrides.0.fp":     {got.Overrides[0]["fingerprint"], "sha256:ff"},
 	}
@@ -72,8 +72,8 @@ func TestAssembleJoinsTheScenarioWithWhatTheLabOwns(t *testing.T) {
 			t.Errorf("%s = %q, want %q", name, pair[0], pair[1])
 		}
 	}
-	if got.Export["in_flight"] != "1" || got.Export["allow_plaintext"] != "true" {
-		t.Errorf("export = %v, want in_flight 1 over plaintext on the sealed network", got.Export)
+	if _, plaintext := got.Export["allow_plaintext"]; got.Export["in_flight"] != "1" || plaintext {
+		t.Errorf("export = %v, want in_flight 1 and no plaintext", got.Export)
 	}
 }
 

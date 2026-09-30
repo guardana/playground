@@ -137,7 +137,7 @@ func knownLabel(label string) bool {
 	switch label {
 	case "state", "resolution", "request", "action digest", "bundle digest", "expires",
 		"answered by", "answered at", "readable", "principal", "agent", "action",
-		"resource", "effect class", "rule ids", "requested":
+		"upstream", "resource", "effect class", "rule ids", "requested":
 		return true
 	}
 	return false

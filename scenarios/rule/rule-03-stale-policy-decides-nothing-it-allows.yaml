@@ -2,12 +2,12 @@
 #   POLICY_STALE, INDETERMINATE, past the staleness budget:
 #     docs/reference/reason-codes.md:43; the budget is the smaller of the
 #     bundle's and the operator's, and evaluation goes on, so a stale DENY is
-#     still a DENY: docs/concepts/how-a-call-is-decided.md:30,54,144.
+#     still a DENY: docs/concepts/how-a-call-is-decided.md:30,54,185.
 #   policy.max_stale is the operator's budget: docs/reference/configuration.md:54.
 #   A stale snapshot is a cause in the policy's availability, and a read under
 #     it blocks with fail-open reads off, the default:
 #     docs/concepts/how-a-call-is-decided.md:88,100, docs/reference/configuration.md:55.
-#   The kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:67.
+#   The kernel's decision is on the block: docs/concepts/evidence-and-the-spool.md:68.
 schema_version: 1
 id: rule-03-stale-policy-decides-nothing-it-allows
 title: A bundle past its staleness budget allows nothing, and what it denies stays denied

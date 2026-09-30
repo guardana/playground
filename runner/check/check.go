@@ -26,34 +26,25 @@ func spoken(detail string) string {
 	return detail
 }
 
-// runIDs are the runs an event names: the enforcement plane stamps one on the
-// event and one on the proposed envelope's context, and either of them naming
-// another run makes the event a record of something else.
-func runIDs(event evidence.Event) []string {
-	var named []string
-	if event.RunID != "" {
-		named = append(named, event.RunID)
-	}
-	if event.Proposed != nil && event.Proposed.Context != nil && event.Proposed.Context.RunID != "" {
-		named = append(named, event.Proposed.Context.RunID)
-	}
-	return named
-}
-
-// writtenForRun reports whether a record may be read as this run's.
-//
-// An unstamped record cannot be placed either way, and is read as this run's
-// because it was collected from this run's directory; whether the trail says
-// which run wrote it is asserted once, by Evidence, rather than silently here.
-// A record that names another run is never this run's: the run directory is
-// fresh per run, and a directory is luck rather than an assertion.
-func writtenForRun(named []string, runID string) bool {
-	for _, id := range named {
-		if id != runID {
-			return false
+// planeRun is the run the trail records. The enforcer mints a run's id itself
+// and, with no authenticator, keeps one run per process, so the id says nothing
+// about which lab run wrote the trail: the run directory the runner made does.
+// The first proposal naming a run names it; a record naming any other is from
+// another process, is never read as this run's, and fails evidence/run-id.
+func planeRun(events []evidence.Event) string {
+	for _, event := range events {
+		if event.Kind == evidence.KindActionProposed && event.RequestID != "" && event.RunID != "" {
+			return event.RunID
 		}
 	}
-	return true
+	return ""
+}
+
+// writtenForRun reports whether a record may be read as the trail's run's. A
+// record naming no run belongs to a call the enforcer gave none, such as one
+// it refused before it computed a run; evidence/run-id asserts that it is.
+func writtenForRun(event evidence.Event, run string) bool {
+	return event.RunID == "" || event.RunID == run
 }
 
 // servedInRun keeps the journal entries this run's calls were recorded in, and

@@ -1,15 +1,15 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   An ACTION_STARTED reserves closing_reserve, and an append past max_bytes,
-#     reservations included, is refused: docs/concepts/evidence-and-the-spool.md:96-99,115-116,
-#     docs/reference/configuration.md:73-75.
+#     reservations included, is refused: docs/concepts/evidence-and-the-spool.md:97-100,116-117,
+#     docs/reference/configuration.md:76-78.
 #   A refused ACTION_STARTED blocks the call before anything runs, with
 #     EVIDENCE_UNAVAILABLE, and the block itself is not recorded:
-#     docs/concepts/evidence-and-the-spool.md:79, docs/concepts/enforcement-modes.md:80,
-#     docs/reference/reason-codes.md:64, docs/reference/mcp-coverage.md:105.
+#     docs/concepts/evidence-and-the-spool.md:80, docs/concepts/enforcement-modes.md:81,
+#     docs/reference/reason-codes.md:64, docs/reference/mcp-coverage.md:123.
 #   Under on_unwritable: block a read is blocked like a material call:
-#     docs/concepts/enforcement-modes.md:80, docs/reference/configuration.md:78.
+#     docs/concepts/enforcement-modes.md:81, docs/reference/configuration.md:81.
 #   /healthz counts blocks by reason code, sink failures before an effect and
-#     unrecorded reads under pipeline: docs/guides/run-the-gateway.md:134-142.
+#     unrecorded reads under pipeline: docs/guides/run-the-gateway.md:143-150.
 # EVIDENCE_UNAVAILABLE is in no trail: the block is unrecorded by design and
 # counted only in /healthz, which is graded after the replay: two blocks for
 # two refused starts, each a sink failure before the effect, and no read run

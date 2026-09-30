@@ -28,6 +28,37 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The enforcer is pinned to its public release `v0.2.0-alpha` (commit
+  `471e18a0aec5e6201ea1a23c89ba0d1b926bbc33`, tree
+  `0b3b35ccd5639ba50816c47f7d83c63e3fbebf59`), which anyone can fetch; the
+  previous pin was a commit the public repository does not serve.
+  `versions.env` gains `ENFORCER_RELEASE`, and `scripts/fetch-enforcer.sh`
+  refuses the commit when that release's tag at `ENFORCER_REPOSITORY` names
+  another. The commit and its tree still decide what is built.
+- The enforcer exports its trail to the collector over TLS. At the new pin it
+  sends plaintext only to a loopback address and refused to start with the
+  lab's plaintext export. The runner makes a CA for each run, signs a
+  certificate for `collector` with it and keeps the CA's key in memory; the
+  collector reads its certificate and key from the run's `collector-tls/`,
+  and the enforcer trusts the CA from `export-ca/` beside the decision point
+  double's.
+- `evidence/run-id` asserts how the enforcer names runs at the new pin: every
+  event on a request carries the one run it minted, except the events of a
+  request whose proposal is tagged `flow.v1.state=uncomputed` (a call refused
+  before it had a run, such as one to an unclassified tool), which carry
+  none; no event names another run; and no envelope names a run of its own.
+  The trail's run is the one its first proposal naming a run names; an event
+  naming any other is not read as this run's and fails the check. The
+  enforcer's run id is not the lab's, so the trail is tied to the lab's run
+  by the directory the runner created, as before.
+- The approver reads the `upstream` line `approvals list` prints at the new
+  pin; a script cannot match on it yet.
+- A named gap may be one the lab cannot configure yet as well as one the
+  system lacks (`docs/lab-files.md`). `gaps-01` is now that kind: at the new
+  pin the gateway keeps a run's flow, but it reads what a tool returns only
+  from the operator's `returns` declaration, which the lab's classification
+  cannot make yet, so the send stays `INDETERMINATE` where a `DENY` is
+  wanted.
 - `make docs-frontmatter` runs in `make quality`: every page under `docs/`
   carries frontmatter (`docs/lab-files.md` as a contract, exempt from a word
   budget), `docs/index.md` gave way to the generated `docs/README.md`, and the

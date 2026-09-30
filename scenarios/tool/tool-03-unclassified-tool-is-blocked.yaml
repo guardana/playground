@@ -1,9 +1,9 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   A call nothing classifies is blocked outside OBSERVE, INDETERMINATE with
-#     ACTION_UNCLASSIFIED on the block: docs/concepts/enforcement-modes.md:76,
-#     docs/reference/mcp-coverage.md:103, docs/reference/reason-codes.md:65.
+#     ACTION_UNCLASSIFIED on the block: docs/concepts/enforcement-modes.md:77,
+#     docs/reference/mcp-coverage.md:119, docs/reference/reason-codes.md:65.
 #   The block is the enforcement point's own decision on ACTION_BLOCKED, and
-#     POLICY_DECIDED keeps the kernel's: docs/concepts/enforcement-modes.md:40-43.
+#     POLICY_DECIDED keeps the kernel's: docs/concepts/enforcement-modes.md:39-42.
 #   The kernel's decision on POLICY_DECIDED is INDETERMINATE: the translation
 #     gives an unclassified tool no effect class (docs/concepts/mcp-gateway.md:128,132),
 #     an envelope that declares none is refused (docs/contracts.md:340-343), and a

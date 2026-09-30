@@ -68,7 +68,7 @@ type DecisionRow struct {
 func DecisionRows(
 	spec labspec.Scenario, trajectory labspec.Trajectory, records assertion.Records, evidenceFile string,
 ) []DecisionRow {
-	paired := pairTrails(spec, trajectory, records.Evidence, records.RunID)
+	paired := pairTrails(spec, trajectory, records.Evidence)
 	steps := slices.Sorted(maps.Keys(spec.Expect.Decisions))
 	rows := make([]DecisionRow, 0, len(steps))
 	for _, step := range steps {
@@ -118,14 +118,14 @@ func gradeStep(spec labspec.Scenario, records assertion.Records, file string, pa
 func gradeTrail(
 	row DecisionRow, want labspec.DecisionExpectation, records assertion.Records, file, requestID string, tolerated bool,
 ) DecisionRow {
-	events := records.Evidence
+	events, run := records.Evidence, planeRun(records.Evidence)
 	var got []string
 	fail := func(detail string) DecisionRow {
 		row.Got, row.Outcome, row.Detail = strings.Join(got, "; "), assertion.Fail, detail
 		return row
 	}
 	if want.Verdict != "" {
-		decisions := eventsOn(events, records.RunID, requestID, evidence.KindPolicyDecided)
+		decisions := eventsOn(events, run, requestID, evidence.KindPolicyDecided)
 		if len(decisions) != 1 || events[decisions[0]].Decision == nil {
 			return fail(decisionDefect(requestID, len(decisions)))
 		}
@@ -136,7 +136,7 @@ func gradeTrail(
 		got = append(got, row.Got)
 	}
 	if want.Blocked != nil {
-		detail, recorded := gradeBlock(*want.Blocked, events, records.RunID, requestID)
+		detail, recorded := gradeBlock(*want.Blocked, events, run, requestID)
 		got = append(got, recorded)
 		if detail != "" {
 			return fail(detail)

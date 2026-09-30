@@ -22,13 +22,13 @@ recorded traces from its pinned release. Two scenarios are red by design.
 ## P4 — Public, repeatable release loop (planned)
 
 The public Playground repository is empty. Publish a reviewed lab commit there
-after the maintainer authorizes that action. The current Control commit is
-present in a local checkout but cannot be fetched anonymously from its public
-repository. Pin a published Control release or public commit and its tree,
-rebuild both systems, then regrade every scenario and example. Update
-expectations only from the new version's contract and records. A release is
-ready for this lab's CI when an anonymous fetch works and the catalogue is
-green except for exactly the documented red scenarios.
+after the maintainer authorizes that action. Control is pinned to its public
+release `v0.2.0-alpha`, fetched anonymously by commit id after its tag is
+checked (implemented). Each later release is taken the same way: pin the
+commit, its tree and the release, rebuild both systems, regrade every scenario
+and example from records, and update expectations only from the new version's
+contract. A release is ready for this lab's CI when the anonymous fetch works
+and the catalogue is green except for exactly the documented red scenarios.
 
 `make smoke` is implemented as a smaller local loop over allowed, denied, held,
 trace-graded and probe-graded paths. It uses the same pins and evidence checks;

@@ -16,9 +16,13 @@ import (
 const bundleDigest = "sha256:" +
 	"0000000000000000000000000000000000000000000000000000000000000000"
 
-// thisRun is the run the records name. The victims stamp their journals with
-// it; the enforcer stamps no event with any run.
-const thisRun = "run-1"
+// thisRun is the lab's run the records name, which the victims stamp their
+// journals with. planeRun is the run the enforcer minted for that lab run and
+// stamps on every event of its trails.
+const (
+	thisRun  = "run-1"
+	planeRun = "01PLANERUN"
+)
 
 // The scope every trail is written in: the contract chains events per request
 // within one project and tenant.
@@ -32,9 +36,8 @@ const (
 // one the chain check accepts unless a test breaks it on purpose.
 type decided struct {
 	step int
-	// runID stamps the events with a run, on the event and on the proposed
-	// envelope's context, which the enforcer never does; a test sets it to put
-	// a trail from something else in front of the checks.
+	// runID is the run the events name; empty is planeRun. A test sets it to
+	// put a trail from another process in front of the checks.
 	runID       string
 	requestID   string
 	verdict     string
@@ -53,6 +56,9 @@ func (d decided) events() []evidence.Event {
 		digest = bundleDigest
 	}
 	runID := d.runID
+	if runID == "" {
+		runID = planeRun
+	}
 	tool := d.tool
 	if tool == "" {
 		tool = everyTool
@@ -70,7 +76,7 @@ func (d decided) events() []evidence.Event {
 		Proposed: &evidence.ActionEnvelope{
 			RequestID: d.requestID,
 			Action:    &evidence.Action{Name: tool, Protocol: "mcp"},
-			Context:   &evidence.RunContext{RunID: runID},
+			Context:   &evidence.RunContext{Tags: computedFlow()},
 			Arguments: &evidence.Arguments{RedactedPreview: d.preview},
 		},
 	}
@@ -123,6 +129,12 @@ func (d decided) events() []evidence.Event {
 		OccurredAt:  at,
 		PrevEventID: started.EventID,
 	}}
+}
+
+// computedFlow is the flow state the enforcer stamps on a proposal it decided
+// within a run.
+func computedFlow() []string {
+	return []string{"flow.v1.untrusted=false", "flow.v1.max_read=PUBLIC"}
 }
 
 func obligations(types []string) []evidence.Obligation {

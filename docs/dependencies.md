@@ -75,7 +75,9 @@ index; the digest is what Docker resolves.
 
 `OTEL_COLLECTOR_IMAGE`. The one place the enforcer's OTLP/HTTP log export
 lands, so `internal/evidence.DecodeOTLP` reads back what the plane actually
-sent rather than a file the lab wrote itself. The
+sent rather than a file the lab wrote itself. It receives over TLS with a
+certificate the runner signs for each run with a CA of its own, since the
+enforcer sends plaintext only to a loopback address. The
 core distribution carries the file exporter (`docker run --rm
 otel/opentelemetry-collector:<tag> components` lists it), so writing an
 OTLP/HTTP receiver by hand to avoid one dependency would make every finding a
@@ -94,9 +96,10 @@ by Shopify.
 
 ### The enforcement plane
 
-Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, taken
-from the clone `ENFORCER_SOURCE` names; it publishes no image to pull. The
-build refuses a clone with replacement refs, a commit whose tree is not
+Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, the
+commit of the release `ENFORCER_RELEASE`, taken from the clone
+`ENFORCER_SOURCE` names, rather than pulled as the release's image, so the
+build can check the commit's tree. The build refuses a clone with replacement refs, a commit whose tree is not
 `ENFORCER_TREE`, and an archive that does not hash back to that tree, which
 an export attribute or a filter would cause.
 It uses `GO_BUILD_IMAGE` and `SERVICE_BASE_IMAGE`, stamps the commit into the

@@ -36,8 +36,8 @@ The first matching rule answers. `match` takes `action`, `resource`,
 `effect_class`, `principal` and `agent`, compared with the listing's printed
 values; an absent key matches anything, an unknown key or an `effect_class` the
 listing never prints is refused. An unreadable record matches only
-`{unreadable: true}`, never a catch-all. The upstream is not listed, so no
-rule matches it. `delay` counts from the first listing that showed
+`{unreadable: true}`, never a catch-all. The listing names the upstream, but
+no rule matches on it. `delay` counts from the first listing that showed
 the approval.
 
 ## Journal

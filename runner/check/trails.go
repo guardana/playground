@@ -29,14 +29,16 @@ type opening struct {
 // trail and an extra one for another tool leave the counts equal. Two calls to
 // the same tool cannot be told apart this way (docs/lab-files.md).
 type pairing struct {
+	// run is the enforcer's run the pairing reads (planeRun).
+	run      string
 	byStep   map[int]opening
 	openers  []int
 	openings []opening
 	tools    []string
 }
 
-func pairTrails(spec labspec.Scenario, trajectory labspec.Trajectory, events []evidence.Event, runID string) pairing {
-	p := pairing{byStep: map[int]opening{}}
+func pairTrails(spec labspec.Scenario, trajectory labspec.Trajectory, events []evidence.Event) pairing {
+	p := pairing{run: planeRun(events), byStep: map[int]opening{}}
 	for _, step := range trajectory.Steps {
 		p.tools = append(p.tools, step.Call.Tool)
 	}
@@ -47,7 +49,7 @@ func pairTrails(spec labspec.Scenario, trajectory labspec.Trajectory, events []e
 	}
 	first := map[string]int{}
 	for i, event := range events {
-		if event.Kind != evidence.KindActionProposed || !writtenForRun(runIDs(event), runID) {
+		if event.Kind != evidence.KindActionProposed || !writtenForRun(event, p.run) {
 			continue
 		}
 		if at, seen := first[event.RequestID]; seen {
@@ -128,7 +130,7 @@ func (Trails) ID() string { return "trails" }
 
 // Run reports one result: the openings against the steps that open one.
 func (t Trails) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
-	paired := pairTrails(t.Scenario, t.Trajectory, records.Evidence, records.RunID)
+	paired := pairTrails(t.Scenario, t.Trajectory, records.Evidence)
 	result := assertion.Result{
 		Check:   "trails/opened",
 		Want:    fmt.Sprintf("%d trails, one per step that opens one, each proposing its step's tool", len(paired.openers)),
@@ -182,10 +184,10 @@ func kindsOf(events []evidence.Event, requestID string) ([]string, error) {
 }
 
 // eventsOn finds the events of one kind on one request, by index.
-func eventsOn(events []evidence.Event, runID, requestID string, kind evidence.Kind) []int {
+func eventsOn(events []evidence.Event, run, requestID string, kind evidence.Kind) []int {
 	var found []int
 	for i, event := range events {
-		if event.Kind != kind || event.RequestID != requestID || !writtenForRun(runIDs(event), runID) {
+		if event.Kind != kind || event.RequestID != requestID || !writtenForRun(event, run) {
 			continue
 		}
 		found = append(found, i)
