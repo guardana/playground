@@ -3,42 +3,42 @@
 A lab for finding out whether agent security tooling does what it says.
 
 Two systems are under test. [Guardana](https://github.com/guardana/guardana)
-grades a run after it happened. The enforcement plane decides one tool call as
-it is made. This repository builds a small, hostile world around both of them —
-tool servers that lie about what they do, web pages carrying injected
-instructions, a decision point that stops answering mid-run — replays scripted
-agent trajectories through it, and checks the records they left behind.
+grades recorded runs; Control decides tool calls inline. The lab replays
+scripted agent trajectories against deceptive tool servers and injected
+content, then checks both systems' records and the victims' effects.
 
-It serves two readers: the maintainers, who run it against every release of
-both systems, and a team deploying either one, who runs its own policy, gateway
-configuration or verifier contract here before production.
-[docs/reference/use-cases.md](docs/reference/use-cases.md) lists the agent
-deployments it simulates and the [failure modes](docs/reference/failure-modes.md)
-each one meets.
+Maintainers test releases; adopters test their own policy, gateway
+configuration or verifier contract. See the [use cases](docs/reference/use-cases.md)
+and [failure modes](docs/reference/failure-modes.md).
 
 **Status: experimental.** The catalogue of 34 scenarios runs against the
 enforcer and the verifier at the versions `versions.env` pins; two of them are
 red on purpose, each on a recorded finding. `docs/status.md` says what exists,
 component by component.
 
+Planned: Range will run an external agent against the same victims and grade
+its observed effects. Control and Guardana remain optional. The
+[roadmap](ROADMAP.md) also covers model artifacts and endpoints.
+
 ## One green scenario
 
-You need Docker with Compose v2 and buildx, the Go version `go.mod` names, git,
-make, and a clone of the enforcer that holds the commit `versions.env` pins
-(the quickstart says where to get one):
+You need this checkout, Docker with Compose v2 and buildx, Go, git, make, and
+a Control clone containing the pinned commit. The public Playground repository
+is empty, and the Control pin is not publicly available:
 
 ```
-git clone https://github.com/guardana/playground
-cd playground
-export ENFORCER_SOURCE="$HOME/control"
+cd /path/to/playground
+export ENFORCER_SOURCE="/path/to/control-with-the-pinned-commit"
 make images
 make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 ```
 
-The last line printed is `pass`, the scenario and the path of its `report.md`.
-[docs/runbooks/quickstart.md](docs/runbooks/quickstart.md) walks through each
-step, what a red run means, and how to clean up.
+The last line gives the verdict and report path. The
+[quickstart](docs/runbooks/quickstart.md) covers setup and failures.
+
+`make smoke` runs five green paths across both systems and fails on any red or
+unrunnable path. `make scenarios` runs the whole catalogue.
 
 ## Your own policy, configuration or contract
 
@@ -52,11 +52,9 @@ say what each file is and what the lab keeps for itself:
 
 ## How a run is graded
 
-A scenario names a trajectory, what decides it, and what it expects. The
-runner boots the profile, replays the trajectory, then reads the answer from
-records that cannot be talked into lying: the trail the enforcer exported, the
-victim services' own journals, the enforcer's `/healthz`, and the verifier's
-report. What the agent said about its work is not evidence.
+A scenario names its trajectory and expected verdict. The runner grades from
+the enforcer's exported trail, victim journals, `/healthz` and the verifier's
+report. The agent's account of its work is not evidence.
 
 A verdict of `INDETERMINATE` where `ALLOW` or `DENY` was expected fails the run.
 A missing record fails the run. Unknown is never a pass. A green scenario is

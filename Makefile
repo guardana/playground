@@ -7,7 +7,7 @@ SOURCES = scripts/repo-files.sh | grep '\.go$$'
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
 	check-sizes check-attribution check-hygiene check-actions-pinned \
-	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios ci-scenarios \
+	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios smoke ci-scenarios \
 	quality-quick quality
 
 # The compose profiles a target brings up, space-separated, and where a run
@@ -128,6 +128,11 @@ scenario:
 
 scenarios:
 	$(GO) run ./runner -all -reports $(REPORTS)
+
+# A smaller representative loop over both pinned systems. It still grades each
+# path from the same records as a full catalogue run.
+smoke:
+	REPORTS=$(REPORTS) scripts/smoke.sh
 
 # What CI runs after the gate: images, a throwaway lab key, the catalogue judged
 # against scenarios/red-by-design.txt, and every example from a copy outside

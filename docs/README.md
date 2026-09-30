@@ -17,7 +17,7 @@ with `make docs-gen`; an edit made here does not survive the next run.
 - [Bring your own verifier contract](runbooks/bring-your-own-contract.md): Have the pinned verifier grade the agent's own trace of a run against a security contract of yours, and see the contract fail when it should.
 - [Bring your own gateway configuration](runbooks/bring-your-own-gateway-configuration.md): Which settings of the enforcer's gateway a scenario sets, which the lab owns and refuses, and how a run assembles the rest.
 - [Bring your own policy](runbooks/bring-your-own-policy.md): Run a policy of your own through the pinned enforcer against the lab's victims, and see what it allows, denies and holds.
-- [Quickstart](runbooks/quickstart.md): From a fresh clone to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
+- [Quickstart](runbooks/quickstart.md): From a checkout to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 
 ## Reference
 

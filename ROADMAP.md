@@ -1,73 +1,91 @@
 # Roadmap
 
-Ordered by dependency, not by date. `docs/status.md` says what exists today;
-[docs/reference/failure-modes.md](docs/reference/failure-modes.md) and
-[docs/reference/use-cases.md](docs/reference/use-cases.md) say which failure
-modes and deployments each phase adds.
+This repository is one playground for testing AI security controls, agents and
+models. Guardana Control is the inline gate; Guardana is the independent
+verifier. The planned Range path will run an agent as the subject under test.
+Each path uses synthetic victims, scripted scenarios and records of actual
+effects. None needs either of the other two to return a verdict.
 
-## P0 — Rules and gate (implemented)
+Work is ordered by dependency. [Status](docs/status.md) describes what runs
+today; the [failure modes](docs/reference/failure-modes.md) and
+[use cases](docs/reference/use-cases.md) name the claims a new scenario must
+prove.
 
-Repository rules, hygiene guards, the quality gate, pinned versions of the
-systems under test.
+## P0–P3 — Lab and first catalogue (implemented)
 
-## P1 — Skeleton, victims, scripted agent (implemented)
+Pinned systems, six deliberately deceptive victim servers, a scripted agent,
+policy and approval doubles, an isolated Compose topology, the runner, 34
+scenarios, an adopter workspace, runbooks and the quality gate. The enforcer
+decides calls from its pinned commit; the verifier probes victims and grades
+recorded traces from its pinned release. Two scenarios are red by design.
 
-Six tool servers with synthetic data and deliberately wrong annotations, a
-scripted agent that replays a trajectory as real tool calls, a runner that
-grades from records. The stub gateway it started with is retired.
+## P4 — Public, repeatable release loop (planned)
 
-## P2 — The real enforcer, the verifier and the first catalogue (implemented)
+The public Playground repository is empty. Publish a reviewed lab commit there
+after the maintainer authorizes that action. The current Control commit is
+present in a local checkout but cannot be fetched anonymously from its public
+repository. Pin a published Control release or public commit and its tree,
+rebuild both systems, then regrade every scenario and example. Update
+expectations only from the new version's contract and records. A release is
+ready for this lab's CI when an anonymous fetch works and the catalogue is
+green except for exactly the documented red scenarios.
 
-Scenarios decided by the enforcer built from its pinned commit and graded from
-its exported trail: rules, tenancy, approvals, the external decision point,
-obligations, modes, a full evidence spool, chaos on the victims' paths. The
-verifier at its pinned release probes the victims and grades the agent's own
-trace against a security contract.
+`make smoke` is implemented as a smaller local loop over allowed, denied, held,
+trace-graded and probe-graded paths. It uses the same pins and evidence checks;
+it does not replace the full catalogue. A development build from a local,
+possibly dirty Control tree is planned as a separate mode whose report names
+that tree and cannot be mistaken for a release-pin result. Translate Control's
+own scenario format only after a round trip preserves the calls and expected
+evidence; do not maintain two conflicting truths for one case.
 
-## P3 — Open to strangers (implemented)
+## P5 — Agent trials in the same playground (planned)
 
-A workspace outside the clone for a team's own policy, gateway configuration
-and contract; a worked example; the runbooks; the lab on a Linux host as an
-ordinary user; a CI job that builds both systems from their pins and judges the
-catalogue against the scenarios red by design; the failure-mode and use-case
-catalogues every scenario maps to. The CI job waits on the enforcer's commit
-being fetchable from its public repository.
+Run an external agent image by digest against the lab's synthetic victims and
+tasks. The first Range slice is one local Docker profile, one normal CRM task
+and one planted-canary exfiltration attempt. Record the task, agent image,
+configuration, observed calls, victim effects and coverage of the tested
+paths. Prove the profile's blocked direct egress and host access with negative
+probes. If a path or a required record cannot be observed, the trial is
+`INDETERMINATE` and fails the gate.
 
-## P4 — The use-case library (planned)
+Start with the existing scenario runner and result semantics. Add an agent
+driver only where the scripted trajectory cannot express the trial. Guardana
+may grade its trace and Control may gate its tool calls, independently and at
+their own pins. The agent trial must still judge its own task and victim
+effects when neither is installed. A separate Range repository or a generic
+sandbox provider is premature until this local path works for an agent
+outside the lab.
 
-Victims and scenarios for the deployments the use-case catalogue marks
-`planned`, each victim with its own deliberate lie, ordered by how often the
-deployment is met and what a gate has to decide there:
+## P6 — Use-case and attack library (planned)
 
-- payments that charge before they time out, amount caps, retries that must not
-  charge twice (`DEST-03`, `FLOW-04`);
-- a code host and a package registry for coding agents: secrets in arguments,
-  untrusted packages, poisoned repository content (`SEC-01`, `SUP-03`,
-  `INJ-03`);
-- a retrieval store with tenant partitions and a poisoned document (`TEN-03`,
-  `INJ-02`, `INJ-04`);
-- an infrastructure victim with a production and a test environment
-  (`DEST-02`);
-- a calendar and an authenticated MCP server (`MCP-02`, `MCP-03`);
-- loops, fan-out and a denial routed around (`RUN-01`, `RUN-02`, `RUN-05`).
+Add victims where they create a new observable failure, beginning with a code
+host and package registry for coding agents, a tenant-partitioned retrieval
+store, and a payment service that commits before a lost response. Follow with
+infrastructure, calendar and authenticated MCP cases. Cover poisoned content,
+tool descriptions and schemas, secret-bearing arguments, repeated calls and
+denial routed around. Every case gets a deterministic trajectory, an expected
+verdict, victim-side evidence and a mutation that makes its check fail.
 
-## P5 — The model supply chain (planned)
+## P7 — Model artifacts and endpoints (planned)
 
-Inert model files, configurations, notebooks, training scripts and datasets,
-each planted with one known defect, served by a registry victim an agent
-fetches from; the verifier's scans graded against them (`SUP-01`..`05`).
+Serve inert model files, configurations, training code and datasets with known
+defects for the verifier's supply-chain checks (`SUP-01`–`SUP-05`). Add a
+model endpoint double and recorded model responses for prompt leakage and
+jailbreak cases (`PRM-01`, `PRM-02`). A live model is an optional capture layer
+with a stated budget and version; replay, not a live response, decides CI.
 
-## P6 — Other gates, graders and monitors (planned)
+## P8 — More gates, graders and monitors (planned)
 
-A driver per kind of tooling, so another MCP gateway or policy engine, another
-trace grader or scanner, or a monitor runs against the same victims,
-trajectories and payloads: how it is built and pinned, how a scenario
-configures it, and how its records are read into the decisions, findings and
-detections the checks grade. The enforcer's detectors join here once they
-ship.
+Use a driver for each other control under test: pinned build, scenario
+configuration, record reader and checks against the same victim effects.
+Compare Guardana reports between pins once both have stable result records.
+Add a monitor when it can be checked on a stream with known missed and false
+alerts. Do not infer a pass from the absence of a finding.
 
-## P7 — Live models and benchmarks (planned)
+## P9 — Long runs and operations (planned)
 
-A live model as an overlay, recorded once and replayed, never the thing that
-decides a build (`PRM-01`, `PRM-02`, richer `INJ-01`); decision latency against
-policy size, published with the machine that produced it.
+Reuse the local profiles on a test server for multiple tasks and agents, fault
+injection, load and soak runs. Keep external model access and its cost bounded;
+the victims remain synthetic. Publish latency or coverage numbers only with
+the machine and workload that produced them. Kubernetes or another isolation
+backend follows a proven local agent trial and its escape tests.

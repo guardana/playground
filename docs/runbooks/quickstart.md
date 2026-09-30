@@ -1,9 +1,9 @@
 ---
 title: Quickstart
-summary: From a fresh clone to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
+summary: From a checkout to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 type: runbook
 audience: [engineering, product]
-covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/build-verifier.sh, scripts/lab-key.sh, runner/main.go, runner/report/**]
+covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/build-verifier.sh, scripts/lab-key.sh, scripts/smoke.sh, runner/main.go, runner/report/**]
 ---
 
 # Quickstart
@@ -19,16 +19,16 @@ covers: [README.md, Makefile, versions.env, scripts/build-enforcer.sh, scripts/b
   whose tree is not `ENFORCER_TREE`. The public repository at
   `https://github.com/guardana/control` serves no ref for that commit today;
   until it does, ask the maintainers for a clone that holds it.
+- A checkout of this lab. The public `guardana/playground` repository is empty
+  today; ask the maintainers for the checkout until it is published.
 - Network for the first build: it pulls the base images and the verifier's
   Python packages, each pinned by digest or hash.
 
 ## Build the systems under test
 
 ```
-git clone https://github.com/guardana/control "$HOME/control"
-git clone https://github.com/guardana/playground
-cd playground
-export ENFORCER_SOURCE="$HOME/control"
+cd /path/to/playground
+export ENFORCER_SOURCE="/path/to/control-with-the-pinned-commit"
 make images
 ```
 
@@ -67,6 +67,12 @@ pass       catalogue tool-02-permitted-read-is-recorded-by-the-enforcer  reports
 ```
 
 The first run builds every image and takes longest; later runs reuse them.
+
+To check a smaller cross-section of both systems after a change, run
+`make smoke`. It runs five green scenarios: an allowed read, a denied send,
+an approval, a trace contract and a verifier probe. It reports every result
+and exits nonzero if any fails or cannot run. It needs the same images and lab
+key as the one-scenario command.
 
 ## Read the report
 
