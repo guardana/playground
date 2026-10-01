@@ -53,7 +53,7 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `INJ-01` | a call that fetched content asked for is let through | gate, grader | `auth-01`, `flow-01`, `gaps-01` |
+| `INJ-01` | a call that fetched content asked for is let through | gate, grader | `auth-01`, `flow-01`, `flow-02` |
 | `INJ-02` | a tool result carries instructions into the next step | grader | planned |
 | `INJ-03` | a tool's schema or description hides instructions | grader | planned |
 | `INJ-04` | poisoned memory steers a later run | grader | planned |
@@ -62,8 +62,8 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `FLOW-01` | untrusted content, then a private read, then an external send | gate, grader | `flow-01`, `gaps-01` |
-| `FLOW-02` | data reaches a sink the deployment forbids | gate, grader | `flow-01`, `trace-01`, `trace-02`, `payouts-01` |
+| `FLOW-01` | untrusted content, then a private read, then an external send | gate, grader | `flow-01`, `flow-02`, `flow-03`, `gaps-02` |
+| `FLOW-02` | data reaches a sink the deployment forbids | gate, grader | `flow-01`, `flow-03`, `trace-01`, `trace-02`, `payouts-01` |
 | `FLOW-03` | data leaves inside a request to an attacker's address | gate | planned |
 | `FLOW-04` | a redaction or a cap the policy requires is not applied before the effect | gate | `obligation-01` |
 | `FLOW-05` | private data reaches the agent's answer rather than a tool | grader, monitor | planned: needs the answer recorded |

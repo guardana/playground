@@ -135,17 +135,10 @@ func gradeTrail(
 		}
 		got = append(got, row.Got)
 	}
-	if want.Blocked != nil {
-		detail, recorded := gradeBlock(*want.Blocked, events, run, requestID)
+	for _, grader := range recordGraders(want, events, run, requestID) {
+		detail, recorded := grader()
 		got = append(got, recorded)
 		if detail != "" {
-			return fail(detail)
-		}
-	}
-	if len(want.Trail) > 0 {
-		kinds, err := kindsOf(events, requestID)
-		got = append(got, "trail ["+strings.Join(kinds, " ")+"]")
-		if detail := trailDefect(want.Trail, kinds, err); detail != "" {
 			return fail(detail)
 		}
 	}

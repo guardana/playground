@@ -7,6 +7,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The lab's classification declares what each tool returns (`returns.trust`,
+  `returns.sensitivity`, which the enforcer reads into a run's flow state) and
+  where it sends (`trust_zone`), per tool: every tool but `shell.exec`, whose
+  `cat` can read anything in its container. `flow-02` grades the enforcer's own
+  example: a mail after an untrusted page is undetermined, and after a private
+  read the same address is denied as a toxic flow. `flow-03` is `flow-01`'s
+  positive control: the private read written to a sink classified trusted runs
+  under `deny_external_sink` and a toxic-flow rule. `gaps-02` names what one
+  undeclared result does to the run's reading.
+- A step can state `result: { status: ... }`, graded on its trail's closing
+  record, and `proposed_tags_include`, graded on the run-context tags of its
+  proposal, where the enforcer records the flow state it decided by. Both are
+  additive; the format stays `schema_version: 1`. `flow-01` grades its
+  refused send's `BLOCKED` result.
 - The runner refuses a trajectory whose principal, tenant, agent or
   environment is not the one its gateway part's listener names.
 
@@ -247,6 +261,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and removes a download it refused; it checks each tool's version exactly, and
   the Makefile finds what it put in `./bin`; `buf` and `syft`, which nothing
   ran, are no longer installed.
+- `gaps-01` is gone: with `returns` declared, the send it named is denied, and
+  `flow-02` grades it.
 
 - The enforcer is pinned to its public release `v0.3.0-alpha` (commit
   `14153928d7cb0df18533856c2c6115b6693e92dc`, tree
@@ -389,6 +405,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   each name after `--`.
 - victim-shell's `cat` reads regular files only, at most 1 MiB in all,
   where `cat /dev/zero` filled the container's memory and a pipe could hold it.
+- victim-web refuses a redirect to another host than attacker-web, as it
+  refuses a URL naming one, so a page it returns is attacker-web's, and stops
+  after ten redirects.
 
 - The enforcer's agent listener binds the enforcer's own address on
   `agent-net`, where it bound every interface, so a container on

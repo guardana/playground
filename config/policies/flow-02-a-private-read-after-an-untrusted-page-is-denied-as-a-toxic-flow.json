@@ -1,0 +1,17 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-flow-02", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "reads-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["READ"]}}},
+    {"id": "mail-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["COMMUNICATE"]}}},
+    {
+      "id": "private-data-stays-in",
+      "effect": "DENY",
+      "reason": "TOXIC_FLOW_SENSITIVE_TO_EXTERNAL",
+      "when": {
+        "action": {"effect": ["COMMUNICATE"]},
+        "flow": {"toxicAtLeast": "CONFIDENTIAL"}
+      }
+    }
+  ]
+}

@@ -1,16 +1,17 @@
 {
   "apiVersion": "agent-policy/v1alpha1",
-  "bundle": {"id": "lab-gaps-01", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "bundle": {"id": "lab-flow-03", "version": "1", "serial": 1, "maxStaleSeconds": 600},
   "rules": [
     {"id": "reads-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["READ"]}}},
-    {"id": "mail-allowed", "effect": "ALLOW", "when": {"action": {"effect": ["COMMUNICATE"]}}},
+    {"id": "writes-only-to-trusted-sinks", "effect": "ALLOW_WITH_OBLIGATIONS",
+      "when": {"action": {"effect": ["WRITE"]}},
+      "obligations": [{"type": "deny_external_sink"}]},
     {
       "id": "private-data-stays-in",
       "effect": "DENY",
       "reason": "TOXIC_FLOW_SENSITIVE_TO_EXTERNAL",
       "when": {
-        "action": {"effect": ["COMMUNICATE"]},
-        "destination": {"trustZone": ["UNTRUSTED_EXTERNAL"]},
+        "action": {"effect": ["WRITE", "COMMUNICATE"]},
         "flow": {"toxicAtLeast": "CONFIDENTIAL"}
       }
     }

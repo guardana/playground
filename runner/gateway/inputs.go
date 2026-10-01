@@ -58,12 +58,21 @@ func BundleID(document []byte) (string, error) {
 // Class is the lab's classification of one tool: what the tool does, decided
 // by reading the victim's code, never its annotations.
 type Class struct {
-	Upstream     string `json:"upstream"`
-	Tool         string `json:"tool"`
-	Effect       string `json:"effect"`
-	ResourceType string `json:"resource_type"`
-	ResourceFrom string `json:"resource_from,omitempty"`
-	TrustZone    string `json:"trust_zone,omitempty"`
+	Upstream     string   `json:"upstream"`
+	Tool         string   `json:"tool"`
+	Effect       string   `json:"effect"`
+	ResourceType string   `json:"resource_type"`
+	ResourceFrom string   `json:"resource_from,omitempty"`
+	TrustZone    string   `json:"trust_zone,omitempty"`
+	Returns      *Returns `json:"returns,omitempty"`
+}
+
+// Returns is what a tool's results contain, as the operator declares it. The
+// enforcer reads it into a run's flow state; a tool without it returns
+// untrusted results of unknown sensitivity.
+type Returns struct {
+	Trust       string `json:"trust,omitempty"`
+	Sensitivity string `json:"sensitivity,omitempty"`
 }
 
 // Fingerprint is what the enforcer's doctor printed for one tool definition.
@@ -93,9 +102,13 @@ func Overrides(classes []Class, prints []Fingerprint, unclassified []string) ([]
 		if len(found) != 1 {
 			return nil, fmt.Errorf("%w: %s has %d fingerprints, want one", ErrInvalid, name, len(found))
 		}
+		if class.Returns != nil && *class.Returns == (Returns{}) {
+			return nil, fmt.Errorf("%w: %s declares returns and states neither trust nor sensitivity", ErrInvalid, name)
+		}
 		overrides = append(overrides, Override{
 			Upstream: class.Upstream, Tool: class.Tool, Fingerprint: found[0], Effect: class.Effect,
 			ResourceType: class.ResourceType, ResourceFrom: class.ResourceFrom, TrustZone: class.TrustZone,
+			Returns: class.Returns,
 		})
 	}
 	for _, name := range unclassified {

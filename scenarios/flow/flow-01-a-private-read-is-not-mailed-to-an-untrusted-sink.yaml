@@ -1,9 +1,9 @@
 # The policy has no flow rule, so what the run read before the send decides
-# nothing here (gaps-01 is that case); what decides is the sink's trust zone,
+# nothing here (flow-02 is that case); what decides is the sink's trust zone,
 # which the lab classifies UNTRUSTED_EXTERNAL for mail.send
 # (config/gateway/classification.yaml). The send is allowed only with
 # deny_external_sink, which refuses it at that zone whatever was read before.
-# No lab tool is classified trusted, so a trusted sink passing is not shown.
+# flow-03 is the same run with a sink the lab classifies trusted, which runs.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   The override's trust zone is destination.trust_zone, which deny_external_sink
 #     reads: docs/concepts/mcp-gateway.md:140.
@@ -15,8 +15,10 @@
 #     record says so: docs/reference/obligations.md:47, docs/extending/adapters.md:95-108.
 #   Under ENFORCE the call runs only with its obligations applied:
 #     docs/concepts/enforcement-modes.md:58. A call the adapter does not send is
-#     started, then closed ACTION_FAILED: docs/concepts/mcp-gateway.md:221,
-#     docs/concepts/evidence-and-the-spool.md:40,69.
+#     started, then closed ACTION_FAILED with a BLOCKED result:
+#     docs/concepts/mcp-gateway.md:221, docs/concepts/evidence-and-the-spool.md:40,69,
+#     docs/concepts/privacy.md:71. The code that result carries is not graded:
+#     it is the one an obligation the plane cannot apply carries too.
 #   The reads are allowed by the bundle: docs/reference/reason-codes.md:30.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
 # (docs/concepts/how-a-call-is-decided.md:54), so victim-mail is put in the
@@ -47,6 +49,7 @@ expect:
       reason_codes_include: [OBLIGATIONS_ATTACHED]
       obligations_include: [deny_external_sink]
       trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+      result: { status: BLOCKED }
   effects:
     victim-web: { calls_served: { web.fetch: 1 } }
     victim-fs: { calls_served: { fs.read: 1 } }

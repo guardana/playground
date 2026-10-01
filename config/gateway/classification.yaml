@@ -3,17 +3,24 @@
 # by itself: a tool only this file names is pinned to the definition the
 # enforcer's own `doctor` fingerprinted (fingerprints.yaml), and a scenario
 # that wants a tool unclassified says so by name.
-- { upstream: victim-crm, tool: crm.read_customer, effect: READ, resource_type: customer, resource_from: /customer_id }
-- { upstream: victim-crm, tool: crm.update_note, effect: WRITE, resource_type: customer, resource_from: /customer_id }
-- { upstream: victim-crm, tool: crm.update_bank_account, effect: WRITE, resource_type: customer, resource_from: /customer_id }
-- { upstream: victim-crm, tool: crm.export_table, effect: READ, resource_type: table, resource_from: /table }
-- { upstream: victim-db, tool: db.query, effect: READ, resource_type: database }
-- { upstream: victim-db, tool: db.execute, effect: WRITE, resource_type: database }
-- { upstream: victim-db, tool: db.drop_table, effect: DELETE, resource_type: table, resource_from: /table }
-- { upstream: victim-fs, tool: fs.read, effect: READ, resource_type: file, resource_from: /path }
-- { upstream: victim-fs, tool: fs.write, effect: WRITE, resource_type: file, resource_from: /path }
-- { upstream: victim-fs, tool: fs.list, effect: READ, resource_type: directory, resource_from: /path }
+#
+# trust_zone is where a call sends data; returns is what its result holds, which
+# the enforcer reads into the run's flow state. Both are per tool, never per
+# path: fs.read is CONFIDENTIAL whatever file it reads. A TRUSTED_INTERNAL
+# result holds because every victim starts from its fixture with the run and
+# nothing outside the run writes to it. shell.exec declares neither: its cat
+# reads any path in its container, the run's journals included.
+- { upstream: victim-crm, tool: crm.read_customer, effect: READ, resource_type: customer, resource_from: /customer_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-crm, tool: crm.update_note, effect: WRITE, resource_type: customer, resource_from: /customer_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-crm, tool: crm.update_bank_account, effect: WRITE, resource_type: customer, resource_from: /customer_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-crm, tool: crm.export_table, effect: READ, resource_type: table, resource_from: /table, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-db, tool: db.query, effect: READ, resource_type: database, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-db, tool: db.execute, effect: WRITE, resource_type: database, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-db, tool: db.drop_table, effect: DELETE, resource_type: table, resource_from: /table, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-fs, tool: fs.read, effect: READ, resource_type: file, resource_from: /path, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-fs, tool: fs.write, effect: WRITE, resource_type: file, resource_from: /path, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-fs, tool: fs.list, effect: READ, resource_type: directory, resource_from: /path, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
 - { upstream: victim-shell, tool: shell.exec, effect: EXECUTE, resource_type: command }
-- { upstream: victim-mail, tool: mail.send, effect: COMMUNICATE, resource_type: recipient, resource_from: /to, trust_zone: UNTRUSTED_EXTERNAL }
-- { upstream: victim-mail, tool: mail.send_bulk, effect: COMMUNICATE, resource_type: recipient, trust_zone: UNTRUSTED_EXTERNAL }
-- { upstream: victim-web, tool: web.fetch, effect: READ, resource_type: url, resource_from: /url, trust_zone: UNTRUSTED_EXTERNAL }
+- { upstream: victim-mail, tool: mail.send, effect: COMMUNICATE, resource_type: recipient, resource_from: /to, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-mail, tool: mail.send_bulk, effect: COMMUNICATE, resource_type: recipient, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-web, tool: web.fetch, effect: READ, resource_type: url, resource_from: /url, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: UNTRUSTED_EXTERNAL, sensitivity: PUBLIC } }

@@ -147,6 +147,12 @@ func describeExpectation(want labspec.DecisionExpectation) string {
 	if len(want.Trail) > 0 {
 		parts = append(parts, "trail ["+strings.Join(want.Trail, " ")+"]")
 	}
+	if want.Result != nil {
+		parts = append(parts, "result "+want.Result.Status)
+	}
+	if len(want.ProposedTagsInclude) > 0 {
+		parts = append(parts, "proposed tags ["+strings.Join(want.ProposedTagsInclude, " ")+"]")
+	}
 	return strings.Join(parts, "; ")
 }
 

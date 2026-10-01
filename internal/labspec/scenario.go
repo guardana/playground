@@ -68,14 +68,18 @@ type Expect struct {
 // PDPInstance grades the decision point POLICY_DECIDED names: an identifier,
 // or PDPInstanceNone for a decision that consulted none.
 type DecisionExpectation struct {
-	Verdict            string            `json:"verdict,omitempty"`
-	ReasonCodesInclude []string          `json:"reason_codes_include,omitempty"`
-	ObligationsInclude []string          `json:"obligations_include,omitempty"`
-	PDPInstance        string            `json:"pdp_instance,omitempty"`
-	Resumes            int               `json:"resumes,omitempty"`
-	Opens              string            `json:"opens,omitempty"`
-	Blocked            *BlockExpectation `json:"blocked,omitempty"`
-	Trail              []string          `json:"trail,omitempty"`
+	Verdict            string             `json:"verdict,omitempty"`
+	ReasonCodesInclude []string           `json:"reason_codes_include,omitempty"`
+	ObligationsInclude []string           `json:"obligations_include,omitempty"`
+	PDPInstance        string             `json:"pdp_instance,omitempty"`
+	Resumes            int                `json:"resumes,omitempty"`
+	Opens              string             `json:"opens,omitempty"`
+	Blocked            *BlockExpectation  `json:"blocked,omitempty"`
+	Trail              []string           `json:"trail,omitempty"`
+	Result             *ResultExpectation `json:"result,omitempty"`
+	// ProposedTagsInclude grades the run-context tags on the step's own
+	// ACTION_PROPOSED, where the gateway records the flow state it decided by.
+	ProposedTagsInclude []string `json:"proposed_tags_include,omitempty"`
 }
 
 // EffectExpectation is what one victim served and refused, read back from the

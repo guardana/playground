@@ -20,6 +20,9 @@ const (
 	// payload that needs a megabyte to carry an instruction is not the payload
 	// this lab is about.
 	bodyLimit = 1 << 20
+	// maxRedirects is the cap net/http keeps when a client sets no redirect
+	// check of its own; one that sets a check has to keep it itself.
+	maxRedirects = 10
 )
 
 var (
@@ -61,7 +64,19 @@ func (f fetcher) fetch(ctx context.Context, given string) (document, error) {
 	if err != nil {
 		return document{}, err
 	}
-	response, err := f.client.Do(request)
+	// A redirect is a new request to another host as surely as a URL naming
+	// it, so it is held to the same one host.
+	client := *f.client
+	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		switch {
+		case next.URL.Host != f.host:
+			return fmt.Errorf("%w: %s", errHostNotAllowed, next.URL.Host)
+		case len(via) >= maxRedirects:
+			return fmt.Errorf("stopped after %d redirects", len(via))
+		}
+		return nil
+	}
+	response, err := client.Do(request)
 	if err != nil {
 		return document{}, err
 	}

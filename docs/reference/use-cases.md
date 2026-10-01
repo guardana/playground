@@ -40,7 +40,7 @@ The catalogue is `experimental`.
 
 | use case | acts through | failure modes | in the lab today |
 |---|---|---|---|
-| Research and browsing: fetches pages, searches, summarises | web fetch, search | `INJ-01`, `INJ-02`, `FLOW-03`, `RUN-03` | victim-web and the injected pages in `attacks/`; `flow-01`, `gaps-01`, `auth-01`. Planned: data leaving in a fetched URL |
+| Research and browsing: fetches pages, searches, summarises | web fetch, search | `INJ-01`, `INJ-02`, `FLOW-03`, `RUN-03` | victim-web and the injected pages in `attacks/`; `flow-01`, `flow-02`, `auth-01`. Planned: data leaving in a fetched URL |
 | Knowledge assistant over company documents | a retrieval store, documents | `TEN-03`, `INJ-02`, `INJ-04`, `FLOW-02`, `FLOW-05` | none. Planned: a retrieval victim with tenant partitions and a poisoned document |
 | Regulated records: health, HR or legal files, with consent and retention | a records system, scheduling | `TEN-01`, `FLOW-02`, `EVID-01`, `SEC-03` | the tenancy and evidence scenarios, `tenant-01` and `evidence-01`, on other victims. Planned: a records victim with consent scopes |
 

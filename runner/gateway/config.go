@@ -55,13 +55,14 @@ type Upstream struct {
 
 // Override classifies one tool definition, pinned by its fingerprint.
 type Override struct {
-	Upstream     string `json:"upstream"`
-	Tool         string `json:"tool"`
-	Fingerprint  string `json:"fingerprint"`
-	Effect       string `json:"effect"`
-	ResourceType string `json:"resource_type"`
-	ResourceFrom string `json:"resource_from,omitempty"`
-	TrustZone    string `json:"trust_zone,omitempty"`
+	Upstream     string   `json:"upstream"`
+	Tool         string   `json:"tool"`
+	Fingerprint  string   `json:"fingerprint"`
+	Effect       string   `json:"effect"`
+	ResourceType string   `json:"resource_type"`
+	ResourceFrom string   `json:"resource_from,omitempty"`
+	TrustZone    string   `json:"trust_zone,omitempty"`
+	Returns      *Returns `json:"returns,omitempty"`
 }
 
 // Assemble returns the configuration file the gateway runs with.

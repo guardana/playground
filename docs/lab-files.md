@@ -200,7 +200,12 @@ gateway:
   the classification in
   `config/gateway/classification.yaml` pinned to `fingerprints.yaml`, the
   approvals directories when the provider is `file`, and the decision point's
-  identifier when `pdp_script` is set.
+  identifier when `pdp_script` is set. The classification gives each tool its
+  effect and resource, its `trust_zone` (where a call sends data) and its
+  `returns` (`trust` and `sensitivity`: what its result holds, which the
+  enforcer reads into the run's flow state); every tool but `shell.exec`
+  declares `returns`, so one call to it leaves a flow rule undetermined for the
+  rest of the run.
 - `policy` is an `agent-policy/v1alpha1` document, signed for the run with the
   lab key (`make lab-key`) by the enforcer's own `policy sign`. The key lives
   outside the clone, the reports directory and the workspace (`LAB_KEYS_DIR`);
@@ -301,6 +306,20 @@ A step opens a trail unless it says otherwise:
   anything resumed.
 - `opens: none` is a step that opens no trail of its own, such as a retry the
   enforcer answered pending. It states nothing else.
+- `result: { status: <s> }` grades the result on the trail's closing record,
+  written without the `RESULT_STATUS_` prefix: `SUCCESS` on an
+  `ACTION_COMPLETED`, or `FAILURE`, `TIMEOUT`, `CANCELLED`, `BLOCKED` or
+  `UNKNOWN` on an `ACTION_FAILED`. It needs the `trail` it is read from, ending
+  in that kind, and is refused beside `blocked`. A held trail is closed once, so
+  its result is stated on the step that resumes it. The kind alone does not
+  tell a call the adapter refused (`BLOCKED`) from one an upstream failed or
+  that ran out of time.
+- `proposed_tags_include` grades the run-context tags on the trail's one
+  `ACTION_PROPOSED`, where the enforcer records the flow state its decision
+  used, such as `flow.v1.untrusted=true` and `flow.v1.max_read=CONFIDENTIAL`.
+  It names the cause of a flow verdict, which the verdict alone does not: an
+  undetermined send reads the same whether the run's reading was unknown or
+  never computed. A resuming step does not state it.
 
 At the enforcer's pin, a retry answered pending and the retry that resumes a
 hold both write no `ACTION_PROPOSED`, so the trail cannot tell which attempt
@@ -316,8 +335,8 @@ what the lab configures, and names the verdict it should give:
 
 ```yaml
 gap:
-  wanted: { 3: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] } }
-  why: the lab's classification declares no tool's returns, so the run's reading is unknown at the send
+  wanted: { 4: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] } }
+  why: one undeclared result makes the run's reading unknown, and the enforcer keeps no known maximum beside it
 ```
 
 The runner prints its suite as `known-gap`, and the report shows the wanted

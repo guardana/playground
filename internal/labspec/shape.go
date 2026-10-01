@@ -38,7 +38,7 @@ func (d DecisionExpectation) OpensTrail() bool { return d.Resumes == 0 && d.Open
 
 // Graded reports whether the step states anything read from a record.
 func (d DecisionExpectation) Graded() bool {
-	return d.Verdict != "" || d.Blocked != nil || len(d.Trail) > 0
+	return d.Verdict != "" || d.Blocked != nil || len(d.Trail) > 0 || d.Result != nil || len(d.ProposedTagsInclude) > 0
 }
 
 func (d DecisionExpectation) validate(step int) error {
@@ -60,6 +60,14 @@ func (d DecisionExpectation) validate(step int) error {
 		return fmt.Errorf("%w: %s.pdp_instance is %q, want %q or the decision point's https identifier",
 			ErrInvalid, field, d.PDPInstance, PDPInstanceNone)
 	}
+	if err := d.validateResult(field); err != nil {
+		return err
+	}
+	for i, tag := range d.ProposedTagsInclude {
+		if err := required(fmt.Sprintf("%s.proposed_tags_include[%d]", field, i), tag); err != nil {
+			return err
+		}
+	}
 	return validateTrail(field, d)
 }
 
@@ -76,13 +84,20 @@ func (d DecisionExpectation) validateShape(field string) error {
 		return fmt.Errorf("%w: %s opens a trail and states no verdict", ErrInvalid, field)
 	case d.Resumes == 0:
 		return nil
-	case d.Verdict != "" || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0 || d.PDPInstance != "":
-		return fmt.Errorf("%w: %s resumes a trail and states a verdict, which only re-reads the opening step's POLICY_DECIDED",
+	case d.readsTheOpening():
+		return fmt.Errorf("%w: %s resumes a trail and states a verdict or proposal tags, which only re-read the opening step's records",
 			ErrInvalid, field)
 	case d.Blocked == nil && len(d.Trail) == 0:
 		return fmt.Errorf("%w: %s resumes a trail and states neither trail nor blocked to read from it", ErrInvalid, field)
 	}
 	return nil
+}
+
+// readsTheOpening reports whether the step states what only its trail's
+// opening records carry: the proposal and the decision.
+func (d DecisionExpectation) readsTheOpening() bool {
+	return d.Verdict != "" || len(d.ReasonCodesInclude) > 0 || len(d.ObligationsInclude) > 0 || d.PDPInstance != "" ||
+		len(d.ProposedTagsInclude) > 0
 }
 
 func (d DecisionExpectation) validateOpensNone(field string) error {
@@ -127,6 +142,9 @@ func validateShapes(s Scenario, steps int) error {
 			return fmt.Errorf("%w: step %d resumes step %d, which has not run before it", ErrInvalid, number, resumed)
 		case !stated || !target.OpensTrail():
 			return fmt.Errorf("%w: step %d resumes step %d, which opens no trail", ErrInvalid, number, resumed)
+		case target.Result != nil:
+			return fmt.Errorf("%w: step %d states the result of the trail step %d resumes; state it on step %d",
+				ErrInvalid, resumed, number, number)
 		}
 	}
 	return nil

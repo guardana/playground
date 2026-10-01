@@ -66,6 +66,16 @@ lab owns most of it:
   classification of its victims, `config/gateway/classification.yaml`, pinned
   to each tool's fingerprint. You cannot reclassify a victim's tool; a scenario
   can only leave one unclassified on purpose (`gateway.unclassified`).
+- **The run's flow state**, which a `flow.toxicAtLeast` rule reads, is built
+  from what each tool returns as that classification declares it: a page from
+  `web.fetch` is untrusted and public, `fs.read`, `db.query` and the CRM's
+  records are trusted and confidential, whatever path or row a call names. The
+  CRM, the database and the filesystem are trusted destinations, mail and the
+  web untrusted ones. `shell.exec` declares nothing, so a run that called it
+  reads as unknown for the rest of the run, and a flow rule is undetermined for
+  its calls to an untrusted destination. A trusted result holds because every
+  victim starts from its fixture with each run: a store that outlived the run
+  would hand back as trusted what an earlier run wrote into it.
 - **Tenants**: the principal's is `listener.principal.tenant_id` in your part
   (left unset, the enforcer at the pin fills in the gateway's `tenant_id`). A
   victim has no tenant unless the scenario names one in
