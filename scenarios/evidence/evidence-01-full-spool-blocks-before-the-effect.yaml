@@ -14,11 +14,12 @@
 # counted only in /healthz, which is graded after the replay: two blocks for
 # two refused starts, each a sink failure before the effect, and no read run
 # unrecorded. The trail stops at the decision and the servers serve nothing.
-# The docs name the counters but not that an unrecorded block or a refused
-# start adds one to them; the counts are the lab's reading of the source at the
-# pin: internal/gateway/stats.go:11-31 (a block a refused record kept off its
-# trail is counted; each append that failed before anything ran is a sink
-# failure) and internal/gateway/admit.go:205-220 (one failed append per call).
+# The counters are blocks by reason code and sink failures before an effect
+# (docs/guides/run-the-gateway.md:147-148), and a refused start blocks the call
+# with the block itself unrecorded (docs/concepts/evidence-and-the-spool.md:82);
+# that each refused start adds one to both is the lab's reading of the source at
+# the pin: internal/gateway/stats.go:11-31 and internal/gateway/admit.go:220-251
+# (record, one failed append, then the unrecorded block).
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
 # (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.

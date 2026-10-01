@@ -26,8 +26,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - A development mode for the enforcer: `make dev-scenarios
   CONTROL=<checkout> [ID=<scenario>]` builds it from a checkout's working
-  tree, uncommitted changes included, as `playground-enforcer-dev:<tree>`
-  (`scripts/build-enforcer-dev.sh`), and runs the catalogue or one scenario
+  tree, uncommitted changes included, as `playground-enforcer-dev:<tree12>`,
+  the first 12 hex digits of the tree it built (`scripts/build-enforcer-dev.sh`),
+  and runs the catalogue or one scenario
   with `runner -enforcer-dev <image>`. The run signs policies with that build
   and is held to its version, its tree and the image ID read at the start;
   every result line and JUnit case reads `dev-<suite>`, and the report names
@@ -44,7 +45,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scenario that does not map to it. `ROADMAP.md` is rewritten around the
   catalogue's planned rows.
 - Runbooks for a stranger and an adopting team: `docs/runbooks/quickstart.md`
-  (from `git clone` to one green scenario, reading the report, what a red
+  (from a checkout to one green scenario, reading the report, what a red
   run means, cleaning up) and one page each for bringing your own policy,
   gateway configuration and verifier contract. `README.md` is rewritten
   around them; it no longer says no scenario runs.

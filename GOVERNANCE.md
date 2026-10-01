@@ -17,9 +17,11 @@ by consensus. Stepping back is normal and carries no stigma.
 
 ## What does not change
 
-Everything here is Apache-2.0 and stays that way. The lab tests published
-versions of its subjects and takes no private build from anyone, so a result is
-reproducible by someone who does not know the maintainers.
+Everything here is Apache-2.0 and stays that way. A result the lab publishes is
+about a published version of its subjects, so it is reproducible by someone who
+does not know the maintainers. A development build of the enforcer
+(`make dev-scenarios`) is labelled as one in every line and report it produces,
+and is never reported as a release's result.
 
 ## Conduct
 

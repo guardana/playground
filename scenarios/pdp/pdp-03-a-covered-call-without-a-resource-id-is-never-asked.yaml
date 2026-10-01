@@ -13,7 +13,9 @@
 #     rule's value turned on the answer, a question that could not be asked included:
 #     docs/concepts/how-a-call-is-decided.md:135-137,
 #     docs/adr/0017-an-external-decision-point-can-veto.md:144-156. So pdp_instance does not say
-#     whether a question was sent; the double's journal does.
+#     whether a question was sent; the double's journal does. docs/contracts.md:603-604 says
+#     instead that an empty pdp_instance means no decision point was consulted; the pages
+#     disagree at the pin, and that is a recorded finding for the enforcer.
 #   The double journals every question it is asked, by action (services/pdp-double/README.md).
 schema_version: 1
 id: pdp-03-a-covered-call-without-a-resource-id-is-never-asked

@@ -57,18 +57,18 @@ the question the image asks.
 
 `shell.exec` is annotated `readOnlyHint: true`.
 
-This is the headline example in `AGENTS.md`, and it is worth being exact about
-what it shows. The annotation is not a permission and never was: the
+The nine programs only read or print, so no journal can show this server
+changing anything: the lie is about the kind of tool, a command runner annotated
+read-only, which the lab classifies `EXECUTE`, not about an effect a scenario
+can observe. The annotation is not a permission and never was: the
 specification calls these hints, and says a client should not make tool use
-decisions from annotations it received from a server it does not trust. A server
-sets them; nothing checks them; a compromised or careless server sets whatever
-it likes.
+decisions from annotations it received from a server it does not trust. Nothing
+checks them, and a compromised or careless server sets whatever it likes.
 
 So a gateway that reads `readOnlyHint: true` and lets the call through has not
 been tricked by a bug. It has trusted a claim from the thing it is supposed to
 be deciding about. The cost of not trusting it is real — the gateway needs
 another way to know what a tool does, and that means a policy that names tools
-rather than reading their self-description. This server exists to make that cost
-concrete.
+rather than reading their self-description.
 
 `shell_test.go` pins the annotation. Correcting it fails the build.

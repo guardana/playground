@@ -6,10 +6,11 @@
 # Six networks, all internal: agent-net holds the agent and the enforcer;
 # tool-net the enforcer, the victims and what they reach; evidence-net the
 # collector and the enforcer; pdp-net the enforcer and the double;
-# approver-net the approver alone; trace-net the trace verifier alone. Nothing
-# in the lab has a route out; the agent can reach the enforcer and nothing else. That is the property every
-# scenario depends on, and the runner proves it from inside `agent-net` on
-# every run rather than trusting this file.
+# approver-net the approver alone; trace-net the trace verifier alone. Every
+# network is internal, so nothing in the lab has a route out, and the agent can
+# reach the enforcer and nothing else. The runner checks the second part from
+# inside `agent-net` on every run: the enforcer answers, a victim and the sealed
+# addresses do not. It probes no address outside the lab.
 #
 # A run's records live in its own directory, LAB_RUN_HOST_DIR, and each
 # service mounts only the part of it that service writes. By hand (`make up`),
@@ -480,8 +481,8 @@ networks:
   # the last thing in the lab that should be able to reach anything outside it:
   # an exfiltration that succeeded would be one no scenario could grade. Nothing
   # needs a route out at run time — images are pulled and built over the host's
-  # network before any container starts (`docker compose run --build` builds the
-  # agent's image first, over the host's network, not the lab's), and the agent
+  # network before any container starts (the runner builds every image of the
+  # profile, the agent's included, before it brings anything up), and the agent
   # talks only to the gateway.
   # The runner gives each run its own subnet (runner/env.go), so parallel runs
   # do not share one; docker refuses a subnet already in use and that run's

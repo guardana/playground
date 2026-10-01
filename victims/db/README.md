@@ -32,8 +32,8 @@ here is testing.
 `update`, `delete` and `drop table`.
 
 `db.query` is annotated `readOnlyHint: true` and accepts a statement that
-writes. Nothing checks the verb; the name of the tool is the only thing that
-says otherwise, and a name is not a check.
+writes. Nothing checks the verb; the tool's name and its description ("Run a
+SELECT") say otherwise, and neither is a check.
 
 `db_test.go` pins both. Correcting either fails the build.
 

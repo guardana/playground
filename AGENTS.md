@@ -42,9 +42,9 @@ A missing evidence record is a failure. Unknown is never a pass.
 ## Deterministic first
 
 Every scenario has a scripted trajectory that produces the same calls on every
-run, with no model involved. A live model is an overlay: recorded to a cassette
-on first capture, replayed afterwards, and never the thing that decides whether
-a build is green.
+run, with no model involved. A live model, when one is added (`planned`), is an
+overlay: recorded to a cassette on first capture, replayed afterwards, and never
+the thing that decides whether a build is green.
 
 A scenario that cannot run reports that it could not run, and fails. It does not
 skip quietly.
@@ -81,7 +81,8 @@ which is not tracked.
 
 The work here belongs to the people who did it. No commit message, pull request,
 code comment, changelog entry or document credits a tool.
-`scripts/check-attribution.sh` enforces this and runs in `make quality`.
+`scripts/check-attribution.sh` enforces this for every file in the tree and
+runs in `make quality`; a commit message is held to it in review.
 
 ## Language
 
@@ -129,7 +130,7 @@ already carried out.
 ## Commands
 
     make bootstrap       install and verify the pinned toolchain
-    make quality-quick   format, vet, test, hygiene
+    make quality-quick   format, vet, test, attribution, hygiene
     make quality         the full gate; CI runs exactly this
 
 `make quality` is the definition of green. CI adds no check you cannot run
