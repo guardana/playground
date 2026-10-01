@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -89,6 +90,13 @@ func refuseOutside(root, asked string, found []string) ([]string, error) {
 }
 
 func everyScenario(root string) ([]string, error) {
+	stray, err := unrunnable(filepath.Join(root, scenarioDir))
+	if err != nil {
+		return nil, err
+	}
+	if len(stray) > 0 {
+		return nil, fmt.Errorf("a scenario file -all would not run: %s", strings.Join(stray, ", "))
+	}
 	found, err := filepath.Glob(filepath.Join(root, scenarioDir, "*", "*.yaml"))
 	if err != nil {
 		return nil, err
@@ -100,6 +108,75 @@ func everyScenario(root string) ([]string, error) {
 	}
 	slices.Sort(found)
 	return refuseOutside(root, "-all", found)
+}
+
+// unrunnable lists what sits in a suite directory and is not a regular *.yaml
+// file: the -all glob would pass over it, and a scenario written there would
+// never run. Files directly under scenarios/ belong to the catalogue itself.
+func unrunnable(scenarios string) ([]string, error) {
+	suites, err := os.ReadDir(scenarios)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var stray []string
+	for _, suite := range suites {
+		dir := filepath.Join(scenarios, suite.Name())
+		info, err := os.Stat(dir)
+		if err != nil {
+			stray = append(stray, dir)
+			continue
+		}
+		if !info.IsDir() {
+			if yamlName(dir) {
+				stray = append(stray, dir)
+			}
+			continue
+		}
+		found, err := unrunnableIn(dir)
+		if err != nil {
+			return nil, err
+		}
+		stray = append(stray, found...)
+	}
+	return stray, nil
+}
+
+// unrunnableIn lists what sits in one suite directory and is not a regular
+// *.yaml file the -all glob matches.
+func unrunnableIn(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var stray []string
+	for _, entry := range entries {
+		path := filepath.Join(dir, entry.Name())
+		info, err := os.Stat(path)
+		if err == nil && info.Mode().IsRegular() && hidden(entry.Name()) {
+			continue
+		}
+		if err != nil || !info.Mode().IsRegular() || filepath.Ext(path) != ".yaml" {
+			stray = append(stray, path)
+		}
+	}
+	return stray, nil
+}
+
+// hidden is a file the desktop or an editor leaves beside a scenario, never a
+// scenario: a hidden name with a YAML extension, or a hidden directory, is
+// judged like any other.
+func hidden(name string) bool {
+	return strings.HasPrefix(name, ".") && !yamlName(name)
+}
+
+// yamlName is a name a scenario could be written under, in any case; the
+// -all glob matches only the lower-case *.yaml.
+func yamlName(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	return ext == ".yaml" || ext == ".yml"
 }
 
 func looksLikeAPath(value string) bool {

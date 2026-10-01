@@ -47,6 +47,9 @@ func load(space workspace, scenarioPath string) (labspec.Scenario, labspec.Traje
 	if err := labspec.Validate(spec, trajectory); err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}
+	if err := refuseAnotherIdentity(space, spec, trajectory); err != nil {
+		return labspec.Scenario{}, labspec.Trajectory{}, err
+	}
 	if err := mountable(spec); err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}

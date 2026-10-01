@@ -3,7 +3,7 @@
 # happened cannot pass.
 schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
-principal: { id: user_412, type: human, tenant_id: tenant_a }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
 session: { environment: development }
 steps:
   - label: customer_lookup

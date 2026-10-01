@@ -4,7 +4,7 @@
 # to allow it too, so an ask that was answered would decide it ALLOW.
 schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
-principal: { id: user_412, type: human, tenant_id: tenant_a }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
 session: { environment: development }
 steps:
   - label: covered_read_with_a_resource_id

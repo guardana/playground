@@ -30,13 +30,15 @@ func (l lab) gradeTrajectory(
 	if spec.Expect.Health != nil {
 		checks = append(checks, check.Health{Expect: *spec.Expect.Health, Source: filepath.Join(runDir, healthRecord)})
 	}
-	records, unreadable := l.collect(spec, boot, runID, runDir)
+	// Every victim the profile booted answers for what it served, named or not.
+	served := everyVictimServesNothing(spec, boot)
+	records, unreadable := l.collect(served, boot, runID, runDir)
 
 	trail := filepath.Join(runDir, "evidence.jsonl")
 	graded := assertion.Run(ctx, records, append(checks,
 		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
 		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
-		check.Effects{Scenario: spec, JournalDir: filepath.Join(runDir, "journals")},
+		check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")},
 		check.Evidence{
 			Scenario: spec, EvidenceFile: trail, ReadError: unreadable,
 			// The trail is read from runDir, which execute created for this run

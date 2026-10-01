@@ -23,13 +23,14 @@ var Severities = []string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
 var serverName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
 // validateVerifier refuses every key a verifier scenario cannot grade: there
-// is no trajectory, no enforcer and no trail, so a stated decision, trail
-// expectation, mode, tolerance or gap would load and be read by nothing.
+// is no trajectory, no enforcer and no trail, so a gateway, a stated decision,
+// trail expectation, mode, tolerance or gap would load and be read by nothing.
 func (s Scenario) validateVerifier() error {
 	for _, set := range []struct {
 		field string
 		set   bool
 	}{
+		{"gateway", s.Gateway != nil},
 		{"trajectory", s.Trajectory != ""},
 		{"enforcement_mode", s.EnforcementMode != ""},
 		{"gap", s.Gap != nil},

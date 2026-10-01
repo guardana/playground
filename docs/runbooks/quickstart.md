@@ -96,8 +96,9 @@ read. The records sit beside the report:
 
 `make scenarios` runs the whole catalogue. Two scenarios are red by design,
 each on a finding in a system under test; `scenarios/red-by-design.txt` names
-them and the finding, and `go run ./runner -all -red-by-design
-scenarios/red-by-design.txt` passes only when the reds are exactly those.
+them, the check each fails on and the finding, and `go run ./runner -all
+-red-by-design scenarios/red-by-design.txt` passes only when the reds are
+exactly those, each failing on its named checks and passing every other.
 
 ## Try an unreleased enforcer change (experimental)
 

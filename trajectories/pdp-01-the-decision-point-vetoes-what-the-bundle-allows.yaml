@@ -4,7 +4,7 @@
 # so an ask about the uncovered fs.list would turn its ALLOW into a DENY.
 schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
-principal: { id: user_412, type: human, tenant_id: tenant_a }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
 session: { environment: development }
 steps:
   - label: read_the_decision_point_allows

@@ -34,7 +34,7 @@ expect:
 `
 	trajectoryFile = `schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
-principal: { id: user_123, type: human, tenant_id: tenant_a }
+principal: { id: user_123, type: human, tenant_id: tenant-1 }
 session: { environment: development }
 steps:
   - call:
@@ -48,7 +48,7 @@ steps:
 	evidenceFile = `{"eventId":"e1","kind":"EVENT_KIND_ACTION_PROPOSED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:00Z","proposed":{"requestId":"r1","action":{"name":"fs.read","protocol":"mcp"}}}
 {"eventId":"e2","kind":"EVENT_KIND_POLICY_DECIDED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:01Z","prevEventId":"e1","decision":{"requestId":"r1","actionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","verdict":"VERDICT_ALLOW","reasonCodes":["RULE_ALLOW"],"policyBundleDigest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}}
 {"eventId":"e3","kind":"EVENT_KIND_ACTION_STARTED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:02Z","prevEventId":"e2"}
-{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3","result":{"requestId":"r1","executedActionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
+{"eventId":"e4","kind":"EVENT_KIND_ACTION_COMPLETED","requestId":"r1","runId":"01PLANERUN","projectId":"project-1","tenantId":"tenant-1","enforcementMode":"ENFORCEMENT_MODE_ENFORCE","occurredAt":"2026-09-09T12:00:03Z","prevEventId":"e3","result":{"requestId":"r1","status":"RESULT_STATUS_SUCCESS","executedActionDigest":"sha256:1111111111111111111111111111111111111111111111111111111111111111"}}
 `
 	// ${RUN_ID} is what the fake victims stamp their journals with, the way the
 	// real ones stamp LAB_RUN_ID.

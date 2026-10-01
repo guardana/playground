@@ -74,6 +74,8 @@ func DecodeJSONL(r io.Reader, limit int) ([]Event, error) {
 			return nil, fmt.Errorf("line %d: %w", number, err)
 		case atEOF && len(line) == 0:
 			return events, nil
+		case atEOF:
+			return nil, fmt.Errorf("line %d: %w: no newline at its end, as a write cut short leaves it", number, ErrMalformedLine)
 		}
 		if len(events) >= limit {
 			return nil, fmt.Errorf("line %d: %w: limit %d", number, ErrTooManyEvents, limit)
@@ -83,9 +85,6 @@ func DecodeJSONL(r io.Reader, limit int) ([]Event, error) {
 			return nil, fmt.Errorf("line %d: %w", number, err)
 		}
 		events = append(events, event)
-		if atEOF {
-			return events, nil
-		}
 	}
 }
 

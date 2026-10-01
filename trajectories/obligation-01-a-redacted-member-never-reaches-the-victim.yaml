@@ -5,7 +5,7 @@
 # Step 3 carries an obligation nothing in this build applies.
 schema_version: 1
 agent: { id: support-agent, framework: scripted, model_ref: none }
-principal: { id: user_412, type: human, tenant_id: tenant_a }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
 session: { environment: development }
 steps:
   - label: read_with_a_member_to_redact

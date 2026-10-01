@@ -11,21 +11,51 @@ import (
 	"github.com/guardana/playground/internal/redbydesign"
 )
 
-var (
-	listedTwo = []redbydesign.Entry{
-		{ID: "mode-01", Finding: "observe completes a refused digest"},
-		{ID: "verify-04", Finding: "drift reported CRITICAL, catalogued HIGH"},
-	}
-	catalogueWithTwoReds = []ranScenario{
-		{id: "flow-01", outcome: assertion.Pass},
-		{id: "mode-01", outcome: assertion.Fail},
-		{id: "verify-04", outcome: assertion.Fail},
-	}
+const (
+	modeCheck   = "evidence/executed-digest"
+	verifyCheck = "verifier/step-2/finding/guardana.agent.mcp_server_manifest"
 )
 
-func TestExactlyTheListedRedsPassTheRun(t *testing.T) {
+var listedTwo = []redbydesign.Entry{
+	{ID: "mode-01", Checks: []string{modeCheck}, Finding: "observe completes a refused digest"},
+	{ID: "verify-04", Checks: []string{verifyCheck}, Finding: "drift reported CRITICAL, catalogued HIGH"},
+}
+
+// scenarioOf builds one ran scenario from its results, the outcome taken the
+// way a report takes it.
+func scenarioOf(id string, results ...ranCheck) ranScenario {
+	worst := assertion.Indeterminate
+	if len(results) > 0 {
+		worst = assertion.Pass
+	}
+	for _, result := range results {
+		worst = assertion.Worse(worst, result.outcome)
+	}
+	return ranScenario{id: id, outcome: worst, results: results}
+}
+
+func passed(check string) ranCheck    { return ranCheck{id: check, outcome: assertion.Pass} }
+func failed(check string) ranCheck    { return ranCheck{id: check, outcome: assertion.Fail} }
+func unsettled(check string) ranCheck { return ranCheck{id: check, outcome: assertion.Indeterminate} }
+
+func catalogueWithTwoReds() []ranScenario {
+	return []ranScenario{
+		scenarioOf("flow-01", passed("scenario/loads"), passed("decisions/step-1")),
+		scenarioOf("mode-01", passed("scenario/loads"), passed("decisions/step-1"), failed(modeCheck)),
+		scenarioOf("verify-04", passed("scenario/loads"), passed("verifier/step-1/exit-code"), failed(verifyCheck)),
+	}
+}
+
+// withMode replaces mode-01 in the two-red catalogue.
+func withMode(mode ranScenario) []ranScenario {
+	ran := catalogueWithTwoReds()
+	ran[1] = mode
+	return ran
+}
+
+func TestExactlyTheListedRedsOnTheirNamedChecksPassTheRun(t *testing.T) {
 	var out strings.Builder
-	if err := judgeRedByDesign(catalogueWithTwoReds, listedTwo, &out); err != nil {
+	if err := judgeRedByDesign(catalogueWithTwoReds(), listedTwo, &out); err != nil {
 		t.Fatalf("the listed reds and nothing else reported %v", err)
 	}
 	for _, want := range []string{"mode-01", "observe completes a refused digest", "verify-04", "1 passed"} {
@@ -41,24 +71,40 @@ func TestEveryWayTheRedsDifferFromTheListFailsByName(t *testing.T) {
 		want []string
 	}{
 		"an unlisted red": {
-			ran:  append(append([]ranScenario{}, catalogueWithTwoReds...), ranScenario{id: "rule-01", outcome: assertion.Fail}),
+			ran:  append(catalogueWithTwoReds(), scenarioOf("rule-01", failed("decisions/step-1"))),
 			want: []string{"rule-01", "not listed"},
 		},
 		"an unlisted indeterminate": {
-			ran:  append(append([]ranScenario{}, catalogueWithTwoReds...), ranScenario{id: "rule-01", outcome: assertion.Indeterminate}),
+			ran:  append(catalogueWithTwoReds(), scenarioOf("rule-01", unsettled("decisions/step-1"))),
 			want: []string{"rule-01", "not listed"},
 		},
 		"a listed scenario that passes": {
-			ran:  []ranScenario{{id: "mode-01", outcome: assertion.Pass}, {id: "verify-04", outcome: assertion.Fail}},
-			want: []string{"mode-01", "passed"},
+			ran:  withMode(scenarioOf("mode-01", passed("scenario/loads"), passed(modeCheck))),
+			want: []string{"mode-01", modeCheck, "pass"},
 		},
 		"a listed scenario the run does not hold": {
-			ran:  []ranScenario{{id: "mode-01", outcome: assertion.Fail}},
+			ran:  catalogueWithTwoReds()[:2],
 			want: []string{"verify-04", "no scenario"},
 		},
 		"a listed scenario that established nothing": {
-			ran:  []ranScenario{{id: "mode-01", outcome: assertion.Indeterminate}, {id: "verify-04", outcome: assertion.Fail}},
-			want: []string{"mode-01", "indeterminate"},
+			ran:  withMode(ranScenario{id: "mode-01", outcome: assertion.Indeterminate}),
+			want: []string{"mode-01", modeCheck, "no such result"},
+		},
+		"a listed scenario that did not load": {
+			ran:  withMode(scenarioOf("mode-01", failed("scenario/loads"))),
+			want: []string{"mode-01", "scenario/loads", modeCheck, "no such result"},
+		},
+		"a listed scenario failing on another check too": {
+			ran:  withMode(scenarioOf("mode-01", failed("boot/victim-fs"), failed(modeCheck))),
+			want: []string{"mode-01", "boot/victim-fs", "fail"},
+		},
+		"an indeterminate beside the named fail": {
+			ran:  withMode(scenarioOf("mode-01", unsettled("evidence/trail"), failed(modeCheck))),
+			want: []string{"mode-01", "evidence/trail", "indeterminate"},
+		},
+		"a named check that is indeterminate": {
+			ran:  withMode(scenarioOf("mode-01", passed("scenario/loads"), unsettled(modeCheck))),
+			want: []string{"mode-01", modeCheck, "indeterminate"},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -76,8 +122,21 @@ func TestEveryWayTheRedsDifferFromTheListFailsByName(t *testing.T) {
 	}
 }
 
+func TestEveryNamedCheckMustFail(t *testing.T) {
+	listed := []redbydesign.Entry{{ID: "mode-01", Checks: []string{modeCheck, "decisions/step-2"}, Finding: "f"}}
+	ran := []ranScenario{scenarioOf("mode-01", failed(modeCheck), passed("decisions/step-2"))}
+	err := judgeRedByDesign(ran, listed, &strings.Builder{})
+	if err == nil || !strings.Contains(err.Error(), "decisions/step-2") {
+		t.Errorf("a named check that passed reported %v", err)
+	}
+	ran = []ranScenario{scenarioOf("mode-01", failed(modeCheck), failed("decisions/step-2"))}
+	if err := judgeRedByDesign(ran, listed, &strings.Builder{}); err != nil {
+		t.Errorf("both named checks failing and nothing else reported %v", err)
+	}
+}
+
 func TestEveryDifferenceIsNamedInOneRun(t *testing.T) {
-	ran := []ranScenario{{id: "mode-01", outcome: assertion.Pass}, {id: "rule-01", outcome: assertion.Fail}}
+	ran := []ranScenario{scenarioOf("mode-01", passed(modeCheck)), scenarioOf("rule-01", failed("decisions/step-1"))}
 	err := judgeRedByDesign(ran, listedTwo, &strings.Builder{})
 	if err == nil {
 		t.Fatal("three differences judged green")
@@ -91,7 +150,7 @@ func TestEveryDifferenceIsNamedInOneRun(t *testing.T) {
 
 func TestTheListJudgesOnlyTheWholeCatalogue(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "red.txt")
-	if err := os.WriteFile(path, []byte("mode-01 a finding\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("mode-01 evidence/executed-digest a finding\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	chosen, err := parse([]string{"-scenario", "mode-01", "-red-by-design", path}, &strings.Builder{})
@@ -115,11 +174,25 @@ func TestTheListJudgesOnlyTheWholeCatalogue(t *testing.T) {
 func TestACatalogueRunIsJudgedAgainstTheList(t *testing.T) {
 	subject, _, scenario := enforcerLab(t)
 	err := executeRedByDesign(context.Background(), subject, []string{scenario},
-		[]redbydesign.Entry{{ID: "flow-01", Finding: "a finding"}}, &strings.Builder{})
+		[]redbydesign.Entry{{ID: "flow-01", Checks: []string{"decisions/step-1"}, Finding: "a finding"}}, &strings.Builder{})
 	if err == nil || !strings.Contains(err.Error(), "flow-01") {
 		t.Errorf("a listed scenario that passed reported %v", err)
 	}
 	if err := executeRedByDesign(context.Background(), subject, []string{scenario}, nil, &strings.Builder{}); err != nil {
 		t.Errorf("a green run with nothing listed reported %v", err)
+	}
+}
+
+// runEach carries every result a scenario was graded on, not its outcome alone.
+func TestRunEachCarriesEveryResult(t *testing.T) {
+	subject, _, scenario := enforcerLab(t)
+	ran := runEach(context.Background(), subject, []string{scenario}, &strings.Builder{})
+	if len(ran) != 1 || len(ran[0].results) == 0 {
+		t.Fatalf("runEach = %+v, want one scenario with its results", ran)
+	}
+	for _, result := range ran[0].results {
+		if result.id == "" {
+			t.Errorf("a result without its check id: %+v", ran[0].results)
+		}
 	}
 }

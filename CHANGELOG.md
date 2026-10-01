@@ -7,6 +7,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The runner refuses a trajectory whose principal, tenant, agent or
+  environment is not the one its gateway part's listener names.
+
 - A development mode for the enforcer: `make dev-scenarios
   CONTROL=<checkout> [ID=<scenario>]` builds it from a checkout's working
   tree, uncommitted changes included, as `playground-enforcer-dev:<tree>`
@@ -234,6 +237,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Red by design names the check each listed scenario fails on
+  (`<id> <check>[,<check>...] <finding>`), and the judge passes the catalogue
+  only when each listed scenario fails on exactly those checks and passes every
+  other; a listed scenario that failed to load, boot or sign, or holds an
+  indeterminate result, is no longer counted as red as listed.
 - `make bootstrap` installs a release binary only when its sha256 is the one
   `scripts/tool-versions.env` pins for the platform, on Linux amd64 and arm64,
   and removes a download it refused; it checks each tool's version exactly, and
@@ -357,6 +365,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reached through a link; it refuses a `.` or `..` component and a path
   holding a control character, leaves an existing parent's mode alone, and
   mounts only a fresh directory of its own into the keygen container.
+- `content_captured: false` fails on result text as well as argument text;
+  every `ACTION_COMPLETED` has to carry a successful result; a victim the
+  profile booted and the scenario does not name is held to having served
+  nothing; a verifier scenario is refused a `gateway`, whose `expect.health`
+  nothing read; `-all` refuses a file in a suite directory it would not run,
+  a hidden directory there, a YAML file in any letter case directly under
+  `scenarios/` and an entry there that does not resolve; a trail whose last
+  line lacks its newline is refused.
 - `check-hygiene.sh` refuses a hidden name anywhere in a path, where it looked
   at the first component only. The file list every guard reads takes each name
   as git stores it, where a name git quotes, such as one with a byte outside

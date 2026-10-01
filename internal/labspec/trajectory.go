@@ -26,9 +26,9 @@ type Agent struct {
 	ModelRef  string `json:"model_ref"`
 }
 
-// Principal is the identity the calls are made on behalf of. TenantID is the
-// value a cross-tenant check compares against the resource's owner, so a
-// scenario about tenancy changes this and nothing else.
+// Principal is the identity the calls are made on behalf of. The listener
+// authenticates nobody, so the enforcer decides for the principal its
+// configuration names, and the runner refuses a trajectory naming another.
 type Principal struct {
 	ID       string `json:"id"`
 	Type     string `json:"type"`

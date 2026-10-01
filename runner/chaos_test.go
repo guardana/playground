@@ -282,7 +282,7 @@ func TestAHangIsHeldToTheCallTimeoutTheScenarioSets(t *testing.T) {
 		if bound != "" {
 			writeFile(config, string(body)+"upstream:\n"+bound)
 		}
-		compose.collector = strings.Replace(compose.collector, `\"result\":{`, `\"result\":{\"status\":\"RESULT_STATUS_TIMEOUT\",`, 1)
+		compose.collector = strings.Replace(compose.collector, `\"status\":\"RESULT_STATUS_SUCCESS\"`, `\"status\":\"RESULT_STATUS_TIMEOUT\"`, 1)
 		if result := chaosResults(t, subject, scenario)["chaos/fault-1"]; result.Outcome != want {
 			t.Errorf("a hang with %q in the configuration was %s: %s", bound, result.Outcome, result.Got)
 		}

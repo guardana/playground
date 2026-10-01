@@ -178,41 +178,65 @@ func (e Evidence) digestResult(events []evidence.Event) assertion.Result {
 	return result
 }
 
-// captureResult grades arguments.redactedPreview across every proposed
-// envelope. False is the assertion that no envelope carries text, which is the
-// privacy default; true is the assertion that at least one does.
+// captureResult grades captured content: arguments.redactedPreview on every
+// proposed envelope and result.redactedResultPreview on every closing record.
+// False is the assertion that neither carries text, which is the privacy
+// default; true is the assertion that at least one does.
 func (e Evidence) captureResult(events []evidence.Event, captured bool) assertion.Result {
 	result := assertion.Result{
 		Check:  "evidence/content-captured",
-		Want:   fmt.Sprintf("arguments.redactedPreview present: %t", captured),
+		Want:   fmt.Sprintf("arguments.redactedPreview or result.redactedResultPreview present: %t", captured),
 		Source: e.EvidenceFile,
 	}
-	proposed, carrying := 0, []int{}
-	for i, event := range events {
-		if event.Kind != evidence.KindActionProposed || event.Proposed == nil {
-			continue
-		}
-		proposed++
-		if event.Proposed.Arguments != nil && event.Proposed.Arguments.RedactedPreview != "" {
-			carrying = append(carrying, i+1)
-		}
-	}
-	if proposed == 0 {
+	seen := previewsIn(events)
+	if seen.proposed == 0 {
 		result.Outcome = assertion.Indeterminate
 		result.Got = "no proposed envelope to read arguments from"
 		return result
 	}
-	result.Got = fmt.Sprintf("%d of %d envelopes carry a preview", len(carrying), proposed)
-	if (len(carrying) > 0) == captured {
+	result.Got = fmt.Sprintf("%d of %d envelopes carry an argument preview, %d of %d closing records carry a result preview",
+		seen.arguments, seen.proposed, seen.results, seen.closed)
+	if (seen.first > 0) == captured {
 		result.Outcome = assertion.Pass
 		return result
 	}
 	result.Outcome = assertion.Fail
-	if len(carrying) > 0 {
-		result.Source = fmt.Sprintf("%s:%d", e.EvidenceFile, carrying[0])
-		result.Detail = "the scenario expects no captured content and the trail carries some"
+	if seen.first > 0 {
+		result.Source = fmt.Sprintf("%s:%d", e.EvidenceFile, seen.first)
+		result.Detail = fmt.Sprintf("the scenario expects no captured content and line %d carries some", seen.first)
 		return result
 	}
 	result.Detail = "the scenario expects captured content and the trail carries none"
 	return result
+}
+
+// previews counts the records content could be captured on and those that
+// carry it; first is the line of the earliest that does, zero when none does.
+type previews struct {
+	proposed, arguments, closed, results, first int
+}
+
+func previewsIn(events []evidence.Event) previews {
+	var seen previews
+	for i, event := range events {
+		carries := false
+		switch {
+		case event.Kind == evidence.KindActionProposed && event.Proposed != nil:
+			seen.proposed++
+			carries = event.Proposed.Arguments != nil && event.Proposed.Arguments.RedactedPreview != ""
+			if carries {
+				seen.arguments++
+			}
+		case event.Kind == evidence.KindActionCompleted || event.Kind == evidence.KindActionFailed:
+			seen.closed++
+			carries = event.Result != nil && event.Result.RedactedResultPreview != ""
+			if carries {
+				seen.results++
+			}
+		}
+		if carries && seen.first == 0 {
+			seen.first = i + 1
+		}
+	}
+	return seen
 }

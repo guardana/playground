@@ -80,7 +80,7 @@ func TestLocateAllFindsEveryScenarioInOrder(t *testing.T) {
 		"scenarios/tool/tool-01.yaml",
 		"scenarios/flow/flow-02.yaml",
 		"scenarios/auth/auth-01.yaml",
-		"scenarios/flow/README.md",
+		"scenarios/red-by-design.txt",
 	)
 
 	found, err := locate(root, settings{all: true})

@@ -3,8 +3,9 @@
 // it, and a lab check proves every listed scenario exists, so both read the
 // file the same way.
 //
-// One scenario per line: its identifier, whitespace, the finding in one line.
-// A line starting with # and a blank line are skipped.
+// One scenario per line: its identifier, whitespace, the checks it fails on
+// separated by commas, whitespace, the finding in one line. A line starting
+// with # and a blank line are skipped.
 package redbydesign
 
 import (
@@ -14,18 +15,24 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"unicode"
 )
 
-// Entry is one listed scenario and the finding that keeps it red.
+// Entry is one listed scenario, the checks it fails on, and the finding that
+// keeps it red.
 type Entry struct {
 	ID      string
+	Checks  []string
 	Finding string
 }
 
 // identifier is a scenario's file name without its extension; a path or a
 // file name would never match the identifier a run reports.
 var identifier = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+
+// checkID is a check identifier as a result carries it: a family, then at
+// least one further part. A bare word is refused, so a finding whose first
+// word slipped into the check field cannot parse as a check.
+var checkID = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*(/[A-Za-z0-9._-]+)+$`)
 
 // Read parses the list at path. A missing file is an error, never an empty list.
 func Read(path string) ([]Entry, error) {
@@ -64,15 +71,39 @@ func Parse(r io.Reader, name string) ([]Entry, error) {
 }
 
 func parseLine(line string) (Entry, error) {
-	id, finding := line, ""
-	if at := strings.IndexFunc(line, unicode.IsSpace); at >= 0 {
-		id, finding = line[:at], strings.TrimSpace(line[at:])
-	}
-	switch {
-	case !identifier.MatchString(id):
+	fields := strings.Fields(line)
+	id := fields[0]
+	if !identifier.MatchString(id) {
 		return Entry{}, fmt.Errorf("%q is not a scenario identifier (its file name without .yaml)", id)
-	case finding == "":
+	}
+	if len(fields) < 2 {
+		return Entry{}, fmt.Errorf("%s names no check; list the checks it fails on, separated by commas", id)
+	}
+	checks, err := parseChecks(fields[1])
+	if err != nil {
+		return Entry{}, fmt.Errorf("%s: %w", id, err)
+	}
+	if len(fields) < 3 {
 		return Entry{}, fmt.Errorf("%s names no finding; say in one line what keeps it red", id)
 	}
-	return Entry{ID: id, Finding: finding}, nil
+	rest := strings.TrimSpace(line[len(id):])
+	finding := strings.TrimSpace(rest[len(fields[1]):])
+	return Entry{ID: id, Checks: checks, Finding: finding}, nil
+}
+
+func parseChecks(field string) ([]string, error) {
+	checks := strings.Split(field, ",")
+	seen := map[string]bool{}
+	for _, check := range checks {
+		switch {
+		case check == "":
+			return nil, fmt.Errorf("%q holds an empty check", field)
+		case !checkID.MatchString(check):
+			return nil, fmt.Errorf("%q is not a check identifier as a result carries it (family/name)", check)
+		case seen[check]:
+			return nil, fmt.Errorf("%s is named twice", check)
+		}
+		seen[check] = true
+	}
+	return checks, nil
 }

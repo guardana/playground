@@ -49,9 +49,9 @@ func (l lab) gradeVerifier(
 }
 
 // everyVictimServesNothing adds every victim the profile booted to the
-// effects a verifier scenario states, as serving nothing. The verifier reaches
-// every victim on tool-net, not only the ones it probes, and it documents that
-// it calls no tool on any of them.
+// effects a scenario states, as serving nothing. Every victim of the profile
+// boots, a verifier reaches every one on tool-net, and a victim no step calls
+// that served a call served one nobody decided.
 func everyVictimServesNothing(spec labspec.Scenario, boot assertion.Boot) labspec.Scenario {
 	effects := maps.Clone(spec.Expect.Effects)
 	if effects == nil {

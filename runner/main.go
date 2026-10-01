@@ -7,7 +7,8 @@
 //
 // It exits zero only when every scenario it ran passed, or, with
 // -red-by-design, when the ones that did not are exactly those the file lists,
-// each failing on a record. Anything else — a service that did not start, a
+// each failing on exactly the checks the file names for it and passing every
+// other. Anything else — a service that did not start, a
 // step with no decision, a check that could not read its input — is a run that
 // did not establish what it claimed, and a lab that reported those as green
 // would be worth nothing.
@@ -145,7 +146,7 @@ func parse(args []string, out io.Writer) (settings, error) {
 	set.DurationVar(&chosen.timeout, "timeout", defaultScenarioTimeout,
 		"how long one scenario may take, the first docker build included")
 	set.StringVar(&chosen.redByDesign, "red-by-design", "",
-		"with -all, pass only when the scenarios that do not pass are exactly the ones this file lists")
+		"with -all, pass only when the scenarios that do not pass are exactly the ones this file lists, each failing on its named checks alone")
 	set.StringVar(&chosen.enforcerDev, "enforcer-dev", "",
 		"run this development image of the enforcer (scripts/build-enforcer-dev.sh) instead of the pinned one")
 	if err := set.Parse(args); err != nil {
@@ -202,7 +203,8 @@ func executeAll(ctx context.Context, subject lab, scenarios []string, out io.Wri
 }
 
 // runEach runs every scenario and prints one line for each. A run that could
-// not be written established nothing and counts as indeterminate.
+// not be written established nothing and counts as indeterminate, carrying no
+// result a judge could accept.
 func runEach(ctx context.Context, subject lab, scenarios []string, out io.Writer) []ranScenario {
 	ran := make([]ranScenario, 0, len(scenarios))
 	for _, scenario := range scenarios {
@@ -219,7 +221,7 @@ func runEach(ctx context.Context, subject lab, scenarios []string, out io.Writer
 		}
 		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), suite, graded.Scenario,
 			filepath.Join(subject.reports, graded.RunID, "report.md"))
-		ran = append(ran, ranScenario{id: graded.Scenario, outcome: graded.Outcome()})
+		ran = append(ran, ranScenario{id: graded.Scenario, outcome: graded.Outcome(), results: ranChecks(graded.Results)})
 	}
 	return ran
 }

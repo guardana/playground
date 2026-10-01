@@ -10,9 +10,9 @@ import (
 	"github.com/guardana/playground/internal/labspec"
 )
 
-// TrailClaims grades two things the enforcer's trail claims apart from any one
-// step: the mode every event was enforced under, and that what ran is what was
-// decided.
+// TrailClaims grades what the enforcer's trail claims apart from any one step:
+// the mode every event was enforced under, that what ran is what was decided,
+// and that every completion succeeded.
 type TrailClaims struct {
 	Scenario     labspec.Scenario
 	EvidenceFile string
@@ -28,6 +28,9 @@ func (c TrailClaims) Run(_ context.Context, records assertion.Records) ([]assert
 	results := []assertion.Result{c.modeResult(records.Evidence)}
 	if executed, found := c.executedResult(records.Evidence); found {
 		results = append(results, executed)
+	}
+	if completed, found := c.completedResult(records.Evidence); found {
+		results = append(results, completed)
 	}
 	return results, nil
 }

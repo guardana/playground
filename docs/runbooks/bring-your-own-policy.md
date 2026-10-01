@@ -59,7 +59,8 @@ lab owns most of it:
 
 - **The principal and the agent** are the listener's, set in your gateway part
   (`listener.principal`, `listener.agent`). The listener authenticates nobody,
-  so nothing a call carries changes who makes it.
+  so nothing a call carries changes who makes it, and the runner refuses a
+  trajectory that names another principal, tenant, agent or environment.
 - **The action** is the tool's name, `crm.read_customer`, and its effect class,
   resource type, resource id and destination trust zone come from the lab's
   classification of its victims, `config/gateway/classification.yaml`, pinned

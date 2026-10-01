@@ -54,9 +54,12 @@ scenario says it is testing.
 
 The run identifier is not in the file. A trajectory replayed twice is two runs.
 
-`agent`, `principal` and `session` are required but sent nowhere: the enforcer
+`agent`, `principal` and `session` are required and sent nowhere: the enforcer
 decides as the `listener.principal` and `listener.agent` of the scenario's
-gateway part, and nothing checks that the two agree.
+gateway part. The runner refuses a trajectory whose principal, tenant, agent
+or environment differs from that part's, before anything boots; an unset
+`listener.principal.tenant_id` is compared as the part's own `tenant_id`, which
+the enforcer fills in.
 
 A step can wait, and can resend its call while the gateway holds it:
 
@@ -151,8 +154,10 @@ three are checked when the files load:
   questions the decision point double was asked, by action; the approver's
   answers (`approve`, `reject`, `leave`, `wait`, `unknown`, `no-plane`). Either
   is optional.
-- **`evidence` is stated.** All three keys are read, and `false` is an
-  assertion, so a scenario without the block would assert without saying so.
+- **`evidence` is stated.** `content_captured: false` is the assertion that
+  no argument or result text reached the trail, the privacy default; `true` is
+  the assertion that some did. `chain_complete` and `policy_digest_present` are
+  asserted when `true` and say nothing when `false`.
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
   was expected is a failure unless that step is listed, and listing a step whose
   expectation is already `INDETERMINATE` is refused because it says nothing.
@@ -376,7 +381,8 @@ expect:
   serving nothing.
 - `profile` is `[verifier]` and nothing else: another profile boots the
   gateway, which lists every victim's tools when it starts and spends the
-  listing a drift is read on.
+  listing a drift is read on. A verifier scenario names no `gateway`, and so no
+  `expect.health`: nothing in it boots an enforcer to read them against.
 - `trajectory`, `enforcement_mode`, `gap`, `tolerance`, `chaos`, `trace`,
   `expect.decisions`, `expect.evidence` and `expect.trace` are refused: nothing
   in the run could grade them.
@@ -542,6 +548,13 @@ The runner refuses before anything boots, with the reason:
   image, and a run writes the collector's key before the images are built;
 - a scenario file, found by identifier, by `-all` or by path, that resolves
   outside the workspace;
+- under `-all`, a file in a suite directory (`scenarios/<class>/`) that is not
+  a regular `*.yaml`, a directory below one, hidden or not, a file directly
+  under `scenarios/` whose extension is `.yaml` or `.yml` in any letter case,
+  or an entry there that does not resolve, such as a link to a suite that
+  moved: `-all` would pass over it, and a scenario written there would never
+  run. A hidden file with neither extension, such as one a desktop leaves, is
+  ignored;
 - a link anywhere on the way to `trajectories/`, `config/contracts/`,
   `config/pdp/`, `config/approver/`, `config/policies/` or
   `config/gateway/scenarios/`: compose binds these by the path as written and
