@@ -42,7 +42,8 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir -p "$work/reports/classify/journals" "$work/gateway/spool"
-chmod -R 777 "$work/reports"
+chmod 755 "$work/reports" "$work/reports/classify"
+chmod 1777 "$work/reports/classify/journals"
 chmod 700 "$work/gateway/spool"
 
 victims=(victim-crm victim-db victim-fs victim-shell victim-mail victim-web)

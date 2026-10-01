@@ -56,6 +56,9 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	case err != nil:
 		return err
 	}
+	if err := refuseServiceUID(os.Getuid()); err != nil {
+		return err
+	}
 	root, err := os.Getwd()
 	if err != nil {
 		return err

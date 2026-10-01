@@ -129,7 +129,8 @@ classify-victims:
 # -keep` leaves one up. By hand, the services write under reports/manual.
 up:
 	mkdir -p reports/manual/journals reports/manual/agent
-	chmod 777 reports/manual reports/manual/journals reports/manual/agent
+	chmod 755 reports/manual
+	chmod 1777 reports/manual/journals reports/manual/agent
 	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) up -d --build
 
 down:

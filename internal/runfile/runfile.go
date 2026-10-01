@@ -6,11 +6,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 )
 
 // ReadRegular returns the contents of path when it is a regular file of at
 // most limit bytes, never following a link to what it names.
 func ReadRegular(path string, limit int) ([]byte, error) {
+	return readRegular(path, limit, nil)
+}
+
+// readRegular takes afterCheck, run between the check and the open, so a test
+// can swap the file in that window.
+func readRegular(path string, limit int, afterCheck func()) ([]byte, error) {
 	named, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
@@ -18,7 +25,12 @@ func ReadRegular(path string, limit int) ([]byte, error) {
 	if !named.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s is not a regular file", path)
 	}
-	file, err := os.Open(path) // #nosec G304 -- a regular file, checked again once open.
+	if afterCheck != nil {
+		afterCheck()
+	}
+	// The file can be replaced after the check: a link swapped in is not
+	// followed, and a FIFO is opened without waiting for a writer.
+	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0) // #nosec G304 -- checked again once open.
 	if err != nil {
 		return nil, err
 	}

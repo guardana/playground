@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
 	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/internal/runfile"
 )
 
 // errNoEvidence reports a collector export that cannot hold a trail: nothing
@@ -16,6 +18,10 @@ import (
 // caller that wrote evidence.jsonl for either case would leave a trail nobody
 // could tell apart from a run that genuinely produced no events.
 var errNoEvidence = errors.New("collector export holds no evidence")
+
+// maxCollectorExportBytes bounds the collector's export read into memory: room
+// for maxEvents records at the two kilobytes an exported record takes.
+const maxCollectorExportBytes = 128 << 20
 
 // writeEvidenceFromCollector reads the collector file exporter's output at
 // otlpPath, decodes it under namespace, and writes the run's evidence.jsonl at
@@ -27,21 +33,15 @@ var errNoEvidence = errors.New("collector export holds no evidence")
 // from a short one, and this reader never manufactures that ambiguity on the
 // caller's behalf.
 func writeEvidenceFromCollector(otlpPath, evidencePath, namespace string, limit int) error {
-	file, err := os.Open(otlpPath) // #nosec G304,G703 -- the path is inside the run directory the runner made.
+	body, err := runfile.ReadRegular(otlpPath, maxCollectorExportBytes)
 	if err != nil {
-		return fmt.Errorf("opening the collector's export: %w", err)
+		return fmt.Errorf("reading the collector's export: %w", err)
 	}
-	defer func() { _ = file.Close() }()
-
-	info, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("statting the collector's export: %w", err)
-	}
-	if info.Size() == 0 {
+	if len(body) == 0 {
 		return fmt.Errorf("%s: %w", otlpPath, errNoEvidence)
 	}
 
-	events, err := evidence.DecodeOTLP(file, namespace, limit)
+	events, err := evidence.DecodeOTLP(bytes.NewReader(body), namespace, limit)
 	if err != nil {
 		return fmt.Errorf("decoding the collector's export: %w", err)
 	}
@@ -74,19 +74,13 @@ func writeEventsJSONL(path string, events []evidence.Event) error {
 }
 
 func writeEventsFile(path string, events []evidence.Event) error {
-	// #nosec G304,G703 -- the path is inside the run directory the runner made.
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	encoder := json.NewEncoder(file)
-	for _, event := range events {
-		if err := encoder.Encode(event); err != nil {
-			return errors.Join(err, file.Close())
+	return write(path, func(file *os.File) error {
+		encoder := json.NewEncoder(file)
+		for _, event := range events {
+			if err := encoder.Encode(event); err != nil {
+				return err
+			}
 		}
-	}
-	if err := file.Sync(); err != nil {
-		return errors.Join(err, file.Close())
-	}
-	return file.Close()
+		return file.Sync()
+	})
 }

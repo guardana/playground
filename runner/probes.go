@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -55,8 +54,7 @@ func (l lab) probes(
 		}
 		recorded += fmt.Sprintf("%s ran=%t reached=%t %s\n", kind, probe.Ran, probe.Reached, probe.Detail)
 	}
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if err := os.WriteFile(source, []byte(recorded), 0o600); err != nil {
+	if err := writeBytes(source, []byte(recorded)); err != nil {
 		l.note("writing the probe record: %v", err)
 	}
 	return gateway, victim, sealed, source

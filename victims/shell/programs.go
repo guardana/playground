@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -39,6 +41,10 @@ func programs() map[string]program {
 		"whoami":   userName,
 	}
 }
+
+// catLimit bounds what cat reads of one file. A file larger than this, or one
+// that never ends such as /dev/zero, is refused rather than read into memory.
+const catLimit = 1 << 20
 
 // program is one allowlisted command.
 type program func(context.Context, []string) output
@@ -118,13 +124,36 @@ func concatenate(ctx context.Context, args []string) output {
 		if err := ctx.Err(); err != nil {
 			return failed("cat", err)
 		}
-		content, err := os.ReadFile(name) // #nosec G304 -- reading the file the caller named is the tool.
+		content, err := readBounded(name, catLimit-body.Len())
 		if err != nil {
 			return failed("cat", err)
 		}
 		body.Write(content)
 	}
 	return output{stdout: body.String()}
+}
+
+// readBounded reads one regular file the caller named, at most limit bytes of
+// it. The open does not block, so a pipe named in place of a file is refused
+// rather than waited on.
+func readBounded(name string, limit int) ([]byte, error) {
+	file, err := os.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0) // #nosec G304 -- reading the file the caller named is the tool.
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s: not a regular file", name)
+	}
+	content, err := io.ReadAll(io.LimitReader(file, int64(limit)+1))
+	if err == nil && len(content) > limit {
+		err = fmt.Errorf("%s: more than the %d bytes cat reads in all", name, catLimit)
+	}
+	return content, err
 }
 
 func listDirectory(ctx context.Context, args []string) output {

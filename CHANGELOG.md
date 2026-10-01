@@ -333,6 +333,23 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A run directory is the runner's at 0755 and each part a service writes into
+  is sticky, and the runner writes every file of its own as a new one: another
+  local user could replace a run's gateway part or plant a link the runner
+  wrote its report through. A reports directory inside the clone is taken only
+  at or under its `reports/`, where `attacks/`, which attacker-web serves, was
+  accepted; the placement checks compare directories, so another spelling of
+  the clone does not pass; an existing reports directory keeps its mode.
+- Journals and the collector's export are read as regular files of a bounded
+  size, never through a link, and opening them cannot block on a FIFO.
+- `scripts/lab-key.sh` compares every directory above the key's place, with
+  links resolved, with the clone by device and inode, also when the script is
+  reached through a link; it refuses a `.` or `..` component and a path
+  holding a control character, leaves an existing parent's mode alone, and
+  mounts only a fresh directory of its own into the keygen container.
+- victim-shell's `cat` reads regular files only, at most 1 MiB in all,
+  where `cat /dev/zero` filled the container's memory and a pipe could hold it.
+
 - The enforcer's agent listener binds the enforcer's own address on
   `agent-net`, where it bound every interface, so a container on
   `tool-net`, `evidence-net` or `pdp-net` could open a session as the

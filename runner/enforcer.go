@@ -128,7 +128,11 @@ func (l lab) prepareGateway(
 	if err != nil {
 		return "", err
 	}
-	return dir, os.WriteFile(filepath.Join(dir, "gateway.yaml"), assembled, 0o644) // #nosec G306,G703 -- public configuration, inside the run directory.
+	// Public configuration the enforcer's uid reads.
+	return dir, createNew(filepath.Join(dir, "gateway.yaml"), 0o644, func(file *os.File) error {
+		_, err := file.Write(assembled)
+		return err
+	})
 }
 
 func (l lab) overrides(unclassified []string) ([]gateway.Override, error) {

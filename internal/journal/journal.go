@@ -12,12 +12,15 @@ package journal
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/guardana/playground/internal/runfile"
 )
 
 // Status says what the server did with a call it received.
@@ -42,6 +45,10 @@ func (s Status) Known() bool { return s == Served || s == Refused }
 // exported for the writing side to stay under, and Detail is the only field
 // whose length a caller controls.
 const MaxLineBytes = 1 << 20
+
+// MaxFileBytes is the largest journal this package will read: thirty-two
+// lines at MaxLineBytes, where a catalogue run writes a few kilobytes.
+const MaxFileBytes = 32 << 20
 
 // fileMode lets the runner read a journal a server wrote as another uid, as it
 // does on a Linux host. Only the server writes it; nothing in it is secret.
@@ -140,17 +147,16 @@ func (w *Writer) Close() error {
 // ReadFile reads one server's journal. A journal that does not exist is an
 // error and never an empty one: a server that never started would otherwise
 // look exactly like a server that served nothing, and those are the two answers
-// a denial scenario has to tell apart.
+// a denial scenario has to tell apart. The journal sits where its server can
+// write, so a link, a FIFO or a file past MaxFileBytes there is refused.
 func ReadFile(path string) ([]Entry, error) {
-	file, err := os.Open(path) // #nosec G304 -- the path is the journal the caller asked for.
+	body, err := runfile.ReadRegular(path, MaxFileBytes)
 	if err != nil {
 		return nil, err
 	}
-	// Nothing was written, so a close error says nothing a caller could act on.
-	defer func() { _ = file.Close() }()
 
 	var entries []Entry
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64<<10), MaxLineBytes)
 	line := 1
 	for ; scanner.Scan(); line++ {

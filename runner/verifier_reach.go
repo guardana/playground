@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -84,8 +83,7 @@ func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Sc
 	record("outside", reach.Outside)
 	reach.Routes = l.python(ctx, compose, spec.Profile, routeTarget, routeScript)
 	record("routes", reach.Routes)
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if err := os.WriteFile(reach.Source, []byte(recorded.String()), 0o600); err != nil {
+	if err := writeBytes(reach.Source, []byte(recorded.String())); err != nil {
 		l.note("writing the probe record: %v", err)
 	}
 	return reach

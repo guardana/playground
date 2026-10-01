@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"path"
 	"path/filepath"
 
@@ -80,8 +79,7 @@ func (l lab) replay(
 		args = append(args, "-trace", path.Join(containerReports, runID, "agent", traceFile))
 	}
 	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, args)
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if writeErr := os.WriteFile(source, []byte(execution.Output), 0o600); writeErr != nil {
+	if writeErr := writeBytes(source, []byte(execution.Output)); writeErr != nil {
 		l.note("writing what the agent printed: %v", writeErr)
 	}
 	if err != nil {

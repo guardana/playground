@@ -534,8 +534,12 @@ The runner refuses before anything boots, with the reason:
 
 - `LAB_WORKSPACE` set and empty, not there, or not a directory;
 - a workspace inside the clone or inside the reports directory, or a reports
-  directory inside the workspace, after links are resolved (with no workspace,
-  a reports directory inside a directory of the clone a container mounts);
+  directory inside the workspace, after links are resolved;
+- a reports directory inside the clone anywhere but at or under its
+  `reports/`, however its path is spelled, with or without a workspace, or a
+  `reports/` that is a link: every
+  other directory of the clone is mounted by a container or copied into an
+  image, and a run writes the collector's key before the images are built;
 - a scenario file, found by identifier, by `-all` or by path, that resolves
   outside the workspace;
 - a link anywhere on the way to `trajectories/`, `config/contracts/`,

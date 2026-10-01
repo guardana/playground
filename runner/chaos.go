@@ -173,8 +173,7 @@ func (l lab) liftChaos(ctx context.Context, compose Compose, spec labspec.Scenar
 		}
 	}
 	source := filepath.Join(runDir, "chaos.log")
-	// #nosec G703 -- the path is inside the run directory the runner made.
-	if err := os.WriteFile(source, []byte(run.log.String()), 0o600); err != nil {
+	if err := writeBytes(source, []byte(run.log.String())); err != nil {
 		l.note("writing the chaos record: %v", err)
 	}
 	return check.Chaos{Faults: run.faults, Source: source}

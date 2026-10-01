@@ -131,7 +131,25 @@ func resolved(path string) string {
 	return filepath.Join(resolved(parent), filepath.Base(absolute))
 }
 
+// within reports whether path is dir or lies below it. Spellings are compared
+// first; then every existing ancestor of path is compared with dir as a file,
+// because a case-insensitive file system or a second name for a volume gives
+// one directory several spellings that resolving links does not reconcile.
 func within(path, dir string) bool {
 	relative, err := filepath.Rel(dir, path)
-	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
+	if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return true
+	}
+	target, err := os.Stat(dir)
+	if err != nil {
+		return false
+	}
+	for at := filepath.Clean(path); ; at = filepath.Dir(at) {
+		if info, err := os.Stat(at); err == nil && os.SameFile(info, target) {
+			return true
+		}
+		if filepath.Dir(at) == at {
+			return false
+		}
+	}
 }

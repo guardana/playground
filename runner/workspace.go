@@ -32,7 +32,13 @@ type workspace struct {
 func openWorkspace(root, reports string, environ []string) (workspace, error) {
 	value, set := lookupSet(environ, workspaceVariable)
 	if !set {
-		return workspace{dir: resolved(root)}, refuseReportsInMounts(resolved(root), reports)
+		if err := refuseReportsInMounts(resolved(root), reports); err != nil {
+			return workspace{}, err
+		}
+		return workspace{dir: resolved(root)}, refuseReportsInClone(root, reports)
+	}
+	if err := refuseReportsInClone(root, reports); err != nil {
+		return workspace{}, err
 	}
 	if strings.TrimSpace(value) == "" {
 		return workspace{}, fmt.Errorf("%s is set and empty; name a directory, or unset it to run the lab's own scenarios",
@@ -63,8 +69,41 @@ func openWorkspace(root, reports string, environ []string) (workspace, error) {
 func refuseReportsInMounts(root, reports string) error {
 	for _, dir := range mountedDirs() {
 		if within(resolved(reports), filepath.Join(root, filepath.FromSlash(strings.Trim(dir, "/")))) {
-			return fmt.Errorf("the reports directory %s is inside %s, which containers mount; keep the reports outside it", reports, dir)
+			return fmt.Errorf("the reports directory %s is inside %s, which containers mount; keep the reports under the clone's reports/ or outside the clone",
+				reports, dir)
 		}
+	}
+	return nil
+}
+
+// refuseReportsInClone takes reports inside the clone only at or under its
+// reports/, the one directory there that no service mounts and the build
+// context leaves out: anywhere else a run's records, and the collector's key
+// written before the images are built, would sit in a container's view or in
+// an image.
+func refuseReportsInClone(root, reports string) error {
+	clone, at := resolved(root), resolved(reports)
+	written, err := filepath.Abs(reports)
+	if err != nil {
+		return err
+	}
+	lexical, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	if !within(at, clone) && !within(written, lexical) {
+		return nil
+	}
+	own := filepath.Join(clone, "reports")
+	info, err := os.Lstat(own)
+	switch {
+	case err == nil && info.Mode()&fs.ModeSymlink != 0:
+		return fmt.Errorf("the clone's reports/ at %s is a link; make it a directory, or keep the reports outside the clone", own)
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return err
+	case !within(at, own):
+		return fmt.Errorf("the reports directory %s is inside the clone %s and not under its reports/, the only directory there no container mounts and no image is built from",
+			reports, root)
 	}
 	return nil
 }

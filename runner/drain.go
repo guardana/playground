@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -41,7 +40,7 @@ func (l lab) drainPlane(ctx context.Context, compose Compose, profiles []string,
 		plane.Builder = "scripts/build-enforcer-dev.sh"
 	}
 	var log strings.Builder
-	defer func() { _ = os.WriteFile(plane.Source, []byte(log.String()), 0o600) }() // #nosec G703 -- inside the run directory.
+	defer func() { _ = writeBytes(plane.Source, []byte(log.String())) }()
 
 	if body, err := l.planeGet(ctx, compose, profiles, "/brand"); err == nil {
 		var brand struct {
@@ -115,8 +114,7 @@ func keepHealth(log *strings.Builder, runDir string, health []byte) {
 		fmt.Fprintf(log, "healthz kept: no answer was read\n")
 		return
 	}
-	// #nosec G703 -- inside the run directory.
-	err := os.WriteFile(filepath.Join(runDir, healthRecord), health, 0o600)
+	err := writeBytes(filepath.Join(runDir, healthRecord), health)
 	fmt.Fprintf(log, "healthz kept in %s: %v\n", healthRecord, err)
 }
 

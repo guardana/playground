@@ -115,16 +115,18 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 // two reports. Nothing in it is secret — the fixtures are synthetic and the
 // canary tokens are planted to be found — and reports/ is not tracked.
 //
-// It is written by the lab services, not by the runner: compose bind-mounts
-// reports/ into every one of them and they run as nonroot, uid 65532. On Linux
-// that uid is the uid on the mount, so a directory this user owns at 0750 is
-// one no service can write its record into; macOS hides it because Docker
-// Desktop maps every access back to the invoking user. Hence the mode: a run's
-// scratch directory is world-writable on purpose, and reports/ above it is
-// traversable so a service can reach it.
+// The runner writes the run directory itself; compose bind-mounts only its
+// subdirectories, and the services write there as nonroot, uid 65532, which on
+// Linux is the uid on the mount. So the run directory is the runner's at 0755,
+// and each directory a service writes into is world-writable and sticky: any
+// service can add its record, and another local user can neither remove nor
+// replace one. The services share one uid, so the bit does not keep them from
+// each other's files.
 const (
 	reportsMode = 0o755
-	runDirMode  = 0o777
+	runDirMode  = 0o755
+	sharedMode  = fs.ModeSticky | 0o777
+	serviceUID  = 65532
 )
 
 // makeRunDir creates the directory this run writes into, and refuses one that
@@ -132,13 +134,10 @@ const (
 // on whatever the last run left in it, which is the difference between reading
 // a record and reading a record of something else.
 func makeRunDir(reports, runDir string) error {
-	if err := os.MkdirAll(reports, reportsMode); err != nil {
+	if err := makeReports(reports); err != nil {
 		return err
 	}
-	if err := os.Chmod(reports, reportsMode); err != nil {
-		return err
-	}
-	if err := makeShared(runDir); err != nil {
+	if err := makeDir(runDir, runDirMode); err != nil {
 		return err
 	}
 	for _, owned := range []string{"journals", "agent"} {
@@ -149,15 +148,37 @@ func makeRunDir(reports, runDir string) error {
 	return nil
 }
 
-// makeShared creates one directory the services can write into. The mode is set
-// twice because Mkdir's is masked by the umask of whoever ran the runner, and a
-// umask of 022 is the difference between a lab that records and one that does
-// not.
-func makeShared(path string) error {
-	if err := os.Mkdir(path, runDirMode); err != nil { // #nosec G301,G703 -- see the mode's own comment.
+// makeReports creates the reports directory traversable, and leaves the mode
+// of one that is already there to its owner.
+func makeReports(reports string) error {
+	if _, err := os.Stat(reports); !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	return os.Chmod(path, runDirMode) // #nosec G302,G703 -- as above.
+	if err := os.MkdirAll(reports, reportsMode); err != nil {
+		return err
+	}
+	return os.Chmod(reports, reportsMode)
+}
+
+// makeShared creates one directory every service can write into.
+func makeShared(path string) error { return makeDir(path, sharedMode) }
+
+// makeDir sets the mode again after Mkdir, whose mode the umask of whoever ran
+// the runner narrows.
+func makeDir(path string, mode fs.FileMode) error {
+	if err := os.Mkdir(path, mode); err != nil { // #nosec G301,G703 -- see the modes' own comment.
+		return err
+	}
+	return os.Chmod(path, mode) // #nosec G302,G703 -- as above.
+}
+
+// refuseServiceUID refuses a runner with the uid every lab service runs as:
+// the modes of the run directory keep nothing from a service that is its owner.
+func refuseServiceUID(uid int) error {
+	if uid == serviceUID {
+		return fmt.Errorf("the runner runs as uid %d, the uid every lab service runs as; run it as another user", uid)
+	}
+	return nil
 }
 
 func readTrail(path string) ([]evidence.Event, error) {
@@ -208,9 +229,18 @@ func writeJSON(path string, value any) error {
 	})
 }
 
-func write(path string, body func(*os.File) error) error {
+func writeBytes(path string, body []byte) error {
+	return write(path, func(file *os.File) error { _, err := file.Write(body); return err })
+}
+
+func write(path string, body func(*os.File) error) error { return createNew(path, 0o600, body) }
+
+// createNew is every write the runner makes into a run directory, whose
+// subdirectories every service can write into: a link or file already at path
+// is refused, never followed or truncated, so each path is written once.
+func createNew(path string, mode fs.FileMode, body func(*os.File) error) error {
 	// #nosec G304,G703 -- the path is inside the run directory the runner made.
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
 	if err != nil {
 		return err
 	}

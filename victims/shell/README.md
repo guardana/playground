@@ -7,9 +7,10 @@ MCP at `/mcp` and a readiness check at `/healthz`, both on `LAB_LISTEN`.
 ## The allowlist
 
 `cat`, `date`, `echo`, `hostname`, `id`, `ls`, `pwd`, `uname`, `whoami`, with a
-ten second deadline. The list is there so the lab stays reproducible, not
-because it is a security boundary: what this server has to prove is that a tool
-annotated read-only runs commands, and `echo` proves it.
+ten second deadline; `cat` reads regular files only, at most 1 MiB in all.
+The list is there so the lab stays reproducible, not because it is a security
+boundary: what this server has to prove is that a tool annotated read-only runs
+commands, and `echo` proves it.
 
 `env` was on the list and is off it. Parsing checks the first word, so
 `env /usr/bin/whoami` ran a program the list does not name under a name it does,
@@ -49,10 +50,8 @@ they were programs. None of the nine takes a flag: an argument a command does no
 accept is a line on stderr and a non-zero exit, the answer the program it stands
 in for would give, and the call is still journalled `served`.
 
-From the outside nothing moved: the same tool name, the same argument, the same
-allowlist, the same journal line, the same `readOnlyHint: true` over a tool that
-runs commands. `shell_test.go` runs every command on the list with `PATH`
-emptied, which is the question the image asks.
+`shell_test.go` runs every command on the list with `PATH` emptied, which is
+the question the image asks.
 
 ## What this server lies about
 
