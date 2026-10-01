@@ -1,8 +1,9 @@
 # The enforcement plane, built from one commit of its own repository.
 #
-# The build context is a `git archive` of ENFORCER_COMMIT, never a working tree:
-# scripts/build-enforcer.sh makes it and is the only supported way to build this
-# file. The named context `lab` is compose/healthprobe and nothing else, so no
+# The build context is a `git archive` of ENFORCER_COMMIT, made by
+# scripts/build-enforcer.sh, or for a development image named apart from the
+# pin, a snapshot of a working tree made by scripts/build-enforcer-dev.sh.
+# Nothing else builds this file. The named context `lab` is compose/healthprobe and nothing else, so no
 # other file of this repository can reach the image.
 #
 # The binaries land under fixed lab names, so compose files and scripts never

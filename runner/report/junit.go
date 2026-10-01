@@ -31,8 +31,12 @@ func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 		}}
 	}
 
+	name, kind := r.Scenario, r.Suite()
+	if p.Development != "" {
+		name, kind = "dev-"+name, "dev-"+kind
+	}
 	suite := junitSuite{
-		Name:      r.Scenario,
+		Name:      name,
 		Timestamp: r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		Time:      seconds(r),
 		Properties: append([]junitProperty{
@@ -42,7 +46,7 @@ func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 		}, provenanceProperties(p)...),
 	}
 	for _, result := range results {
-		suite.Cases = append(suite.Cases, testCase(r.Suite()+"."+r.Scenario, result))
+		suite.Cases = append(suite.Cases, testCase(kind+"."+r.Scenario, result))
 		suite.Tests++
 		if result.Outcome != assertion.Pass {
 			suite.Failures++
@@ -50,7 +54,7 @@ func WriteJUnit(w io.Writer, r assertion.Report, p Provenance) error {
 	}
 
 	document := junitSuites{
-		Name:     r.Scenario,
+		Name:     name,
 		Tests:    suite.Tests,
 		Failures: suite.Failures,
 		Time:     suite.Time,

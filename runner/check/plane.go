@@ -13,7 +13,10 @@ import (
 // and that its spool drained into the collector before the trail was read. A trail read before the drain could
 // be one the plane had not finished handing over.
 type Plane struct {
-	Pin         string
+	Pin string
+	// Builder is the script whose build labels the image with its tree:
+	// scripts/build-enforcer.sh at the pin, or the development build's.
+	Builder     string
 	Version     string
 	VersionRead bool
 	Drained     bool
@@ -50,7 +53,7 @@ func (p Plane) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, 
 		version.Outcome, version.Got = assertion.Pass, p.Version
 	default:
 		version.Outcome, version.Got = assertion.Fail, spoken(p.Version)
-		version.Detail = fmt.Sprintf("the image tagged with the pin serves %s", spoken(p.Version))
+		version.Detail = fmt.Sprintf("the run's enforcer serves %s", spoken(p.Version))
 	}
 	drained := assertion.Result{
 		Check: "plane/drained",
@@ -74,7 +77,7 @@ func (p Plane) image() assertion.Result {
 	result := assertion.Result{
 		Check: "plane/image",
 		Want: "the run's enforcer container runs the image tagged with the pin, built from commit " + p.Pin +
-			" and labelled by scripts/build-enforcer.sh with tree " + spoken(p.TreePin),
+			" and labelled by " + p.builder() + " with tree " + spoken(p.TreePin),
 		Got:    p.RunningImage,
 		Source: p.Source,
 		Detail: p.ImageDetail,
@@ -96,11 +99,18 @@ func (p Plane) image() assertion.Result {
 		result.Detail = "the running image's tree label was not read: " + p.ImageDetail
 	case p.RunningTree != p.TreePin:
 		result.Outcome = assertion.Fail
-		result.Detail = "the running image carries " + treeFound(p.RunningTree) + ", so scripts/build-enforcer.sh did not build it"
+		result.Detail = "the running image carries " + treeFound(p.RunningTree) + ", so " + p.builder() + " did not build it"
 	default:
 		result.Outcome = assertion.Pass
 	}
 	return result
+}
+
+func (p Plane) builder() string {
+	if p.Builder == "" {
+		return "scripts/build-enforcer.sh"
+	}
+	return p.Builder
 }
 
 func treeFound(tree string) string {

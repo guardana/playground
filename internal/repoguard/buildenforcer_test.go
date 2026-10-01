@@ -70,6 +70,10 @@ func buildTree(t *testing.T, commit, tree string) (root, calls string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	hashing, err := os.ReadFile(filepath.Join(repoRoot, "scripts", "context-tree.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	calls = filepath.Join(root, "docker-calls")
 	pins := "ENFORCER_COMMIT=" + commit + "\nENFORCER_IMAGE=lab-enforcer\nENFORCER_GATEWAY_BIN=gateway\n" +
 		"ENFORCER_CONTROL_BIN=control\nGO_BUILD_IMAGE=go\nSERVICE_BASE_IMAGE=base\n"
@@ -78,6 +82,7 @@ func buildTree(t *testing.T, commit, tree string) (root, calls string) {
 	}
 	for path, body := range map[string]string{
 		"scripts/build-enforcer.sh": string(script),
+		"scripts/context-tree.sh":   string(hashing),
 		"versions.env":              pins,
 		"bin/docker":                "#!/bin/sh\necho \"$*\" >> '" + calls + "'\necho sha256:0\n",
 	} {

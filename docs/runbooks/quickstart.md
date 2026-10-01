@@ -3,7 +3,7 @@ title: Quickstart
 summary: From a checkout to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 type: runbook
 audience: [engineering, product]
-covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/build-enforcer.sh, scripts/build-verifier.sh, scripts/lab-key.sh, scripts/smoke.sh, runner/main.go, runner/report/**]
+covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/build-enforcer.sh, scripts/build-enforcer-dev.sh, scripts/build-verifier.sh, scripts/lab-key.sh, scripts/smoke.sh, runner/main.go, runner/report/**]
 ---
 
 # Quickstart
@@ -17,9 +17,9 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
   in `versions.env`, the commit of the release `ENFORCER_RELEASE`.
   `scripts/fetch-enforcer.sh <dir>` makes one from
   `https://github.com/guardana/control` anonymously, after checking that the
-  release's tag there names that commit. The lab builds the enforcer from the
-  commit with `git archive`, never from a clone's working tree, and refuses an
-  archive whose tree is not `ENFORCER_TREE`.
+  release's tag there names that commit. The lab builds the pinned enforcer
+  from the commit with `git archive`, never from a clone's working tree, and
+  refuses an archive whose tree is not `ENFORCER_TREE`.
 - A checkout of this lab. The public `guardana/playground` repository is empty
   today; ask the maintainers for the checkout until it is published.
 - Network for the first build: it pulls the base images and the verifier's
@@ -96,6 +96,17 @@ read. The records sit beside the report:
 each on a finding in a system under test; `scenarios/red-by-design.txt` names
 them and the finding, and `go run ./runner -all -red-by-design
 scenarios/red-by-design.txt` passes only when the reds are exactly those.
+
+## Try an unreleased enforcer change
+
+```
+make dev-scenarios CONTROL=/path/to/control ID=tool-02-permitted-read-is-recorded-by-the-enforcer
+```
+
+This builds the enforcer from that checkout's working tree, uncommitted
+changes included, and grades the scenario against it; without `ID` it runs
+the catalogue. The result line reads `dev-catalogue` and the report starts by
+naming the build. It says nothing about the pinned release.
 
 ## When it is red
 

@@ -71,3 +71,16 @@ func TestExecuteAllFailsOnAScenarioItCannotLoad(t *testing.T) {
 		t.Error("a scenario that does not load was reported as a run that passed")
 	}
 }
+
+// An empty development image is a mistake upstream of the runner, such as a
+// build whose name was not captured; read as "no development build" it would
+// grade the pinned release under a development run's name.
+func TestParseRefusesADevelopmentImageGivenEmpty(t *testing.T) {
+	var out strings.Builder
+	if _, err := parse([]string{"-all", "-enforcer-dev", ""}, &out); err == nil {
+		t.Error("an empty -enforcer-dev was taken")
+	}
+	if got, err := parse([]string{"-all"}, &out); err != nil || got.enforcerDev != "" {
+		t.Errorf("a run without -enforcer-dev: %+v, %v", got, err)
+	}
+}

@@ -60,6 +60,8 @@ func (l lab) environment(runID, runDir string) map[string]string {
 		"LAB_RUN_ID":           runID,
 		"LAB_REPORTS_DIR":      containerReports,
 		"COMPOSE_PROJECT_NAME": projectName(runID),
+		"LAB_ENFORCER_REF":     l.enforcerImage,
+		"LAB_ENFORCER_TAG":     l.enforcerImage[strings.LastIndex(l.enforcerImage, ":")+1:],
 		workspaceVariable:      l.workspace.dir,
 	}
 	network := agentNetFor(runID)

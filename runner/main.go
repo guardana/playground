@@ -3,6 +3,7 @@
 //
 //	runner -scenario <id or path> [-reports dir] [-keep] [-timeout d]
 //	runner -all [-reports dir] [-timeout d] [-red-by-design file]
+//	runner ... -enforcer-dev <image>
 //
 // It exits zero only when every scenario it ran passed, or, with
 // -red-by-design, when the ones that did not are exactly those the file lists,
@@ -32,6 +33,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/internal/redbydesign"
 )
 
 const (
@@ -74,19 +76,59 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 		return err
 	}
 	subject := newLab(root, space, chosen, environ, out)
-	if subject.namespace, err = enforcerNamespace(root); err != nil {
+	if subject, err = pinEnforcer(subject); err != nil {
 		return err
 	}
-	if subject.pin, err = enforcerPin(root); err != nil {
+	if chosen.enforcerDev == "" {
+		return execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
+	}
+	if subject, err = withDevelopment(ctx, subject, chosen.enforcerDev, space, command); err != nil {
 		return err
 	}
-	if subject.enforcerImage, err = enforcerImage(root); err != nil {
-		return err
-	}
-	if chosen.redByDesign != "" {
+	err = execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
+	_, _ = fmt.Fprintf(out, "runner: graded against the %s\n", subject.development.describe(subject.pinned))
+	return err
+}
+
+func execute(
+	ctx context.Context, subject lab, scenarios []string, judged bool, listed []redbydesign.Entry, out io.Writer,
+) error {
+	if judged {
 		return executeRedByDesign(ctx, subject, scenarios, listed, out)
 	}
 	return executeAll(ctx, subject, scenarios, out)
+}
+
+// pinEnforcer reads what versions.env pins the enforcer at: its namespace, its
+// commit and its image.
+func pinEnforcer(subject lab) (lab, error) {
+	var err error
+	if subject.namespace, err = enforcerNamespace(subject.root); err != nil {
+		return lab{}, err
+	}
+	if subject.pin, err = enforcerPin(subject.root); err != nil {
+		return lab{}, err
+	}
+	if subject.enforcerImage, err = enforcerImage(subject.root); err != nil {
+		return lab{}, err
+	}
+	return subject, nil
+}
+
+// withDevelopment points the run at a development image of the enforcer: the
+// version, the tree and the image ID it is checked against are the image's
+// own, policies are signed with its command, and the report names the build
+// and the pin it is not.
+func withDevelopment(ctx context.Context, subject lab, ref string, space workspace, run lookup) (lab, error) {
+	dev, err := readDevelopment(ctx, run, ref)
+	if err != nil {
+		return lab{}, err
+	}
+	subject.pinned = subject.pin
+	subject.pin, subject.enforcerImage, subject.development = dev.Version, dev.Ref, &dev
+	subject.describe = describeHost(subject.root, space, run, &dev)
+	subject.sign = signWithImage(dev.Ref, run)
+	return subject, nil
 }
 
 func parse(args []string, out io.Writer) (settings, error) {
@@ -101,10 +143,18 @@ func parse(args []string, out io.Writer) (settings, error) {
 		"how long one scenario may take, the first docker build included")
 	set.StringVar(&chosen.redByDesign, "red-by-design", "",
 		"with -all, pass only when the scenarios that do not pass are exactly the ones this file lists")
+	set.StringVar(&chosen.enforcerDev, "enforcer-dev", "",
+		"run this development image of the enforcer (scripts/build-enforcer-dev.sh) instead of the pinned one")
 	if err := set.Parse(args); err != nil {
 		return settings{}, err
 	}
-	return chosen, nil
+	var empty error
+	set.Visit(func(given *flag.Flag) {
+		if given.Name == "enforcer-dev" && chosen.enforcerDev == "" {
+			empty = errors.New("-enforcer-dev names no image; a run without one is a run at the pin")
+		}
+	})
+	return chosen, empty
 }
 
 func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer) lab {
@@ -124,7 +174,7 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 		clock:    time.Now,
 		suffix:   randomSuffix,
 		log:      out,
-		describe: describeHost(root, space, command),
+		describe: describeHost(root, space, command, nil),
 		keysDir:  labKeysDir(lookupIn(environ)),
 		sign:     signWithEnforcer(root, command),
 		inspect:  command,
@@ -160,7 +210,11 @@ func runEach(ctx context.Context, subject lab, scenarios []string, out io.Writer
 			_, _ = fmt.Fprintf(out, "%s: the run could not be written: %v\n", filepath.Base(scenario), err)
 			continue
 		}
-		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), graded.Suite(), graded.Scenario,
+		suite := graded.Suite()
+		if subject.development != nil {
+			suite = "dev-" + suite
+		}
+		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), suite, graded.Scenario,
 			filepath.Join(subject.reports, graded.RunID, "report.md"))
 		ran = append(ran, ranScenario{id: graded.Scenario, outcome: graded.Outcome()})
 	}

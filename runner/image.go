@@ -39,6 +39,8 @@ func (l lab) readImages(ctx context.Context, compose Compose, profiles []string,
 	plane.RunningImage = running
 	problems = append(problems, l.readTree(ctx, plane)...)
 	switch {
+	case l.development != nil:
+		plane.PinnedImage, plane.PinnedLabel = l.development.ID, l.development.Version
 	case l.inspect == nil || l.enforcerImage == "":
 		problems = append(problems, "no pinned image to compare with")
 	default:
@@ -62,6 +64,9 @@ func (l lab) readTree(ctx context.Context, plane *check.Plane) []string {
 		problems = append(problems, "the pins cannot be read: "+err.Error())
 	}
 	plane.TreePin = pinValue(pins, "ENFORCER_TREE")
+	if l.development != nil {
+		plane.TreePin = l.development.Tree
+	}
 	if plane.RunningImage == "" || l.inspect == nil {
 		return problems
 	}

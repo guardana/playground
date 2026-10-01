@@ -7,7 +7,8 @@ SOURCES = scripts/repo-files.sh | grep '\.go$$'
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
 	check-sizes check-attribution check-hygiene check-actions-pinned \
-	enforcer-image verifier-image images lab-key classify-victims up down scenario scenarios smoke ci-scenarios \
+	enforcer-image verifier-image images enforcer-dev-image dev-scenarios lab-key classify-victims up down \
+	scenario scenarios smoke ci-scenarios \
 	quality-quick quality
 
 # The compose profiles a target brings up, space-separated, and where a run
@@ -95,6 +96,21 @@ verifier-image:
 	scripts/build-verifier.sh
 
 images: enforcer-image verifier-image
+
+# A development image of the enforcer from the working tree of the checkout
+# CONTROL names, uncommitted changes included, and the catalogue (or ID) graded
+# against it. Never the pinned release: the image is named apart from it and
+# every line and report of the run says it was a development build.
+enforcer-dev-image:
+	@test -n "$(CONTROL)" || { echo "usage: make enforcer-dev-image CONTROL=<checkout>" >&2; exit 2; }
+	scripts/build-enforcer-dev.sh "$(CONTROL)"
+
+dev-scenarios:
+	@test -n "$(CONTROL)" || { echo "usage: make dev-scenarios CONTROL=<checkout> [ID=<scenario id>]" >&2; exit 2; }
+	ref=$$(scripts/build-enforcer-dev.sh "$(CONTROL)" | sed -n 's/^enforcer-dev: \([^ ]*\) .*/\1/p'); \
+	test -n "$$ref" || { echo "dev-scenarios: the development image was not built" >&2; exit 1; }; \
+	echo "dev-scenarios: $$ref"; \
+	$(GO) run ./runner $(if $(ID),-scenario $(ID),-all) -enforcer-dev "$$ref" -reports $(REPORTS)
 
 # The lab's policy signing key, made once per machine outside the clone by the
 # pinned enforcer's own keygen. Scenarios the enforcer decides sign with it.

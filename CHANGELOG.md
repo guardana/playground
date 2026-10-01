@@ -5,6 +5,21 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- A development mode for the enforcer: `make dev-scenarios
+  CONTROL=<checkout> [ID=<scenario>]` builds it from a checkout's working
+  tree, uncommitted changes included, as `playground-enforcer-dev:<tree>`
+  (`scripts/build-enforcer-dev.sh`), and runs the catalogue or one scenario
+  with `runner -enforcer-dev <image>`. The run signs policies with that build
+  and is held to its version, its tree and the image ID read at the start;
+  every result line and JUnit case reads `dev-<suite>`, and the report names
+  the checkout, its HEAD, whether it was dirty, the tree, and the pinned
+  commit the run did not use. Compose takes the enforcer's image from
+  `LAB_ENFORCER_REF`, which the runner always sets, and tags the approver per
+  enforcer image (`LAB_ENFORCER_TAG`), so a development run never reuses the
+  pinned run's approver or the other way round.
+
 ### Fixed
 
 - The enforcer's agent listener binds the enforcer's own address on

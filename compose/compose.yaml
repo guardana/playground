@@ -325,13 +325,14 @@ services:
       victim-web: {condition: service_healthy}
 
   # The enforcement plane under test, from the image `make enforcer-image`
-  # builds out of its pinned commit. It is told nothing the lab decided about
+  # builds out of its pinned commit. The runner names it in LAB_ENFORCER_REF,
+  # which is a development build only when it was asked for one. It is told nothing the lab decided about
   # a verdict: the runner hands it a bundle signed for the run and a
   # configuration assembled from the scenario's part (runner/gateway), both
   # read-only. It trusts two roots and no other: the decision point double's CA
   # in pki/, and in export-ca/ the CA the runner made for the collector.
   enforcer:
-    image: ${ENFORCER_IMAGE}:${ENFORCER_COMMIT}
+    image: ${LAB_ENFORCER_REF:-${ENFORCER_IMAGE}:${ENFORCER_COMMIT}}
     pull_policy: never
     <<: *hardened
     command: ["run", "--config", "/gateway/gateway.yaml"]
@@ -433,15 +434,14 @@ services:
   # enforcer's own command, on the approvals volume it shares with the plane
   # alone. Its network holds nothing else and has no route out.
   approver:
-    image: ${LAB_IMAGE_PREFIX}-approver
+    image: ${LAB_IMAGE_PREFIX}-approver:${LAB_ENFORCER_TAG:-${ENFORCER_COMMIT}}
     <<: *hardened
     build:
       context: ..
       dockerfile: compose/Dockerfile.approver
       args:
         <<: *build-args
-        ENFORCER_IMAGE: ${ENFORCER_IMAGE}
-        ENFORCER_COMMIT: ${ENFORCER_COMMIT}
+        ENFORCER_REF: ${LAB_ENFORCER_REF:-${ENFORCER_IMAGE}:${ENFORCER_COMMIT}}
     command:
       - -dir=/var/lib/lab/approvals
       - -script=/scripts/${LAB_APPROVER_SCRIPT:-no-script-given.yaml}

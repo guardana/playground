@@ -25,7 +25,14 @@ func signWithEnforcer(root string, run lookup) signer {
 			return err
 		}
 		image := pinValue(pins, "ENFORCER_IMAGE") + ":" + pinValue(pins, "ENFORCER_COMMIT")
-		_, err = run(ctx, "docker", "run", "--rm", "--pull", "never", "--network", "none", "--read-only",
+		return signWithImage(image, run)(ctx, keysDir, policy, outDir)
+	}
+}
+
+// signWithImage signs with the `policy sign` of the enforcer image named.
+func signWithImage(image string, run lookup) signer {
+	return func(ctx context.Context, keysDir, policy, outDir string) error {
+		_, err := run(ctx, "docker", "run", "--rm", "--pull", "never", "--network", "none", "--read-only",
 			"--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 			"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
 			"-v", keysDir+":/key:ro", "-v", filepath.Dir(policy)+":/policy:ro", "-v", outDir+":/out",

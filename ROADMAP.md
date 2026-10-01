@@ -32,9 +32,10 @@ and the catalogue is green except for exactly the documented red scenarios.
 
 `make smoke` is implemented as a smaller local loop over allowed, denied, held,
 trace-graded and probe-graded paths. It uses the same pins and evidence checks;
-it does not replace the full catalogue. A development build from a local,
-possibly dirty Control tree is planned as a separate mode whose report names
-that tree and cannot be mistaken for a release-pin result. Translate Control's
+it does not replace the full catalogue. `make dev-scenarios` builds Control
+from a local, possibly dirty tree and grades scenarios against it, with a
+report that names that tree and cannot be mistaken for a release-pin result
+(experimental). Translate Control's
 own scenario format only after a round trip preserves the calls and expected
 evidence; do not maintain two conflicting truths for one case.
 

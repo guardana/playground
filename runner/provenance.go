@@ -67,7 +67,7 @@ func pinValue(pins []report.Pin, name string) string {
 
 // describeHost reads what produced a run from the lab's checkout, the
 // workspace, versions.env, the local Docker daemon and the runtime.
-func describeHost(root string, space workspace, run lookup) func(context.Context) report.Provenance {
+func describeHost(root string, space workspace, run lookup, dev *devBuild) func(context.Context) report.Provenance {
 	return func(ctx context.Context) report.Provenance {
 		ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
 		defer cancel()
@@ -75,6 +75,9 @@ func describeHost(root string, space workspace, run lookup) func(context.Context
 			Lab: labCommit(ctx, run, root), Workspace: describeWorkspace(ctx, run, space), Machine: machine(ctx, run),
 		}
 		pins, err := readPins(filepath.Join(root, versionFile))
+		if dev != nil {
+			described.Development = dev.describe(pinValue(pins, "ENFORCER_COMMIT"))
+		}
 		if err != nil {
 			described.Pins = []report.Pin{{Name: versionFile, Value: "unreadable: " + err.Error()}}
 			return described

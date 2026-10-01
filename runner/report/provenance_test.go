@@ -110,3 +110,23 @@ func TestJUnitCarriesTheProvenance(t *testing.T) {
 		}
 	}
 }
+
+func TestADevelopmentRunSaysSoAboveEverythingElse(t *testing.T) {
+	built := "development build `playground-enforcer-dev:7540e1f1a778` of /work/control at 1415392, dirty"
+	for name, p := range map[string]report.Provenance{"development": {Development: built}, "pinned": provenance()} {
+		var markdown, junit strings.Builder
+		if err := report.WriteMarkdown(&markdown, mixed(), nil, p); err != nil {
+			t.Fatal(err)
+		}
+		if err := report.WriteJUnit(&junit, mixed(), p); err != nil {
+			t.Fatal(err)
+		}
+		saysSo := strings.Contains(markdown.String(), "- Enforcer: a development build, not the pinned release") &&
+			strings.Contains(markdown.String(), "- Enforcer: **"+built+"**") &&
+			strings.Contains(junit.String(), `name="enforcer.development"`) &&
+			strings.Contains(junit.String(), `classname="dev-`)
+		if saysSo != (name == "development") {
+			t.Errorf("%s run: development named %t\n%s\n%s", name, saysSo, markdown.String(), junit.String())
+		}
+	}
+}

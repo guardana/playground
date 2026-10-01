@@ -9,7 +9,10 @@ import (
 // under, the images on this machine tagged with those pins, and the machine. A value nobody could
 // read is carried as the reason it could not be read, never left blank.
 type Provenance struct {
-	Lab string
+	// Development names the development build of the enforcer the run used
+	// instead of the pinned one; empty for a run at the pins.
+	Development string
+	Lab         string
 	// Workspace is where the scenario and the files it names were read from.
 	Workspace string
 	Pins      []Pin
@@ -70,6 +73,9 @@ func (i Image) describe() string {
 
 func writeProvenance(out *writer, p Provenance) {
 	out.printf("## Provenance\n\n")
+	if p.Development != "" {
+		out.printf("- Enforcer: **%s**\n", p.Development)
+	}
 	out.printf("- Lab: %s\n", or(p.Lab, "not recorded"))
 	out.printf("- Workspace: %s\n", or(p.Workspace, "not recorded"))
 	if len(p.Pins) == 0 {
@@ -88,10 +94,14 @@ func writeProvenance(out *writer, p Provenance) {
 }
 
 func provenanceProperties(p Provenance) []junitProperty {
-	properties := []junitProperty{
+	var properties []junitProperty
+	if p.Development != "" {
+		properties = append(properties, junitProperty{Name: "enforcer.development", Value: p.Development})
+	}
+	properties = append(properties, []junitProperty{
 		{Name: "lab", Value: or(p.Lab, "not recorded")},
 		{Name: "workspace", Value: or(p.Workspace, "not recorded")},
-	}
+	}...)
 	for _, pin := range p.Pins {
 		properties = append(properties, junitProperty{Name: "pin." + pin.Name, Value: pin.Value})
 	}

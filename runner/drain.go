@@ -37,6 +37,9 @@ func (l lab) drainPlane(ctx context.Context, compose Compose, profiles []string,
 	ctx, cancel := context.WithTimeout(ctx, bound)
 	defer cancel()
 	plane := check.Plane{Pin: pin, Source: filepath.Join(runDir, "plane.log")}
+	if l.development != nil {
+		plane.Builder = "scripts/build-enforcer-dev.sh"
+	}
 	var log strings.Builder
 	defer func() { _ = os.WriteFile(plane.Source, []byte(log.String()), 0o600) }() // #nosec G703 -- inside the run directory.
 

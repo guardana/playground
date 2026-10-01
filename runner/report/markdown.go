@@ -18,6 +18,9 @@ func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p 
 	out.printf("# %s\n\n", or(r.Scenario, "an unnamed scenario"))
 	out.printf("- Run: `%s`\n", or(r.RunID, "unnamed"))
 	out.printf("- Outcome: **%s**\n", r.Outcome().String())
+	if p.Development != "" {
+		out.printf("- Enforcer: a development build, not the pinned release; see Provenance\n")
+	}
 	out.printf("- Started: %s, took %ss\n", r.StartedAt.UTC().Format("2006-01-02T15:04:05Z"), seconds(r))
 	if r.Gap != "" {
 		out.printf("- Known gap: %s. A pass means the system still does what it documents today; the Wanted column is what it should do\n", r.Gap)

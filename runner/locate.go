@@ -22,6 +22,9 @@ type settings struct {
 	timeout  time.Duration
 	// redByDesign is the list a whole-catalogue run is judged against.
 	redByDesign string
+	// enforcerDev names a development image of the enforcer to run instead of
+	// the pinned one.
+	enforcerDev string
 }
 
 // locate returns the scenario files to run, in the order they will be run.

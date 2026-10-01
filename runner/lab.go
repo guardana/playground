@@ -63,15 +63,20 @@ type lab struct {
 	// namespace is the enforcer's, under which its gateway marks the answers
 	// it makes itself; the agent reads a pending answer only under it.
 	namespace string
-	// pin is ENFORCER_COMMIT, which the running enforcer has to report.
-	pin string
+	// pin is the version the running enforcer has to report: ENFORCER_COMMIT,
+	// or a development build's own, with the pin it replaced in pinned.
+	pin    string
+	pinned string
+	// development is the development build the run uses instead of the pin.
+	development *devBuild
 	// keysDir holds the lab key; sign signs a scenario's policy with it.
 	keysDir string
 	sign    signer
 	// drainBound bounds the wait for the plane's trail; zero reads as the
 	// default in drain.go.
 	drainBound time.Duration
-	// enforcerImage is ENFORCER_IMAGE:ENFORCER_COMMIT; inspect reads it.
+	// enforcerImage is ENFORCER_IMAGE:ENFORCER_COMMIT, or the development
+	// image the run uses instead; inspect reads it.
 	enforcerImage string
 	inspect       lookup
 }

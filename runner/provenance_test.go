@@ -196,7 +196,7 @@ func TestTheReportNamesTheWorkspaceAndItsCommit(t *testing.T) {
 		{"not a checkout", workspace{dir: "/work/loose", external: true}, []string{"`/work/loose`", "not a git checkout"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got := describeHost(root, test.space, gitSays("/work/policies", commit))(context.Background()).Workspace
+			got := describeHost(root, test.space, gitSays("/work/policies", commit), nil)(context.Background()).Workspace
 			for _, want := range test.says {
 				if !strings.Contains(got, want) {
 					t.Errorf("the workspace reads as %q, want it to say %q", got, want)

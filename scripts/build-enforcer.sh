@@ -28,18 +28,8 @@ pin() {
 	printf '%s' "$value"
 }
 
-# context_tree hashes the extracted archive the way git hashes a commit's tree,
-# with no conversion: neither the building machine's configuration nor the
-# archive's own .gitattributes may normalise a file back to what the commit
-# holds.
-context_tree() {
-	local run=(env GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
-		git -C "$1" -c core.autocrlf=false -c core.attributesFile=/dev/null)
-	"${run[@]}" init -q
-	printf '* -text -eol -filter -ident -working-tree-encoding\n' >"$1/.git/info/attributes"
-	"${run[@]}" add -A -f
-	"${run[@]}" write-tree
-}
+# shellcheck source=scripts/context-tree.sh
+. "$root/scripts/context-tree.sh"
 
 if [ -z "${ENFORCER_SOURCE:-}" ]; then
 	echo "build-enforcer: set ENFORCER_SOURCE to a clone of the enforcer's repository" >&2
@@ -68,7 +58,7 @@ control_bin=$(pin ENFORCER_CONTROL_BIN)
 context=$(mktemp -d "${TMPDIR:-/tmp}/enforcer-source.XXXXXX")
 trap 'rm -rf "$context"' EXIT
 git -C "$ENFORCER_SOURCE" archive --format=tar "$commit" | tar -x -C "$context"
-extracted=$(context_tree "$context")
+extracted=$(context_tree "$context") || refuse "the archive of $commit could not be hashed"
 [ "$extracted" = "$tree" ] ||
 	refuse "the archive of $commit hashes to tree $extracted, not its own tree $tree; an attribute or a filter changed it"
 rm -rf "$context/.git"

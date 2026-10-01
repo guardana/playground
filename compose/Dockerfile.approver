@@ -1,15 +1,13 @@
 # The approver: a lab-built service beside the enforcer's own control command.
 #
 # The build context is the repository root, because the service is a package in
-# this module. The command is copied from the enforcer image built at
-# ENFORCER_COMMIT, so the only writer of the approvals directory is the pinned
-# enforcer.
+# this module. The command is copied from the image the run's enforcer runs,
+# so the only writer of the approvals directory is that enforcer.
 ARG GO_BUILD_IMAGE
 ARG SERVICE_BASE_IMAGE
-ARG ENFORCER_IMAGE
-ARG ENFORCER_COMMIT
+ARG ENFORCER_REF
 
-FROM ${ENFORCER_IMAGE}:${ENFORCER_COMMIT} AS enforcer
+FROM ${ENFORCER_REF} AS enforcer
 
 FROM ${GO_BUILD_IMAGE} AS build
 WORKDIR /src
@@ -21,8 +19,8 @@ RUN go build -trimpath -ldflags="-s -w" -o /out/approver ./services/approver && 
     go build -trimpath -ldflags="-s -w" -o /out/healthprobe ./compose/healthprobe
 
 FROM ${SERVICE_BASE_IMAGE}
-ARG ENFORCER_COMMIT
-LABEL org.opencontainers.image.revision="${ENFORCER_COMMIT}"
+ARG ENFORCER_REF
+LABEL io.guardana.playground.enforcer.ref="${ENFORCER_REF}"
 COPY --from=enforcer /enforcer/control /enforcer/control
 COPY --from=build /out/approver /approver
 COPY --from=build /out/healthprobe /healthprobe
