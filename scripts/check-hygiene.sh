@@ -20,7 +20,14 @@ note() {
 }
 
 # The check scripts name the strings they forbid.
-files() { scripts/repo-files.sh | grep -vE '^scripts/(check-.*\.sh|.*-allowlist\.txt)$'; }
+files() { scripts/repo-files.sh | grep -a -vE '^scripts/(check-.*\.sh|.*-allowlist\.txt)$'; }
+
+# The scans below hide grep's errors, and grep cannot read a file without the
+# permission to, so such a file is refused here rather than passed unread. They
+# read every file as text (-a): grep would skip one it takes for binary.
+while IFS= read -r f; do
+	[ -r "$f" ] || note "unreadable: $f"
+done < <(files)
 
 # Working material belongs outside the repository.
 while IFS= read -r f; do
@@ -31,25 +38,27 @@ while IFS= read -r f; do
 	esac
 done < <(files)
 
-# A hidden path is local tooling unless it is one of the project's own dotfiles.
+# A hidden path is local tooling unless it is one of the project's own dotfiles
+# at the root, named one by one: a hidden name below the root is tooling too.
 while IFS= read -r f; do
 	case "$f" in
-	.git* | .editorconfig | .golangci.yml | .dockerignore) ;;
-	.*) note "local tooling must not be tracked: $f" ;;
+	.github/.* | .github/*/.*) note "local tooling must not be tracked: $f" ;;
+	.github/* | .gitignore | .editorconfig | .golangci.yml | .dockerignore) ;;
+	.* | */.*) note "local tooling must not be tracked: $f" ;;
 	esac
 done < <(files)
 
 # English only.
 while IFS= read -r hit; do
 	note "not English: $hit"
-done < <(files | tr '\n' '\0' | xargs -0 grep -nIE '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]' 2>/dev/null || true)
+done < <(files | tr '\n' '\0' | xargs -0 grep -naE -e '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]' -- 2>/dev/null || true)
 
 # Placeholders that were meant to be replaced before the change landed.
 while IFS= read -r hit; do
 	note "placeholder: $hit"
 done < <(
-	files | grep -E '\.(md|go|ya?ml|proto|json|sh)$' |
-		tr '\n' '\0' | xargs -0 grep -nIE '\b(TBD|FIXME|XXX|lorem ipsum)\b|<placeholder>' 2>/dev/null || true
+	files | grep -a -E '\.(md|go|ya?ml|proto|json|sh)$' |
+		tr '\n' '\0' | xargs -0 grep -naE -e '\b(TBD|FIXME|XXX|lorem ipsum)\b|<placeholder>' -- 2>/dev/null || true
 )
 
 # Paths only a maintainer's machine has: a home directory, the macOS /tmp and
@@ -66,8 +75,8 @@ machine_path="$machine_path|${start}/var/folders/|\.\./(control|guardana)${sibli
 while IFS= read -r hit; do
 	note "maintainer path: $hit"
 done < <(
-	files | tr '\n' '\0' | xargs -0 grep -noIE "$machine_path" 2>/dev/null |
-		grep -vE '/home/nonroot$' || true
+	files | tr '\n' '\0' | xargs -0 grep -noaE -e "$machine_path" -- 2>/dev/null |
+		grep -a -vE '/home/nonroot$' || true
 )
 
 if [ "$status" -ne 0 ]; then

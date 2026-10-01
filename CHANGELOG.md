@@ -234,6 +234,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `make bootstrap` installs a release binary only when its sha256 is the one
+  `scripts/tool-versions.env` pins for the platform, on Linux amd64 and arm64,
+  and removes a download it refused; it checks each tool's version exactly, and
+  the Makefile finds what it put in `./bin`; `buf` and `syft`, which nothing
+  ran, are no longer installed.
+
 - The enforcer is pinned to its public release `v0.3.0-alpha` (commit
   `14153928d7cb0df18533856c2c6115b6693e92dc`, tree
   `7540e1f1a77892946d11c4734ffe26a9cc7ae6c0`), which anyone can fetch; the
@@ -324,6 +330,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `scripts/fuzz-smoke.sh`, which passed with no fuzz target and with a
+  failing one, and `scripts/bench.sh`, which ran a package the tree does not
+  have; no target ran either.
+
 - The stub gateway: `services/stub-gateway/`, `config/stub-gateway/`, its
   compose service and the `stub` profile. The enforcer decides every
   trajectory scenario; a scenario carrying `stub:` is refused at load as an
@@ -347,6 +357,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reached through a link; it refuses a `.` or `..` component and a path
   holding a control character, leaves an existing parent's mode alone, and
   mounts only a fresh directory of its own into the keygen container.
+- `check-hygiene.sh` refuses a hidden name anywhere in a path, where it looked
+  at the first component only. The file list every guard reads takes each name
+  as git stores it, where a name git quotes, such as one with a byte outside
+  ASCII, was left out; a name holding a line break fails the list, and so does
+  a nested repository or a submodule, whose files git does not list; outside
+  git a link is listed like a file. The guards hand grep every name after
+  `--`, where a file named like an option, such as `-q.md`, switched their
+  content scans off; they read every file as text, where grep skipped one
+  starting with a NUL byte and, under GNU grep in a UTF-8 locale, held back a
+  line that is not UTF-8, and they refuse a file they cannot read, whose error
+  they hid. `make fmt` and `fmt-check` stop when the list fails, where
+  `fmt-check` read gofmt's standard input and said clean, set their own shell
+  flags, which GNU Make 3.81 does not take from `.SHELLFLAGS`, and hand gofmt
+  each name after `--`.
 - victim-shell's `cat` reads regular files only, at most 1 MiB in all,
   where `cat /dev/zero` filled the container's memory and a pipe could hold it.
 

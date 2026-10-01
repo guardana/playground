@@ -1,7 +1,5 @@
 /dist/
 /bin/
-bench/results/*
-!bench/results/.keep
 /reports/
 
 .DS_Store

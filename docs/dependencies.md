@@ -64,12 +64,21 @@ code. BSD-3-Clause, maintained by the Go team.
 
 ## Outside the module
 
-Pinned in `scripts/tool-versions.env`: `golangci-lint` for Go linting,
-`actionlint` and `zizmor` for workflow linting, `gitleaks` for secret scanning
-and `osv-scanner` for advisories, which `make quality` runs, and `buf` and
-`syft`, which no target runs yet. `make bootstrap` installs each one missing,
-from Homebrew where it exists and otherwise from the pinned linux-amd64
-release, and fails when an installed version is not the pin.
+Pinned in `scripts/tool-versions.env`, each run by `make quality` and run
+there only, never linked into the lab:
+
+- `golangci-lint` lints the Go code past what `go vet` checks. GPL-3.0.
+- `actionlint` checks the workflows' syntax and expressions. MIT.
+- `zizmor` checks the workflows for injection and permission mistakes. MIT.
+- `gitleaks` scans the tree for secrets. MIT.
+- `osv-scanner` matches the module's dependencies against known advisories,
+  beside `govulncheck`'s reachable-code view. Apache-2.0.
+
+`make bootstrap` installs each one missing or at another version: from
+Homebrew where it exists, otherwise, on Linux amd64 or arm64, from the
+project's release asset, installed only when its sha256 is the one
+`scripts/tool-versions.env` pins for that platform. It fails when a tool's
+version is not the pin exactly.
 
 The container images the lab runs are pinned separately in `versions.env`,
 because they are the subject of the experiment rather than part of the build.

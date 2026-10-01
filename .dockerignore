@@ -9,7 +9,6 @@
 reports
 bin
 dist
-bench/results
 docs
 attacks
 scenarios

@@ -12,20 +12,38 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Names arrive NUL-separated, so git quotes none of them and no byte in a name
+# hides it from a guard. A name holding a line break cannot be printed one per
+# line, and git lists a nested repository or a submodule as a directory without
+# its files, so either fails the list.
+one_per_line() {
+	local f
+	while IFS= read -r -d '' f; do
+		f=${f#./}
+		case "$f" in
+		*$'\n'*)
+			echo "repo-files: a file name holds a line break: $(printf '%q' "$f")" >&2
+			return 1
+			;;
+		esac
+		if [ -d "$f" ] && [ ! -L "$f" ]; then
+			echo "repo-files: ${f%/} is a nested repository; no guard can read its files" >&2
+			return 1
+		fi
+		if [ -e "$f" ] || [ -L "$f" ]; then printf '%s\n' "$f"; fi
+	done
+}
+
 list() {
 	if [ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]; then
-		git ls-files --cached --others --exclude-standard |
-			while IFS= read -r f; do
-				if [ -e "$f" ]; then printf '%s\n' "$f"; fi
-			done | sort -u
+		git ls-files -z --cached --others --exclude-standard | one_per_line | sort -u
 		return
 	fi
 	find . \
 		-type d \( -name '.?*' ! -name '.github' \) -prune -o \
-		-type d \( -path './dist' -o -path './bin' -o -path './bench/results' -o -path './reports' \) -prune -o \
-		-type f ! -name '.DS_Store' ! -name '*.bak' ! -name '*.orig' ! -name '*.local.md' \
-		-print |
-		sed 's|^\./||' | sort
+		-type d \( -path './dist' -o -path './bin' -o -path './reports' \) -prune -o \
+		\( -type f -o -type l \) ! -name '.DS_Store' ! -name '*.bak' ! -name '*.orig' ! -name '*.local.md' \
+		-print0 | one_per_line | sort
 }
 
 listed=$(list)

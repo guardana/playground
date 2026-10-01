@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Replaces the placeholder in each `uses:` line with the commit the named tag
-# points at.
+# Rewrites each pinned `uses:` line to the commit its `# pin:` tag points at
+# now. Run by hand, with an authenticated GitHub CLI, to move a pin.
 #
 # A tag is a mutable pointer. CI runs with access worth protecting, so what runs
 # is named by commit and the tag survives only as a comment saying which release

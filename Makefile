@@ -1,8 +1,15 @@
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
+# scripts/bootstrap.sh installs into ./bin where Homebrew is absent.
+export PATH := $(CURDIR)/bin:$(PATH)
 
 GO ?= go
-SOURCES = scripts/repo-files.sh | grep '\.go$$'
+# The Go files scripts/repo-files.sh lists. A list that failed, or one without a
+# Go file, stops the recipe: gofmt handed no file reads its standard input. A
+# recipe using it sets its own shell flags: GNU Make 3.81, macOS's, ignores
+# .SHELLFLAGS.
+GO_FILES = set -eu -o pipefail; files=$$(scripts/repo-files.sh); \
+	gofiles=$$(printf '%s\n' "$$files" | grep -a '\.go$$') || { echo "no Go file listed" >&2; exit 1; }
 
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
@@ -21,10 +28,11 @@ bootstrap:
 	scripts/bootstrap.sh
 
 fmt:
-	$(GO) tool goimports -w $$($(SOURCES))
+	@$(GO_FILES); printf '%s\n' "$$gofiles" | tr '\n' '\0' | xargs -0 $(GO) tool goimports -w --
 
 fmt-check:
-	@unformatted=$$(gofmt -l $$($(SOURCES))); \
+	@$(GO_FILES); \
+	unformatted=$$(printf '%s\n' "$$gofiles" | tr '\n' '\0' | xargs -0 gofmt -l --); \
 	if [ -n "$$unformatted" ]; then echo "unformatted:"; echo "$$unformatted"; exit 1; fi; \
 	echo "format: clean"
 
