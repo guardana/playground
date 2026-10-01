@@ -11,6 +11,7 @@ covers: [runner/trace.go, runner/check/verifier_report.go, agents/scripted/trace
 The verifier at `VERIFIER_VERSION` grades the trace the lab's agent writes of a
 run through the enforcer against a security contract you write in the
 verifier's own format. The contract is yours; the trace is the agent's.
+Trace grading is `experimental` (`docs/status.md`, "Verifier loop").
 
 ## Where it goes
 
@@ -46,7 +47,8 @@ kinds, the lab's trace carries the evidence for two: `approval_required`,
 which needs `approval` and `effects`, and `forbidden_sink`, which needs
 `effects`. The agent's trace instruments `tools`, `approval` and `effects`, and
 nothing for `retrieval` or `delegation`, so a `tenant_boundary`,
-`allowed_scopes` or `credential_boundary` assertion comes back unverified.
+`allowed_scopes` or `credential_boundary` assertion makes the verifier's
+analysis indeterminate, exit `2`.
 
 ## What the trace records
 

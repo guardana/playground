@@ -22,8 +22,9 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
   refuses an archive whose tree is not `ENFORCER_TREE`.
 - A checkout of this lab. The public `guardana/playground` repository is empty
   today; ask the maintainers for the checkout until it is published.
-- Network for the first build: it pulls the base images and the verifier's
-  Python packages, each pinned by digest or hash.
+- Network for the first build: it fetches the enforcer from GitHub and pulls
+  the base images, the Go modules and the verifier's Python packages, each
+  pinned by commit, digest or hash.
 
 ## Build the systems under test
 
@@ -62,7 +63,8 @@ make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 The runner builds every lab image the scenario uses, boots its compose profile
 in a project of its own, proves the topology, replays the trajectory, drains
 the enforcer's trail to the collector, grades the run and takes the profile
-down. The last line is the outcome, the scenario and its report:
+down. It prints one line per scenario: the outcome, the suite, the scenario
+and its report:
 
 ```
 pass       catalogue tool-02-permitted-read-is-recorded-by-the-enforcer  reports/<run id>/report.md
@@ -71,10 +73,10 @@ pass       catalogue tool-02-permitted-read-is-recorded-by-the-enforcer  reports
 The first run builds every image and takes longest; later runs reuse them.
 
 To check a smaller cross-section of both systems after a change, run
-`make smoke`. It runs five green scenarios: an allowed read, a denied send,
-an approval, a trace contract and a verifier probe. It reports every result
-and exits nonzero if any fails or cannot run. It needs the same images and lab
-key as the one-scenario command.
+`make smoke` (experimental). It runs five green scenarios: an allowed read, a
+send refused under an obligation, an approval, a trace contract and a verifier
+probe. It reports every result and exits nonzero if any fails or cannot run.
+It needs the same images and lab key as the one-scenario command.
 
 ## Read the report
 
@@ -97,7 +99,7 @@ each on a finding in a system under test; `scenarios/red-by-design.txt` names
 them and the finding, and `go run ./runner -all -red-by-design
 scenarios/red-by-design.txt` passes only when the reds are exactly those.
 
-## Try an unreleased enforcer change
+## Try an unreleased enforcer change (experimental)
 
 ```
 make dev-scenarios CONTROL=/path/to/control ID=tool-02-permitted-read-is-recorded-by-the-enforcer
@@ -131,9 +133,13 @@ fails the run as surely as a wrong verdict. Common causes:
 ## Clean up
 
 A run takes its compose project down, volumes included, unless you passed
-`-keep` to the runner. What stays is yours to remove:
+`-keep` to the runner (`go run ./runner -scenario <id> -keep`) or it was
+killed. Such a run is the compose project `lab-<the run id's last eight
+characters>`; `docker compose ls --all` lists it. What stays is yours to
+remove:
 
 ```
+docker compose -p lab-<suffix> down --volumes
 rm -rf reports
 docker image ls 'playground-*'
 ```

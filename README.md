@@ -2,10 +2,11 @@
 
 A lab for finding out whether agent security tooling does what it says.
 
-Two systems are under test. [Guardana](https://github.com/guardana/guardana)
-grades recorded runs; Control decides tool calls inline. The lab replays
-scripted agent trajectories against deceptive tool servers and injected
-content, then checks both systems' records and the victims' effects.
+Two systems are under test. [Guardana](https://github.com/guardana/guardana),
+the verifier, grades recorded runs; Control, the enforcer, decides tool calls
+inline. The lab replays scripted agent trajectories against deceptive tool
+servers and injected content, then checks both systems' records and the
+victims' effects.
 
 Maintainers test releases; adopters test their own policy, gateway
 configuration or verifier contract. See the [use cases](docs/reference/use-cases.md)
@@ -22,8 +23,9 @@ its observed effects. Control and Guardana remain optional. The
 
 ## One green scenario
 
-You need this checkout, Docker with Compose v2 and buildx, Go, git and make.
-The public Playground repository is empty. Control is pinned to a public
+You need a checkout of this lab; the public Playground repository is empty,
+so ask the maintainers for one until it is published. You also need Docker
+with Compose v2 and buildx, Go, git and make. Control is pinned to a public
 release, which `scripts/fetch-enforcer.sh` fetches anonymously:
 
 ```
@@ -35,11 +37,12 @@ make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 ```
 
-The last line gives the verdict and report path. The
+Its result line gives the verdict and report path. The
 [quickstart](docs/runbooks/quickstart.md) covers setup and failures.
 
-`make smoke` runs five green paths across both systems and fails on any red or
-unrunnable path. `make scenarios` runs the whole catalogue.
+`make smoke` (experimental) runs five green paths across both systems and
+fails on any red or unrunnable path. `make scenarios` runs the whole catalogue
+and is red on the two scenarios red by design.
 
 ## Your own policy, configuration or contract
 
@@ -79,7 +82,8 @@ against whatever happened to be on disk has measured nothing.
 
 ## Contributing
 
-`make bootstrap` installs the pinned tools, `make quality` is the gate CI runs.
+`make bootstrap` installs the gate's tools and checks each against its pin,
+`make quality` is the gate CI runs.
 `CONTRIBUTING.md` has the short version, `AGENTS.md` the same rules written for
 the tools people point at this repository.
 

@@ -1,10 +1,12 @@
 # Roadmap
 
-This repository is one playground for testing AI security controls, agents and
-models. Guardana Control is the inline gate; Guardana is the independent
-verifier. The planned Range path will run an agent as the subject under test.
-Each path uses synthetic victims, scripted scenarios and records of actual
-effects. None needs either of the other two to return a verdict.
+This repository is one playground for testing AI security controls; testing
+agents and models is planned (P5, P7). Guardana Control is the inline gate;
+Guardana is the independent verifier. The planned Range path will run an agent
+as the subject under test. Each path uses synthetic victims, scripted
+scenarios and records of actual effects. The enforcer's scenarios and the
+verifier's probes return a verdict without the other system; the verifier's
+trace grading reads a run made through the enforcer.
 
 Work is ordered by dependency. [Status](docs/status.md) describes what runs
 today; the [failure modes](docs/reference/failure-modes.md) and
@@ -18,26 +20,30 @@ policy and approval doubles, an isolated Compose topology, the runner, 34
 scenarios, an adopter workspace, runbooks and the quality gate. The enforcer
 decides calls from its pinned commit; the verifier probes victims and grades
 recorded traces from its pinned release. Two scenarios are red by design.
+Several parts are still `experimental`; [status](docs/status.md) says which.
 
-## P4 — Public, repeatable release loop (planned)
+## P4 — Public, repeatable release loop (partly implemented)
 
-The public Playground repository is empty. Publish a reviewed lab commit there
-after the maintainer authorizes that action. Control is pinned to its public
-release `v0.3.0-alpha`, fetched anonymously by commit id after its tag is
-checked (implemented). Each later release is taken the same way: pin the
-commit, its tree and the release, rebuild both systems, regrade every scenario
-and example from records, and update expectations only from the new version's
-contract. A release is ready for this lab's CI when the anonymous fetch works
-and the catalogue is green except for exactly the documented red scenarios.
+Control is pinned to its public release `v0.3.0-alpha`, fetched anonymously by
+commit id after its tag is checked (implemented). Each later release is taken
+the same way: pin the commit, its tree and the release, rebuild both systems,
+regrade every scenario and example from records, and update expectations only
+from the new version's contract. A release is ready for this lab's CI when the
+anonymous fetch works and the catalogue is green except for exactly the
+documented red scenarios.
 
-`make smoke` is implemented as a smaller local loop over allowed, denied, held,
-trace-graded and probe-graded paths. It uses the same pins and evidence checks;
-it does not replace the full catalogue. `make dev-scenarios` builds Control
-from a local, possibly dirty tree and grades scenarios against it, with a
-report that names that tree and cannot be mistaken for a release-pin result
-(experimental). Translate Control's
-own scenario format only after a round trip preserves the calls and expected
-evidence; do not maintain two conflicting truths for one case.
+`make smoke` is a smaller local loop over allowed, obligation-refused, held,
+trace-graded and probe-graded paths (experimental). It uses the same pins and
+evidence checks; it does not replace the full catalogue. `make dev-scenarios`
+builds Control from a local, possibly dirty tree and grades scenarios against
+it, with a report that names that tree and cannot be mistaken for a
+release-pin result (experimental).
+
+Planned: publish a reviewed lab commit to the public Playground repository,
+which is empty, after the maintainer authorizes that action; the lab's CI has
+not run until then. Translate Control's own scenario format only after a round
+trip preserves the calls and expected evidence; do not maintain two
+conflicting truths for one case.
 
 ## P5 — Agent trials in the same playground (planned)
 

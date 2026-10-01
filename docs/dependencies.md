@@ -40,7 +40,9 @@ parser, and this one converts a document to JSON and then decodes it with
 `encoding/json`, so one set of struct tags governs both formats and
 `UnmarshalStrict` refuses a key the type has no field for. That refusal is the
 reason for the choice: a misspelled expectation that loads is an assertion
-nobody makes. MIT, with the vendored parser under BSD-3-Clause.
+nobody makes. MIT, with the part taken from `encoding/json` under
+BSD-3-Clause. It parses with `go.yaml.in/yaml/v2`, which `go.mod` lists as
+indirect: Apache-2.0, with the parts ported from libyaml under MIT.
 
 `gopkg.in/yaml.v3` was the alternative and is archived upstream;
 `go.yaml.in/yaml/v4` is a release candidate.
@@ -62,9 +64,12 @@ code. BSD-3-Clause, maintained by the Go team.
 
 ## Outside the module
 
-Pinned in `scripts/tool-versions.env` and installed by `make bootstrap`:
-`golangci-lint`, `actionlint` and `zizmor` for workflow linting, `gitleaks` for
-secret scanning, `osv-scanner` for advisories, `syft` for bills of materials.
+Pinned in `scripts/tool-versions.env`: `golangci-lint` for Go linting,
+`actionlint` and `zizmor` for workflow linting, `gitleaks` for secret scanning
+and `osv-scanner` for advisories, which `make quality` runs, and `buf` and
+`syft`, which no target runs yet. `make bootstrap` installs each one missing,
+from Homebrew where it exists and otherwise from the pinned linux-amd64
+release, and fails when an installed version is not the pin.
 
 The container images the lab runs are pinned separately in `versions.env`,
 because they are the subject of the experiment rather than part of the build.
@@ -84,6 +89,26 @@ OTLP/HTTP receiver by hand to avoid one dependency would make every finding a
 question about the lab's receiver instead of the enforcer's export.
 Apache-2.0, maintained by the OpenTelemetry project.
 
+### Mailpit
+
+`MAILPIT_IMAGE`. The SMTP server victim-mail delivers to, so a send goes over
+real SMTP to something that accepts it. No scenario reads it: what a send did
+is graded from victim-mail's journal. MIT, maintained by its author.
+
+### nginx
+
+`ATTACKER_WEB_IMAGE`, the `attacker-web` service: serves the inert pages in
+`attacks/` to victim-web on `tool-net`. A static file server needs nothing the
+lab should write itself. nginx is BSD-2-Clause; the image is the nginx
+project's Alpine build.
+
+### Base images
+
+`GO_BUILD_IMAGE` compiles every lab service and the enforcer;
+`SERVICE_BASE_IMAGE`, distroless `static` as a non-root user, is what they run
+on, with no shell and no package manager. Go is BSD-3-Clause; distroless is
+Apache-2.0, maintained by Google.
+
 ### Toxiproxy
 
 `TOXIPROXY_IMAGE`. The TCP proxy a chaos scenario puts between the enforcer and
@@ -99,9 +124,9 @@ by Shopify.
 Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, the
 commit of the release `ENFORCER_RELEASE`, taken from the clone
 `ENFORCER_SOURCE` names, rather than pulled as the release's image, so the
-build can check the commit's tree. The build refuses a clone with replacement refs, a commit whose tree is not
-`ENFORCER_TREE`, and an archive that does not hash back to that tree, which
-an export attribute or a filter would cause.
+build can check the commit's tree. The build refuses a clone with replacement
+refs, a commit whose tree is not `ENFORCER_TREE`, and an archive that does not
+hash back to that tree, which an export attribute or a filter would cause.
 It uses `GO_BUILD_IMAGE` and `SERVICE_BASE_IMAGE`, stamps the commit into the
 binaries and the image's `org.opencontainers.image.revision` label, and every
 report prints the image ID and that label beside the pin. The label is a build

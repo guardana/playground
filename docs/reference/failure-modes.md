@@ -22,6 +22,11 @@ modes. A scenario file states what it expects per step, benign calls
 included, and [lab-files.md](../lab-files.md) says which record each
 expectation is read from.
 
+The catalogue is `experimental`. In the last column, `mode-01` and `verify-04`
+are red by design (`scenarios/red-by-design.txt`), and `payouts-01` is the
+worked example in `examples/helpdesk-payouts/`, which `make scenarios` does not
+run.
+
 ## Authority
 
 | id | what goes wrong | catch | in the lab today |

@@ -11,7 +11,8 @@ covers: [runner/gateway/**, runner/enforcer.go, runner/env.go, compose/compose.y
 Your part of the enforcer's configuration: its mode, who the agent is, how it
 holds approvals, how its evidence spool behaves, its timeouts. The runner adds
 everything that ties the enforcer into the lab and refuses a part that sets any
-of it.
+of it. Running the enforcer in the lab is `experimental` (`docs/status.md`,
+"Enforcer in the lab").
 
 ## Where it goes
 
@@ -23,8 +24,10 @@ in the workspace `LAB_WORKSPACE` names, named by the scenario's
 `gateway.config`, next to its policy
 ([bring your own policy](bring-your-own-policy.md)). The format is the
 enforcer's configuration file at the pin, `docs/reference/configuration.md` in
-its repository at `ENFORCER_COMMIT`, written as block YAML: the enforcer's
-parser refuses flow collections, anchors and tags.
+its repository at `ENFORCER_COMMIT`. The runner reads your part as YAML and
+writes the assembled file in the block style the enforcer's parser requires.
+At the pin, `mode`, `project_id`, `tenant_id`, `listener.principal.id` and
+`listener.agent.id` have no default, so your part sets them.
 
 ## What a scenario sets
 
@@ -61,7 +64,9 @@ The runner writes the rest into the run's own copy of the configuration,
 - the classification of every victim tool, pinned to its fingerprint;
 - the decision point's identifier, when the scenario names a script for the
   double (`gateway.pdp_script`, profile `pdp`), and the approvals directory the
-  approver answers in (`gateway.approver_script`, profile `approvals`).
+  approver answers in (`gateway.approver_script`, profile `approvals`); the
+  two scripts are file names in the workspace's `config/pdp/` and
+  `config/approver/`.
 
 ## Try a setting
 

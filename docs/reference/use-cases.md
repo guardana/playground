@@ -15,6 +15,7 @@ today: the victims it runs, the scenarios that exercise it, and what is
 planned. A team with its own deployment picks the nearest row, writes its
 policy, configuration or contract for the lab's victims in a workspace
 ([runbooks](../runbooks/quickstart.md)), and adds a victim where none fits.
+The catalogue is `experimental`.
 
 ## Acting on customers' behalf
 
@@ -31,7 +32,7 @@ policy, configuration or contract for the lab's victims in a workspace
 |---|---|---|---|
 | Coding and CI: reads a repository, runs tests and commands, opens changes | files, shell, code host, package registry | `DEST-01`, `DEST-04`, `SEC-01`, `SEC-04`, `SUP-03`, `INJ-01`, `INJ-03`, `RUN-01` | victim-fs, victim-shell; `rule-02`, `tool-03`, `mode-02`. Planned: a code host and a package registry victim |
 | Data and analytics: queries warehouses, writes reports | SQL, files, mail | `DEST-01`, `TEN-01`, `FLOW-02`, `RUN-03` | victim-db, whose read tools accept writes; `pdp-03`. Planned: a destructive statement through a read tool, a query cost bound |
-| Finance operations: pays invoices, changes payout details, reconciles | payments, CRM, ledger | `DEST-03`, `APPR-01`, `APPR-02`, `APPR-03`, `APPR-04`, `AUTH-03`, `FLOW-04` | victim-crm's payout change; `approval-01`..`05`, `trace-02`, `obligation-01`. Planned: a payments victim that charges before it times out, amount caps, retries |
+| Finance operations: pays invoices, changes payout details, reconciles | payments, CRM, ledger | `DEST-03`, `APPR-01`, `APPR-02`, `APPR-03`, `APPR-04`, `AUTH-03`, `FLOW-04` | victim-crm's payout change: `tool-01`, `trace-01`, `trace-02`, `payouts-01`; approvals held on a send: `approval-01`..`05`; `obligation-01`. Planned: a payments victim that charges before it times out, amount caps, retries |
 | IT operations: runs runbooks, changes infrastructure, answers incidents | shell, cloud and cluster APIs, monitoring | `DEST-01`, `DEST-02`, `AUTH-05`, `AVAIL-04`, `APPR-01` | victim-shell; `mode-02`. Planned: an infrastructure victim with a production and a test environment |
 | Long-running jobs and agents started by events or schedules | queued tools, webhooks, schedulers | `DEST-05`, `AUTH-09`, `AVAIL-03`, `AVAIL-05` | the slow and silent victims of `chaos-01` and `chaos-02`. Planned: a job victim that commits late, events with an origin |
 

@@ -2,8 +2,7 @@
 
 It stands in for the person who answers a held call. Every answer is the
 enforcer's own `approvals approve` or `approvals reject`, from the enforcer
-image built at `ENFORCER_COMMIT` (`/enforcer/control`); it writes no record
-itself.
+image the run uses (`/enforcer/control`); it writes no record itself.
 
 Every `-interval` (`250ms`) it runs `approvals list <dir>` and deals once with
 each approval still pending. A listing that fails or does not parse is an

@@ -10,7 +10,8 @@ covers: [runner/workspace.go, runner/enforcer.go, runner/signing.go, runner/gate
 
 A policy document in the enforcer's own format, signed for each run with the
 lab key and loaded by the enforcer at `ENFORCER_COMMIT`. The lab never edits
-it. `examples/helpdesk-payouts/` is a worked one.
+it. `examples/helpdesk-payouts/` is a worked one. Running the enforcer in the
+lab is `experimental` (`docs/status.md`, "Enforcer in the lab").
 
 ## Where it goes
 
@@ -42,10 +43,11 @@ in the enforcer's repository at `ENFORCER_COMMIT`, with
 `docs/guides/write-and-test-a-policy.md` beside it. Read them at that commit,
 not at the enforcer's latest: the lab runs that commit and nothing else. Check
 a document before a run with the enforcer's own linter, from the image
-`make images` built:
+`make images` built, `<ENFORCER_COMMIT>` being the full commit id in
+`versions.env`:
 
 ```
-docker run --rm --network none -v "$LAB_WORKSPACE/config/policies:/p:ro" \
+docker run --rm --network none -v "<workspace>/config/policies:/p:ro" \
   --entrypoint /enforcer/control playground-enforcer:<ENFORCER_COMMIT> \
   policy lint /p/<name>.json
 ```

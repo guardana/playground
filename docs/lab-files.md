@@ -13,8 +13,10 @@ says what the lab expects to find afterwards. Nothing states an expectation
 twice, so the two can never disagree about one. A
 [verifier scenario](#verifier-scenarios) is one file: it names no trajectory.
 
-Both are loaded by `internal/labspec`, which refuses a key it has no field for.
-A misspelled expectation that loads is an assertion nobody makes.
+Both are loaded by `internal/labspec`, which refuses a key it has no field for
+and a file over 256 KiB. A misspelled expectation that loads is an assertion
+nobody makes. The formats are `implemented`; chaos, verifier and trace
+scenarios exercise parts `docs/status.md` marks `experimental`.
 
 **Steps are numbered from 1**, in a trajectory's references and in a scenario's
 expectations alike.
@@ -31,7 +33,7 @@ steps:
     call:
       server: victim-web
       tool: web.fetch
-      args: { url: "http://attacker-web/issue-42.html" }
+      args: { url: "http://attacker-web/pi-01-external-recipient.html" }
   - call:
       server: victim-fs
       tool: fs.read
@@ -52,18 +54,25 @@ scenario says it is testing.
 
 The run identifier is not in the file. A trajectory replayed twice is two runs.
 
+`agent`, `principal` and `session` are required but sent nowhere: the enforcer
+decides as the `listener.principal` and `listener.agent` of the scenario's
+gateway part, and nothing checks that the two agree.
+
 A step can wait, and can resend its call while the gateway holds it:
 
 ```yaml
   - wait_before: 3s
     retry_while_pending: { every: 500ms, at_most: 20 }
-    call: { server: victim-crm, tool: crm.refund, args: { order: "o-17" } }
+    call:
+      server: victim-crm
+      tool: crm.update_bank_account
+      args: { tenant_id: tenant_a, customer_id: cus_4417, account: "GB29 0000 0000 0000 9001" }
 ```
 
 `wait_before` pauses before the call, up to 10 minutes. `retry_while_pending`
 sends the same call again while the enforcer answers that the request is held
 for an approval, every `every` (100ms to 1m), at most `at_most` more times (1 to
-100). An answer is pending only when the result is an error whose structured
+100, and no more than 10 minutes in all). An answer is pending only when the result is an error whose structured
 content says `reason_code: APPROVAL_PENDING` and whose `_meta` carries
 `<namespace>/answer: pending`, the mark the enforcer's gateway puts on answers
 it makes itself; the namespace is `ENFORCER_NAMESPACE` in `versions.env`. An
@@ -156,16 +165,17 @@ decides with, and the profile names `enforcer`:
 ```yaml
 profile: [core, enforcer, approvals]
 gateway:
-  config: config/gateway/scenarios/tool-11-held-refund.yaml
-  policy: config/policies/tool-11-held-refund.json
+  config: config/gateway/scenarios/tool-11-held-payout-change.yaml
+  policy: config/policies/tool-11-held-payout-change.json
   unclassified: [victim-shell/shell.exec]
   upstream_tenants: { victim-crm: tenant_b }
-  approver_script: held-refund.yaml
+  approver_script: held-payout-change.yaml
 ```
 
 - `config` is the scenario's part of the enforcer's configuration, in the
-  enforcer's own format and the strict YAML it reads (block style only). It
-  may set these keys and no other, each one value: `mode`, `project_id`,
+  enforcer's own format; the runner reads it as YAML and writes the assembled
+  file in the block style the enforcer's parser requires. It may set these
+  keys and no other, each one value: `mode`, `project_id`,
   `tenant_id`, `environment`, `log.level`; `listener.kind`,
   `listener.principal.{id,type,tenant_id}`,
   `listener.agent.{id,framework,version}`; `policy.max_stale`,
@@ -173,6 +183,9 @@ gateway:
   `approvals.{provider,ttl,retry_after,max_held,max_open,max_records,max_record_bytes,reconcile_max}`;
   `evidence.{max_bytes,segment_bytes,closing_reserve,fsync,fsync_interval,on_unwritable}`;
   `list.shaping`, `list.ttl`; `upstream.call_timeout`, `upstream.list_timeout`.
+  At the pin, `mode`, `project_id`, `tenant_id`, `listener.principal.id` and
+  `listener.agent.id` have no default, so the enforcer does not start without
+  them.
   A key is written nested, never dotted: the enforcer reads `a.b: x` as
   `a: {b: x}`, so a key holding a dot is refused at any depth. The runner adds
   the rest: the listener address (the enforcer's own address on the run's
@@ -202,7 +215,9 @@ spool record, nothing the exporter quarantined or the collector refused or
 dropped, the exporter still running) and the collector has been stopped so its
 file is flushed. The `plane` checks report the drain, that the running enforcer
 reports the pinned commit, and that the run's own enforcer container runs the
-image tagged with the pin, built from it.
+image tagged with the pin, built from it. Under `runner -enforcer-dev <image>`
+they hold the run to that build's version, tree and image ID instead
+(`docs/status.md`, "Development builds of the enforcer").
 
 The last `/healthz` answer the drain reads is kept in the run directory as
 `healthz.json`. `expect.health`, optional and only in a scenario the enforcer
@@ -229,8 +244,10 @@ read run unrecorded.
 
 ### Which trail a step is graded on
 
-The enforcer mints its own request ids and writes no step number, so a step is
-tied to its trail by order: the n-th trail the run opened (its
+The enforcer mints its own request ids and writes no step number. It returns
+the request id with the answers it decided, in the result's `_meta` or an
+upstream error's data, which the lab does not read, so a step is tied to its
+trail by order: the n-th trail the run opened (its
 `ACTION_PROPOSED`) belongs to the n-th step that opens one. The tool that
 proposal names (`action.name`) must be the tool the step calls, so a step whose
 trail never opened and an extra trail for another tool cannot cancel out. Two
@@ -254,8 +271,8 @@ A step opens a trail unless it says otherwise:
       resumes: 1
       trail: [ACTION_PROPOSED, POLICY_DECIDED, APPROVAL_REQUESTED, APPROVAL_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
     4:
-      verdict: DENY
-      blocked: { verdict: DENY, reason_codes_include: [ACTION_UNCLASSIFIED] }
+      verdict: INDETERMINATE
+      blocked: { verdict: INDETERMINATE, reason_codes_include: [ACTION_UNCLASSIFIED] }
 ```
 
 - `verdict`, `reason_codes_include` and `obligations_include` grade the
@@ -271,7 +288,8 @@ A step opens a trail unless it says otherwise:
   could not send included, so whether a question was sent is graded from the
   double's journal in `effects`.
 - `trail` is the exact sequence of event kinds the trail holds when the run
-  ends, in the order its links give.
+  ends, in the order its links give. It starts with `ACTION_PROPOSED`, and a
+  step that states `blocked` beside it lists `ACTION_BLOCKED` in it.
 - `resumes: n` grades step n's held trail instead of a trail of its own. It
   states `trail` or `blocked`, never a verdict: the held trail's
   `POLICY_DECIDED` is step n's, and grading it again would pass whether or not
@@ -305,8 +323,9 @@ elsewhere, is refused at load.
 
 A scenario's trajectory in `trajectories/`, its policy in `config/policies/`
 and its part of the enforcer's configuration in `config/gateway/scenarios/`
-are named for the scenario. One identifier everywhere is one mapping fewer to
-get wrong.
+are named for the scenario that uses them, or the first of several that share
+one, as `trace-02` shares `trace-01`'s trajectory. One identifier everywhere is
+one mapping fewer to get wrong.
 
 ### Verifier scenarios
 
@@ -330,7 +349,6 @@ expect:
       findings_include:
         - { rule_id: guardana.agent.mcp_server_manifest, summary_contains: fs.read }
         - { rule_id: guardana.mcp.unauthenticated_access, severity: LOW }
-      findings_exclude: [guardana.mcp.cache_scope]
       unverified_include: [guardana.mcp.session_binding]
   effects:
     victim-fs: { calls_served: {} }
@@ -348,7 +366,8 @@ expect:
   summary contains. `findings_exclude` names a rule that ran and left nothing:
   no finding, no waived finding, no unverified result, no error. A rule that
   did not run, ran and could not tell, or found something a waiver accepted,
-  fails it. `unverified_include` names a rule reported as
+  fails it, and it cannot also be named in `findings_include` or
+  `unverified_include`. `unverified_include` names a rule reported as
   unverified. A `write_pin` step states only `exit_code`.
 - `effects` names every probed server and stays exhaustive: the verifier
   documents that it never calls a tool, and the victim's journal says whether
@@ -358,9 +377,9 @@ expect:
 - `profile` is `[verifier]` and nothing else: another profile boots the
   gateway, which lists every victim's tools when it starts and spends the
   listing a drift is read on.
-- `trajectory`, `enforcement_mode`, `gap`, `tolerance`,
-  `expect.decisions` and `expect.evidence` are refused: nothing in the run
-  could grade them.
+- `trajectory`, `enforcement_mode`, `gap`, `tolerance`, `chaos`, `trace`,
+  `expect.decisions`, `expect.evidence` and `expect.trace` are refused: nothing
+  in the run could grade them.
 
 The `verifier` profile brings up the victims without the gateway. Before the
 steps, the runner dials each probed server and a documentation address outside

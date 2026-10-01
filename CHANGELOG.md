@@ -19,128 +19,6 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `LAB_ENFORCER_REF`, which the runner always sets, and tags the approver per
   enforcer image (`LAB_ENFORCER_TAG`), so a development run never reuses the
   pinned run's approver or the other way round.
-
-### Fixed
-
-- The enforcer's agent listener binds the enforcer's own address on
-  `agent-net`, where it bound every interface, so a container on
-  `tool-net`, `evidence-net` or `pdp-net` could open a session as the
-  configured principal. Each run gives `agent-net` a /27 of `10.231.0.0/16`,
-  picked from the run id's random suffix, and the enforcer a fixed address
-  in its upper half (`LAB_AGENT_SUBNET`, `LAB_AGENT_RANGE`,
-  `LAB_ENFORCER_ADDRESS`, set by the runner); a lab brought up by hand
-  uses the last /27, which no run is given.
-- `make enforcer-image` builds again from a fresh clone: the tool lister a
-  chaos scenario runs inside a victim is its own command, `relist`, and
-  `compose/healthprobe`, which the enforcer image builds without the lab's
-  module, is held to the standard library by a test.
-- On a Linux host the runner can read what the lab's services write: every
-  victim's journal, both doubles' journals and the scripted agent's log and
-  trace are created mode 0644 whatever the umask, where they were 0600 and
-  owned by the services' uid, so a runner under any other uid graded every
-  effect as "no journal". Docker Desktop hid this by mapping every access to
-  the invoking user. Directories keep their modes.
-
-### Changed
-
-- The enforcer is pinned to its public release `v0.3.0-alpha` (commit
-  `14153928d7cb0df18533856c2c6115b6693e92dc`, tree
-  `7540e1f1a77892946d11c4734ffe26a9cc7ae6c0`). Its wire contract, the OTLP
-  goldens and every tool fingerprint are the same as at `v0.2.0-alpha`; the
-  catalogue and the example grade the same, `mode-01` included.
-- The enforcer was first pinned to its public release `v0.2.0-alpha` (commit
-  `471e18a0aec5e6201ea1a23c89ba0d1b926bbc33`, tree
-  `0b3b35ccd5639ba50816c47f7d83c63e3fbebf59`), which anyone can fetch; the
-  previous pin was a commit the public repository does not serve.
-  `versions.env` gains `ENFORCER_RELEASE`, and `scripts/fetch-enforcer.sh`
-  refuses the commit when that release's tag at `ENFORCER_REPOSITORY` names
-  another. The commit and its tree still decide what is built.
-- The enforcer exports its trail to the collector over TLS. At the new pin it
-  sends plaintext only to a loopback address and refused to start with the
-  lab's plaintext export. The runner makes a CA for each run, signs a
-  certificate for `collector` with it and keeps the CA's key in memory; the
-  collector reads its certificate and key from the run's `collector-tls/`,
-  and the enforcer trusts the CA from `export-ca/` beside the decision point
-  double's.
-- `evidence/run-id` asserts how the enforcer names runs at the new pin: every
-  event on a request carries the one run it minted, except the events of a
-  request whose proposal is tagged `flow.v1.state=uncomputed` (a call refused
-  before it had a run, such as one to an unclassified tool), which carry
-  none; no event names another run; and no envelope names a run of its own.
-  The trail's run is the one its first proposal naming a run names; an event
-  naming any other is not read as this run's and fails the check. The
-  enforcer's run id is not the lab's, so the trail is tied to the lab's run
-  by the directory the runner created, as before.
-- The approver reads the `upstream` line `approvals list` prints at the new
-  pin; a script cannot match on it yet.
-- A named gap may be one the lab cannot configure yet as well as one the
-  system lacks (`docs/lab-files.md`). `gaps-01` is now that kind: at the new
-  pin the gateway keeps a run's flow, but it reads what a tool returns only
-  from the operator's `returns` declaration, which the lab's classification
-  cannot make yet, so the send stays `INDETERMINATE` where a `DENY` is
-  wanted.
-- `make docs-frontmatter` runs in `make quality`: every page under `docs/`
-  carries frontmatter (`docs/lab-files.md` as a contract, exempt from a word
-  budget), `docs/index.md` gave way to the generated `docs/README.md`, and the
-  approver's, the decision point double's and two victims' READMEs fit the
-  300-word folder budget.
-- `tool-01`, `auth-01` and `flow-01` run against the enforcer instead of the
-  stub, under new names: `tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write`,
-  `auth-01-an-injected-administrator-override-grants-no-export` and
-  `flow-01-a-private-read-is-not-mailed-to-an-untrusted-sink`. Their declared
-  verdicts in `config/scenarios/` are gone.
-- `expect.effects` accounts for every journal line of the run, not only the
-  served ones: an entry takes an optional `calls_refused: {tool: n}` beside
-  `calls_served`, and a line whose status and tool the scenario does not name,
-  or whose status the lab does not know, fails the effects check with the line
-  quoted. The victims' journals and both doubles' are graded alike. The format
-  stays `schema_version: 1`; a scenario that names no refusal asserts none.
-- `versions.env` pins the tree of the enforcer's commit as `ENFORCER_TREE`.
-  `make enforcer-image` refuses a commit whose tree is not it and labels the
-  image `io.guardana.playground.enforcer.tree` with the tree it verified;
-  `plane/image` fails unless the enforcer container's own image carries that
-  label equal to the pin, and says which tree it found. An enforcer image
-  built before this change carries no such label and has to be rebuilt.
-- `-scenario <path>` is read relative to the workspace (the clone by default)
-  and refused outside it; a scenario found by identifier or by `-all` that
-  links outside it is refused the same way. `-reports` inside a directory a
-  container mounts is refused.
-- `make check-hygiene` refuses a path that exists only on a maintainer's
-  machine: a home directory other than the distroless images' own, the macOS
-  temporary directories by their real paths, or a sibling checkout of either
-  system under test. A URL segment that looks like one passes.
-- The runner builds every image a scenario's profiles use, the agent's
-  included, before it starts anything, and nothing after: the plane's policy
-  goes stale on a clock that starts when it loads, and building the agent
-  during the probes had spent that clock. A build that fails brings nothing up
-  and fails every service's boot check with the build's error.
-- A report's image line says the label matches the pin rather than the image,
-  and for the enforcer adds whether the image's tree label is `ENFORCER_TREE`.
-- The gate's file list reads git only in the repository's own work tree and
-  refuses an empty list, so a copy inside another repository is scanned file by
-  file and no guard reports clean having read nothing.
-- `versions.env` pins the enforcer by commit (`ENFORCER_COMMIT`) and the
-  verifier at 0.26.1, and every image the lab pulls by tag and the digest of
-  its multi-arch index. `ENFORCER_TAG`, `ENFORCER_BRAND_ENDPOINT` and the Postgres,
-  Jaeger and OPA images are gone until something reads them, and the collector
-  and toxiproxy images came back with the services that read them; a test in
-  `compose/` fails on a variable nothing reads.
-- The verifier image is built by `make verifier-image` alone: the `verifier`
-  service carries no `build:` and the runner's build before a run skips it,
-  so the image it checked against `VERIFIER_VERSION` is the one that runs.
-
-### Removed
-
-- The stub gateway: `services/stub-gateway/`, `config/stub-gateway/`, its
-  compose service and the `stub` profile. The enforcer decides every
-  trajectory scenario; a scenario carrying `stub:` is refused at load as an
-  unknown key, and one without `gateway:` or without the `enforcer` profile is
-  refused. The runner no longer pairs a trail by a step number the trail
-  carries or grades a trail stamped with a run id as this run's: an event
-  naming any run fails `evidence/run-id`.
-
-### Added
-
 - A failure-mode catalogue (`docs/reference/failure-modes.md`) and a use-case
   catalogue (`docs/reference/use-cases.md`), written for any gate, grader or
   monitor, not only the two systems under test here. Every scenario names its
@@ -255,15 +133,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   carries replacement refs. `make verifier-image` installs the verifier from a
   hash-locked requirement file, then removes pip and every setuid or setgid bit.
 - `compose/otel/collector.yaml` and a `collector` service (profile `enforcer`,
-  network `evidence-net`, an internal network no other service is on) run the
-  pinned OpenTelemetry Collector with only its file exporter (`append: true`,
-  so a restart does not truncate what it already wrote), so the enforcer's
-  OTLP export lands somewhere the runner can read it and nothing else on the
-  lab's networks can reach. `runner/otlp.go` decodes that file with
-  `internal/evidence.DecodeOTLP` and writes it out as the run's
+  on `evidence-net`, an internal network it shares with the enforcer alone)
+  run the pinned OpenTelemetry Collector with only its file exporter
+  (`append: true`, so a restart does not truncate what it already wrote), so
+  the enforcer's OTLP export lands somewhere the runner can read it and
+  nothing else on the lab's networks can reach. `runner/otlp.go` decodes that
+  file with `internal/evidence.DecodeOTLP` and writes it out as the run's
   `evidence.jsonl`, one event per line, refusing an empty or eventless export
   rather than writing an empty one; a decode error never leaves a partial
-  trail in its place. Neither is wired into a scenario run yet.
+  trail in its place.
 - `internal/evidence` reads the enforcer's trail from its OTLP/HTTP JSON log
   export: the body of each record is the event, its attributes must agree, a
   redelivered event collapses, and each trail is ordered by its links within one
@@ -295,12 +173,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   approve, reject or leave, after a delay; never while no plane holds the
   directory, never an unreadable record unless a rule names it. A command cut
   short is journalled as unknown until the next listing shows what the record
-  says. `compose/Dockerfile.approver` puts it beside the pinned `/enforcer/control`.
+  says. `compose/Dockerfile.approver` puts it beside the enforcer image's
+  `/enforcer/control`.
 - Documentation machinery: page frontmatter, budgets and `covers` in
-  `docs/docs.json`, checked by `make docs-frontmatter` (outside the gate until
-  the pages carry it); a generated `docs/README.md`; `make docs-impact` for
-  the pages a change makes suspect. The link check no longer reads untracked
-  run reports.
+  `docs/docs.json`, checked by `make docs-frontmatter`; a generated
+  `docs/README.md`; `make docs-impact` for the pages a change makes suspect.
+  The link check no longer reads untracked run reports.
 - Scenarios the enforcer decides: a `gateway:` block names the scenario's part
   of the enforcer's configuration and its policy; the runner signs the policy
   for the run with the lab key (`make lab-key`, made once per machine outside
@@ -310,8 +188,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the trail after the spool drained with nothing quarantined, truncated,
   refused or dropped and the collector flushed, and fails a run whose enforcer
   does not report the pinned commit or whose container does not run the pinned
-  image. `gateway.upstream_tenants` puts a victim in a tenant of its own. The
-  stub moves to its own compose profile. `tool-02` is the first such scenario.
+  image. `gateway.upstream_tenants` puts a victim in a tenant of its own.
+  `tool-02` is the first such scenario.
 - The lab's classification of every victim tool (`config/gateway/`) is pinned
   to the fingerprints the enforcer's own doctor prints (`make
   classify-victims`), and those to the listing snapshots they were taken from
@@ -331,9 +209,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Pinned versions of the systems under test in `versions.env`.
 - Trajectory and scenario file formats in `internal/labspec`, with the evidence,
   journal and assertion readers a run is graded from.
-- Compose topology in `compose/`: ten services on two networks, with `tool-net`
-  marked internal so nothing in the lab has a route out, and the stub gateway as
-  the only service on both.
+- Compose topology in `compose/`, every network marked internal so nothing in
+  the lab has a route out.
 - Stub gateway in `services/stub-gateway`: it replays declared verdicts and
   writes the evidence trail. A step nobody declared is answered
   `STUB_NO_DECLARED_VERDICT`, so a scenario cannot pass on the stub's silence.
@@ -354,5 +231,125 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Three scenarios with their trajectories and declared verdicts:
   `tool-01-permitted-read-is-recorded`, `flow-01-injected-page-to-external-mail`
   and `auth-01-cross-tenant-export-undecided`.
+
+### Changed
+
+- The enforcer is pinned to its public release `v0.3.0-alpha` (commit
+  `14153928d7cb0df18533856c2c6115b6693e92dc`, tree
+  `7540e1f1a77892946d11c4734ffe26a9cc7ae6c0`), which anyone can fetch; the
+  pin before the public releases was a commit the public repository does not
+  serve. `versions.env` gains `ENFORCER_RELEASE`, and
+  `scripts/fetch-enforcer.sh` refuses the commit when that release's tag at
+  `ENFORCER_REPOSITORY` names another; the commit and its tree still decide
+  what is built. The lab moved through `v0.2.0-alpha` (commit
+  `471e18a0aec5e6201ea1a23c89ba0d1b926bbc33`, tree
+  `0b3b35ccd5639ba50816c47f7d83c63e3fbebf59`), which brought the four changes
+  below that name the new pin. `v0.3.0-alpha` brought none: its wire
+  contract, the OTLP goldens and every tool fingerprint are those of
+  `v0.2.0-alpha`, and the catalogue and the example grade the same,
+  `mode-01` included.
+- The enforcer exports its trail to the collector over TLS. At the new pin it
+  sends plaintext only to a loopback address and refused to start with the
+  lab's plaintext export. The runner makes a CA for each run, signs a
+  certificate for `collector` with it and never writes the CA's key; the
+  collector reads its certificate and key from the run's `collector-tls/`,
+  and the enforcer trusts the CA from `export-ca/` beside the decision point
+  double's. The collector's key is removed once the run's services are down.
+- `evidence/run-id` asserts how the enforcer names runs at the new pin: every
+  event on a request carries the one run it minted, except the events of a
+  request whose proposal is tagged `flow.v1.state=uncomputed` (a call refused
+  before it had a run, such as one to an unclassified tool), which carry
+  none; no event names another run; and no envelope names a run of its own.
+  The trail's run is the one its first proposal naming a run names; an event
+  naming any other is not read as this run's and fails the check. The
+  enforcer's run id is not the lab's, so the trail is tied to the lab's run
+  by the directory the runner created, as before.
+- The approver reads the `upstream` line `approvals list` prints at the new
+  pin; a script cannot match on it yet.
+- A named gap may be one the lab cannot configure yet as well as one the
+  system lacks (`docs/lab-files.md`). `gaps-01` is now that kind: at the new
+  pin the gateway keeps a run's flow, but it reads what a tool returns only
+  from the operator's `returns` declaration, which the lab's classification
+  cannot make yet, so the send stays `INDETERMINATE` where a `DENY` is
+  wanted.
+- `make docs-frontmatter` runs in `make quality`: every page under `docs/`
+  carries frontmatter (`docs/lab-files.md` as a contract, exempt from a word
+  budget), `docs/index.md` gave way to the generated `docs/README.md`, and the
+  approver's, the decision point double's and two victims' READMEs fit the
+  300-word folder budget.
+- `tool-01`, `auth-01` and `flow-01` run against the enforcer instead of the
+  stub, under new names: `tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write`,
+  `auth-01-an-injected-administrator-override-grants-no-export` and
+  `flow-01-a-private-read-is-not-mailed-to-an-untrusted-sink`. Their declared
+  verdicts in `config/scenarios/` are gone.
+- `expect.effects` accounts for every journal line of the run, not only the
+  served ones: an entry takes an optional `calls_refused: {tool: n}` beside
+  `calls_served`, and a line whose status and tool the scenario does not name,
+  or whose status the lab does not know, fails the effects check with the line
+  quoted. The victims' journals and both doubles' are graded alike. The format
+  stays `schema_version: 1`; a scenario that names no refusal asserts none.
+- `versions.env` pins the tree of the enforcer's commit as `ENFORCER_TREE`.
+  `make enforcer-image` refuses a commit whose tree is not it and labels the
+  image `io.guardana.playground.enforcer.tree` with the tree it verified;
+  `plane/image` fails unless the enforcer container's own image carries that
+  label equal to the pin, and says which tree it found. An enforcer image
+  built before this change carries no such label and has to be rebuilt.
+- `-scenario <path>` is read relative to the workspace (the clone by default)
+  and refused outside it; a scenario found by identifier or by `-all` that
+  links outside it is refused the same way. `-reports` inside a directory a
+  container mounts is refused.
+- `make check-hygiene` refuses a path that exists only on a maintainer's
+  machine: a home directory other than the distroless images' own, the macOS
+  temporary directories by their real paths, or a sibling checkout of either
+  system under test. A URL segment that looks like one passes.
+- The runner builds every image a scenario's profiles use, the agent's
+  included, before it starts anything, and nothing after: the plane's policy
+  goes stale on a clock that starts when it loads, and building the agent
+  during the probes had spent that clock. A build that fails brings nothing up
+  and fails every service's boot check with the build's error.
+- A report's image line says the label matches the pin rather than the image,
+  and for the enforcer adds whether the image's tree label is `ENFORCER_TREE`.
+- The gate's file list reads git only in the repository's own work tree and
+  refuses an empty list, so a copy inside another repository is scanned file by
+  file and no guard reports clean having read nothing.
+- `versions.env` pins the enforcer by commit (`ENFORCER_COMMIT`) and the
+  verifier at 0.26.1, and every image the lab pulls by tag and the digest of
+  its multi-arch index. `ENFORCER_TAG`, `ENFORCER_BRAND_ENDPOINT` and the Postgres,
+  Jaeger and OPA images are gone until something reads them, and the collector
+  and toxiproxy images came back with the services that read them; a test in
+  `compose/` fails on a variable nothing reads.
+- The verifier image is built by `make verifier-image` alone: the `verifier`
+  service carries no `build:` and the runner's build before a run skips it,
+  so the image it checked against `VERIFIER_VERSION` is the one that runs.
+
+### Removed
+
+- The stub gateway: `services/stub-gateway/`, `config/stub-gateway/`, its
+  compose service and the `stub` profile. The enforcer decides every
+  trajectory scenario; a scenario carrying `stub:` is refused at load as an
+  unknown key, and one without `gateway:` or without the `enforcer` profile is
+  refused. The runner no longer pairs a trail by a step number the trail
+  carries.
+
+### Fixed
+
+- The enforcer's agent listener binds the enforcer's own address on
+  `agent-net`, where it bound every interface, so a container on
+  `tool-net`, `evidence-net` or `pdp-net` could open a session as the
+  configured principal. Each run gives `agent-net` a /27 of `10.231.0.0/16`,
+  picked from the run id's random suffix, and the enforcer a fixed address
+  in its upper half (`LAB_AGENT_SUBNET`, `LAB_AGENT_RANGE`,
+  `LAB_ENFORCER_ADDRESS`, set by the runner); a lab brought up by hand
+  uses the last /27, which no run is given.
+- `make enforcer-image` builds again from a fresh clone: the tool lister a
+  chaos scenario runs inside a victim is its own command, `relist`, and
+  `compose/healthprobe`, which the enforcer image builds without the lab's
+  module, is held to the standard library by a test.
+- On a Linux host the runner can read what the lab's services write: every
+  victim's journal, both doubles' journals and the scripted agent's log and
+  trace are created mode 0644 whatever the umask, where they were 0600 and
+  owned by the services' uid, so a runner under any other uid graded every
+  effect as "no journal". Docker Desktop hid this by mapping every access to
+  the invoking user. Directories keep their modes.
 
 Nothing is released yet.
