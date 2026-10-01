@@ -23,7 +23,7 @@ recorded traces from its pinned release. Two scenarios are red by design.
 
 The public Playground repository is empty. Publish a reviewed lab commit there
 after the maintainer authorizes that action. Control is pinned to its public
-release `v0.2.0-alpha`, fetched anonymously by commit id after its tag is
+release `v0.3.0-alpha`, fetched anonymously by commit id after its tag is
 checked (implemented). Each later release is taken the same way: pin the
 commit, its tree and the release, rebuild both systems, regrade every scenario
 and example from records, and update expectations only from the new version's

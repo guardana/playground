@@ -1,15 +1,15 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   Under LOCKDOWN an allowed material call is blocked with the enforcement
 #     point's DENY LOCKDOWN, and POLICY_DECIDED keeps the kernel's ALLOW:
-#     docs/concepts/enforcement-modes.md:39-42,55, docs/reference/reason-codes.md:63,
+#     docs/concepts/enforcement-modes.md:41-44,57, docs/reference/reason-codes.md:63,
 #     docs/reference/mcp-coverage.md:120.
-#   An allowed read runs: docs/concepts/enforcement-modes.md:55.
+#   An allowed read runs: docs/concepts/enforcement-modes.md:57.
 #   A denied read is blocked with the kernel's decision on the block:
-#     docs/concepts/enforcement-modes.md:58.
-#   A read the policy holds is held: docs/concepts/enforcement-modes.md:57;
-#     its trail waits in APPROVAL_REQUESTED: docs/concepts/evidence-and-the-spool.md:28,62.
+#     docs/concepts/enforcement-modes.md:60.
+#   A read the policy holds is held: docs/concepts/enforcement-modes.md:59;
+#     its trail waits in APPROVAL_REQUESTED: docs/concepts/evidence-and-the-spool.md:30,64.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.
 schema_version: 1
 id: mode-02-lockdown-blocks-material-calls

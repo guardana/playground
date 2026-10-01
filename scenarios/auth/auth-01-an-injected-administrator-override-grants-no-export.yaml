@@ -6,12 +6,12 @@
 #   The listener authenticates nobody: every call is made by the principal the
 #     configuration names: docs/guides/run-the-gateway.md:85-87.
 #   A rule constrains principal.id, by exact equality: docs/reference/policy-format.md:74-77,81;
-#     identifiers compare exactly as sent: docs/contracts.md:438.
+#     identifiers compare exactly as sent: docs/contracts.md:450.
 #   No rule matching is DENY with NO_MATCHING_RULE: docs/reference/reason-codes.md:29,
-#     docs/concepts/how-a-call-is-decided.md:55; RULE_ALLOW: docs/reference/reason-codes.md:30.
-#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:58; the trail
+#     docs/concepts/how-a-call-is-decided.md:57; RULE_ALLOW: docs/reference/reason-codes.md:30.
+#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:60; the trail
 #     ends ACTION_BLOCKED carrying the kernel's decision and the server is never
-#     called: docs/concepts/evidence-and-the-spool.md:30,68, docs/concepts/mcp-gateway.md:57-60.
+#     called: docs/concepts/evidence-and-the-spool.md:32,70, docs/concepts/mcp-gateway.md:59-63.
 # victim-crm is put in the principal's tenant so the tenant check passes and the
 # principal is the only thing the export is refused on.
 schema_version: 1

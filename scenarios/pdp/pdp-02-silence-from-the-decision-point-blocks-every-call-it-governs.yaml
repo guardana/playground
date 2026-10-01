@@ -5,7 +5,7 @@
 #     enforcing mode, and fail_open_read never opens a read on it:
 #     docs/adr/0017-an-external-decision-point-can-veto.md:63-68, docs/reference/policy-format.md:127-128.
 #   A read timing out under fail_open_read: INDETERMINATE, Block, RULE_UNDETERMINED and PDP_TIMEOUT:
-#     docs/guides/let-a-decision-point-veto.md:57-66, docs/concepts/mcp-gateway.md:173-175.
+#     docs/guides/let-a-decision-point-veto.md:57-66, docs/concepts/mcp-gateway.md:182-184.
 #   A status other than 200 is PDP_UNAVAILABLE: docs/adr/0017-an-external-decision-point-can-veto.md:156.
 #   A 200 it will not read is PDP_ANSWER_REFUSED: no X-Request-ID echo, a structure it refuses, a
 #     member outside decision and context on an allow:
@@ -13,7 +13,7 @@
 #     docs/guides/let-a-decision-point-veto.md:27-29.
 #   Codes and usual verdicts: docs/reference/reason-codes.md:45,61,67,68.
 #   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
-#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:68.
+#     docs/concepts/mcp-gateway.md:59-63, docs/concepts/evidence-and-the-spool.md:70.
 #   Every step's question reaches the double, which journals it before it answers, so silence is
 #     told apart from a question never sent (services/pdp-double/README.md).
 schema_version: 1

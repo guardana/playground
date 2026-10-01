@@ -1,7 +1,7 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   upstream.call_timeout bounds a call to an upstream: docs/reference/configuration.md:92.
 #   A call whose result failed upstream closes ACTION_FAILED:
-#     docs/concepts/mcp-gateway.md:210, docs/concepts/evidence-and-the-spool.md:38,67.
+#     docs/concepts/mcp-gateway.md:219, docs/concepts/evidence-and-the-spool.md:40,69.
 #     The docs name no other closing record for a call the bound cut off, so
 #     that is the one asserted; the answer the agent gets is not graded.
 #   The result's status RESULT_STATUS_TIMEOUT is listed at docs/reference/wire/result.md:49;

@@ -2,16 +2,16 @@
 #   A call with no resource id is never sent to the decision point, and one a veto rule covers is
 #     blocked: docs/guides/let-a-decision-point-veto.md:34-35,
 #     docs/adr/0017-an-external-decision-point-can-veto.md:76-78,109-111.
-#   Nothing is sent and the decision carries PDP_UNAVAILABLE: docs/concepts/mcp-gateway.md:169,
+#   Nothing is sent and the decision carries PDP_UNAVAILABLE: docs/concepts/mcp-gateway.md:178,
 #     docs/adr/0017-an-external-decision-point-can-veto.md:156.
 #   The unanswered veto rule is undetermined, INDETERMINATE: docs/adr/0017-an-external-decision-point-can-veto.md:63-68,
 #     docs/reference/reason-codes.md:61,67.
 #   An allowing answer is ALLOW with RULE_ALLOW and PDP_ALLOW: docs/guides/let-a-decision-point-veto.md:67-68.
 #   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
-#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:68.
+#     docs/concepts/mcp-gateway.md:59-63, docs/concepts/evidence-and-the-spool.md:70.
 #   The PDP code and the decision point's identifier in pdp_instance come together, whenever a
 #     rule's value turned on the answer, a question that could not be asked included:
-#     docs/concepts/how-a-call-is-decided.md:133-135,
+#     docs/concepts/how-a-call-is-decided.md:135-137,
 #     docs/adr/0017-an-external-decision-point-can-veto.md:144-156. So pdp_instance does not say
 #     whether a question was sent; the double's journal does.
 #   The double journals every question it is asked, by action (services/pdp-double/README.md).

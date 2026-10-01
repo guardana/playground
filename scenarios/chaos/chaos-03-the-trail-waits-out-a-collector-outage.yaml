@@ -1,10 +1,10 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   A collector outage is retried for as long as it takes and fills the spool
-#     and nothing else: docs/concepts/evidence-and-the-spool.md:119-121.
+#     and nothing else: docs/concepts/evidence-and-the-spool.md:123-125.
 #   The spool depth falls as the collector acknowledges records:
 #     docs/guides/run-the-gateway.md:220-221.
 #   RULE_ALLOW and the run call's trail: docs/reference/reason-codes.md:30,
-#     docs/concepts/evidence-and-the-spool.md:25-39,66.
+#     docs/concepts/evidence-and-the-spool.md:25-41,68.
 #   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
 # The collector is stopped before the replay. The chaos check requires the
 # enforcer's /healthz, read before the collector starts again, to show records

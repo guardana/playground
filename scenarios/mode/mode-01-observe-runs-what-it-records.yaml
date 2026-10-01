@@ -1,15 +1,15 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   OBSERVE runs every verdict with the proposed bytes and records the kernel's
-#     decision untouched: docs/concepts/enforcement-modes.md:12-17,54-59;
-#     it takes a call nothing classifies: docs/concepts/enforcement-modes.md:61-64,77.
+#     decision untouched: docs/concepts/enforcement-modes.md:12-17,56-61;
+#     it takes a call nothing classifies: docs/concepts/enforcement-modes.md:63-66,79.
 #   RULE_DENY and RULE_ALLOW: docs/reference/reason-codes.md:30-31.
 #   The unclassified call's decision is INDETERMINATE, a refused request
-#     (docs/concepts/mcp-gateway.md:128,132, docs/contracts.md:340-343,
-#     docs/concepts/how-a-call-is-decided.md:22-23,48); no refusal code is asserted.
+#     (docs/concepts/mcp-gateway.md:137,141, docs/contracts.md:352-355,
+#     docs/concepts/how-a-call-is-decided.md:24-25,50); no refusal code is asserted.
 #   A call the adapter does not send is started and then closed ACTION_FAILED:
-#     docs/concepts/evidence-and-the-spool.md:37-38,67.
+#     docs/concepts/evidence-and-the-spool.md:39-40,69.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.
 schema_version: 1
 id: mode-01-observe-runs-what-it-records

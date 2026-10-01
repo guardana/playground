@@ -1,17 +1,17 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   A call nothing classifies is blocked outside OBSERVE, INDETERMINATE with
-#     ACTION_UNCLASSIFIED on the block: docs/concepts/enforcement-modes.md:77,
+#     ACTION_UNCLASSIFIED on the block: docs/concepts/enforcement-modes.md:79,
 #     docs/reference/mcp-coverage.md:119, docs/reference/reason-codes.md:65.
 #   The block is the enforcement point's own decision on ACTION_BLOCKED, and
-#     POLICY_DECIDED keeps the kernel's: docs/concepts/enforcement-modes.md:39-42.
+#     POLICY_DECIDED keeps the kernel's: docs/concepts/enforcement-modes.md:41-44.
 #   The kernel's decision on POLICY_DECIDED is INDETERMINATE: the translation
-#     gives an unclassified tool no effect class (docs/concepts/mcp-gateway.md:128,132),
-#     an envelope that declares none is refused (docs/contracts.md:340-343), and a
-#     refused request is INDETERMINATE (docs/concepts/how-a-call-is-decided.md:22-23,48).
+#     gives an unclassified tool no effect class (docs/concepts/mcp-gateway.md:137,141),
+#     an envelope that declares none is refused (docs/contracts.md:352-355), and a
+#     refused request is INDETERMINATE (docs/concepts/how-a-call-is-decided.md:24-25,50).
 #     Which refusal code it carries the docs leave to the refusal's sentinel, so
 #     none is asserted there.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.
 schema_version: 1
 id: tool-03-unclassified-tool-is-blocked

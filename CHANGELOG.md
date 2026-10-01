@@ -43,7 +43,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The enforcer is pinned to its public release `v0.2.0-alpha` (commit
+- The enforcer is pinned to its public release `v0.3.0-alpha` (commit
+  `14153928d7cb0df18533856c2c6115b6693e92dc`, tree
+  `7540e1f1a77892946d11c4734ffe26a9cc7ae6c0`). Its wire contract, the OTLP
+  goldens and every tool fingerprint are the same as at `v0.2.0-alpha`; the
+  catalogue and the example grade the same, `mode-01` included.
+- The enforcer was first pinned to its public release `v0.2.0-alpha` (commit
   `471e18a0aec5e6201ea1a23c89ba0d1b926bbc33`, tree
   `0b3b35ccd5639ba50816c47f7d83c63e3fbebf59`), which anyone can fetch; the
   previous pin was a commit the public repository does not serve.

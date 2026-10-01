@@ -3,13 +3,13 @@
 #     docs/reference/reason-codes.md:32; the mail upstream is put in the principal's tenant, since a
 #     tenant on one side only is TENANT_UNDETERMINED: docs/reference/reason-codes.md:62.
 #   A retry whose binding differs (another action digest: other arguments) is a new request,
-#     held anew with a new approval: docs/concepts/approvals-and-the-held-call.md:145,162,257-259;
-#     docs/concepts/mcp-gateway.md:198-199. It opens a trail and stands at its request.
+#     held anew with a new approval: docs/concepts/approvals-and-the-held-call.md:147,164,261-263;
+#     docs/concepts/mcp-gateway.md:207-208. It opens a trail and stands at its request.
 #   The identical retry still resumes the first hold and runs once:
-#     docs/concepts/approvals-and-the-held-call.md:177,196.
+#     docs/concepts/approvals-and-the-held-call.md:181,200.
 #   The approver answers each hold it lists once, as its script says, and journals the answer
 #     (services/approver/README.md); a retry before an answer is told the same approval_id and
-#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:176.
+#     makes no new hold: docs/concepts/approvals-and-the-held-call.md:180.
 schema_version: 1
 id: approval-03-mutated-retry-is-held-anew
 title: A mail altered after its approval is held anew and is not sent on that approval

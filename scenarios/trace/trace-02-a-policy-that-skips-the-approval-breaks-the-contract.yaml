@@ -7,10 +7,10 @@
 #     docs/concepts/evidence-and-the-spool.md, the trail's state diagram.
 #   NO_MATCHING_RULE, DENY, when no rule matches and there is no implicit
 #     allow: docs/reference/reason-codes.md:29. A material call needs a tenant on
-#     both sides or it is TENANT_UNDETERMINED (docs/concepts/how-a-call-is-decided.md:52),
+#     both sides or it is TENANT_UNDETERMINED (docs/concepts/how-a-call-is-decided.md:54),
 #     so victim-shell is put in the principal's tenant.
 #   The trail of a stopped call ends in ACTION_BLOCKED carrying the kernel's
-#     decision: docs/concepts/evidence-and-the-spool.md:30,68.
+#     decision: docs/concepts/evidence-and-the-spool.md:32,70.
 # And from the verifier's at VERIFIER_VERSION:
 #   A shell effect the system refused is failed, which forbidden_sink does not
 #     count by default: docs/usage-contracts.md:120-130.

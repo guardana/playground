@@ -1,12 +1,12 @@
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   An ACTION_STARTED reserves closing_reserve, and an append past max_bytes,
-#     reservations included, is refused: docs/concepts/evidence-and-the-spool.md:97-100,116-117,
+#     reservations included, is refused: docs/concepts/evidence-and-the-spool.md:101-104,120-121,
 #     docs/reference/configuration.md:76-78.
 #   A material call whose ACTION_STARTED is refused is blocked before anything
-#     runs, and the block is not recorded: docs/concepts/evidence-and-the-spool.md:80,
-#     docs/concepts/enforcement-modes.md:81.
+#     runs, and the block is not recorded: docs/concepts/evidence-and-the-spool.md:82,
+#     docs/concepts/enforcement-modes.md:83.
 #   Under on_unwritable: allow_reads a read runs unrecorded, and its closing
-#     event is not attempted: docs/concepts/evidence-and-the-spool.md:81,
+#     event is not attempted: docs/concepts/evidence-and-the-spool.md:83,
 #     docs/reference/configuration.md:81.
 #   /healthz counts blocks by reason code, sink failures before an effect and
 #     unrecorded reads under pipeline: docs/guides/run-the-gateway.md:143-150.
@@ -20,7 +20,7 @@
 # trail is counted; each append that failed before anything ran is a sink
 # failure) and internal/gateway/admit.go:205-220 (one failed append per call).
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.
 schema_version: 1
 id: evidence-02-full-spool-lets-a-read-run-unrecorded

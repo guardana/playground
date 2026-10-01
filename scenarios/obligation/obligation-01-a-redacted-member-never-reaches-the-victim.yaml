@@ -3,14 +3,14 @@
 #     docs/reference/reason-codes.md:33.
 #   redact_fields is applied by the gateway: docs/reference/obligations.md:37; it removes every
 #     top-level member whose name folds to a named field, before the decision that is recorded:
-#     docs/adr/0013-mcp-interception-approvals-and-modes.md:146-153, docs/extending/adapters.md:108-110.
+#     docs/adr/0013-mcp-interception-approvals-and-modes.md:149-156, docs/extending/adapters.md:108-110.
 #   The bytes sent upstream are the authorized ones, closed ACTION_COMPLETED:
-#     docs/concepts/mcp-gateway.md:41-49,209.
+#     docs/concepts/mcp-gateway.md:43-51,218.
 #   cap_rate is applied by nothing in this build: docs/reference/obligations.md:42; a non-advisory
 #     obligation nothing applies is DENY with OBLIGATION_NOT_UNDERSTOOD: docs/reference/obligations.md:24-26,
 #     docs/reference/reason-codes.md:57.
 #   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
-#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:68.
+#     docs/concepts/mcp-gateway.md:59-63, docs/concepts/evidence-and-the-spool.md:70.
 schema_version: 1
 id: obligation-01-a-redacted-member-never-reaches-the-victim
 title: A member a redaction obligation names never reaches the victim, and an obligation nothing applies denies

@@ -4,17 +4,17 @@
 #     when absent. The lab's classification declares no `returns`, so after the
 #     page and the file the run's reading is unknown, and a DENY flow rule on a
 #     send to an untrusted destination is undetermined:
-#     docs/concepts/how-a-call-is-decided.md:144,150-156,160-168,
-#     docs/reference/mcp-coverage.md:56, docs/concepts/mcp-gateway.md:131.
+#     docs/concepts/how-a-call-is-decided.md:146,152-158,162-170,
+#     docs/reference/mcp-coverage.md:56, docs/concepts/mcp-gateway.md:140.
 #   A DENY rule whose constraint is unknown, with no other constraint false,
 #     leaves the verdict INDETERMINATE with RULE_UNDETERMINED:
-#     docs/reference/reason-codes.md:61, docs/concepts/how-a-call-is-decided.md:55;
-#     a cause in the request blocks every class: docs/concepts/how-a-call-is-decided.md:86,99.
+#     docs/reference/reason-codes.md:61, docs/concepts/how-a-call-is-decided.md:57;
+#     a cause in the request blocks every class: docs/concepts/how-a-call-is-decided.md:88,101.
 #   The reads are decided by the bundle, the flow rule being false on their
 #     effect class: docs/reference/reason-codes.md:30.
 # Wanted: TOXIC_FLOW_SENSITIVE_TO_EXTERNAL, DENY: docs/reference/reason-codes.md:49.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so the material servers are put in
+# (docs/concepts/how-a-call-is-decided.md:54), so the material servers are put in
 # the principal's own tenant.
 schema_version: 1
 id: gaps-01-toxic-flow-to-external-mail-is-undetermined

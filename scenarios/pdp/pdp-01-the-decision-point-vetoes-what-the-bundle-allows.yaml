@@ -8,11 +8,11 @@
 #   True with an obligation is OBLIGATION_NOT_UNDERSTOOD, DENY:
 #     docs/adr/0017-an-external-decision-point-can-veto.md:122-126,149-151,160, docs/reference/policy-format.md:121.
 #   A call no veto rule covers is never sent: docs/guides/let-a-decision-point-veto.md:50-51,
-#     docs/concepts/mcp-gateway.md:157-160.
+#     docs/concepts/mcp-gateway.md:166-169.
 #   A blocked call ends ACTION_BLOCKED carrying the kernel's decision, the server never called:
-#     docs/concepts/mcp-gateway.md:57-60, docs/concepts/evidence-and-the-spool.md:68.
+#     docs/concepts/mcp-gateway.md:59-63, docs/concepts/evidence-and-the-spool.md:70.
 #   A decision that consulted the decision point names its configured identifier in pdp_instance,
-#     one that consulted none leaves it empty: docs/contracts.md:590-592,
+#     one that consulted none leaves it empty: docs/contracts.md:603-605,
 #     docs/reference/policy-format.md:128-129.
 #   The double journals every question it is asked, by action (services/pdp-double/README.md), so
 #     the four covered calls are asked once each and fs.list never.

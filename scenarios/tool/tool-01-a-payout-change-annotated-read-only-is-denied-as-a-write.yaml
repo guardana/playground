@@ -2,15 +2,15 @@
 # (victims/crm/README.md); the lab classifies it WRITE (config/gateway/classification.yaml).
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   Only the operator's override classifies, a tool's annotations are hints, and
-#     the override's effect is action.effect: docs/concepts/mcp-gateway.md:120-122,128.
+#     the override's effect is action.effect: docs/concepts/mcp-gateway.md:129-131,137.
 #   A rule constrains action.effect: docs/reference/policy-format.md:85; RULE_DENY
 #     when a rule matches and denies, RULE_ALLOW when one allows:
 #     docs/reference/reason-codes.md:30-31.
-#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:58; the trail
+#   A DENY blocks under ENFORCE: docs/concepts/enforcement-modes.md:60; the trail
 #     ends ACTION_BLOCKED carrying the kernel's decision and the server is never
-#     called: docs/concepts/evidence-and-the-spool.md:30,68, docs/concepts/mcp-gateway.md:57-60.
+#     called: docs/concepts/evidence-and-the-spool.md:32,70, docs/concepts/mcp-gateway.md:59-63.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so victim-crm is put in the
+# (docs/concepts/how-a-call-is-decided.md:54), so victim-crm is put in the
 # principal's own tenant.
 schema_version: 1
 id: tool-01-a-payout-change-annotated-read-only-is-denied-as-a-write

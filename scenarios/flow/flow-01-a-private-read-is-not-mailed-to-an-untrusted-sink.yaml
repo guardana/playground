@@ -6,7 +6,7 @@
 # No lab tool is classified trusted, so a trusted sink passing is not shown.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
 #   The override's trust zone is destination.trust_zone, which deny_external_sink
-#     reads: docs/concepts/mcp-gateway.md:131.
+#     reads: docs/concepts/mcp-gateway.md:140.
 #   ALLOW_WITH_OBLIGATIONS names OBLIGATIONS_ATTACHED: docs/reference/policy-format.md:56,
 #     docs/reference/reason-codes.md:33; a non-advisory obligation by default:
 #     docs/reference/obligations.md:14-16.
@@ -14,12 +14,12 @@
 #     trust zone is untrusted; a non-advisory one stops the call and the closing
 #     record says so: docs/reference/obligations.md:47, docs/extending/adapters.md:95-108.
 #   Under ENFORCE the call runs only with its obligations applied:
-#     docs/concepts/enforcement-modes.md:56. A call the adapter does not send is
-#     started, then closed ACTION_FAILED: docs/concepts/mcp-gateway.md:212,
-#     docs/concepts/evidence-and-the-spool.md:38,67.
+#     docs/concepts/enforcement-modes.md:58. A call the adapter does not send is
+#     started, then closed ACTION_FAILED: docs/concepts/mcp-gateway.md:221,
+#     docs/concepts/evidence-and-the-spool.md:40,69.
 #   The reads are allowed by the bundle: docs/reference/reason-codes.md:30.
 # A material call needs a tenant on both sides or it is TENANT_UNDETERMINED
-# (docs/concepts/how-a-call-is-decided.md:52), so victim-mail is put in the
+# (docs/concepts/how-a-call-is-decided.md:54), so victim-mail is put in the
 # principal's own tenant.
 schema_version: 1
 id: flow-01-a-private-read-is-not-mailed-to-an-untrusted-sink

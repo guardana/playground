@@ -2,14 +2,14 @@
 #   The manifest is keyed by a fingerprint of the whole definition, so a tool
 #     whose description changed is a different tool until it is classified
 #     again, and a call to it blocks ACTION_UNCLASSIFIED:
-#     docs/adr/0013-mcp-interception-approvals-and-modes.md:114-119,
+#     docs/adr/0013-mcp-interception-approvals-and-modes.md:117-122,
 #     docs/guides/run-the-gateway.md:130-131.
 #   An upstream's changed tool list refreshes the manifest:
 #     docs/reference/mcp-coverage.md:51. list.ttl is what an agent caches the
 #     gateway's own list for, not a re-read of the upstream:
 #     docs/reference/mcp-coverage.md:37,50.
 #   The block, the kernel's INDETERMINATE and the trail it leaves:
-#     docs/concepts/enforcement-modes.md:39-42,77, docs/reference/reason-codes.md:65.
+#     docs/concepts/enforcement-modes.md:41-44,79, docs/reference/reason-codes.md:65.
 #   RULE_ALLOW: docs/reference/reason-codes.md:30.
 # victim-fs describes fs.read anew on its second listing and announces the
 # change to every open session. The relist fault is that second listing, made
