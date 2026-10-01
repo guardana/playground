@@ -307,10 +307,12 @@ A step opens a trail unless it says otherwise:
 - `opens: none` is a step that opens no trail of its own, such as a retry the
   enforcer answered pending. It states nothing else.
 - `result: { status: <s> }` grades the result on the trail's closing record,
-  written without the `RESULT_STATUS_` prefix: `SUCCESS` on an
-  `ACTION_COMPLETED`, or `FAILURE`, `TIMEOUT`, `CANCELLED`, `BLOCKED` or
-  `UNKNOWN` on an `ACTION_FAILED`. It needs the `trail` it is read from, ending
-  in that kind, and is refused beside `blocked`. A held trail is closed once, so
+  written without the `RESULT_STATUS_` prefix: `SUCCESS`, `FAILURE`, `TIMEOUT`,
+  `CANCELLED`, `BLOCKED` or `UNKNOWN`. An `ACTION_COMPLETED` carries only
+  `SUCCESS`; an `ACTION_FAILED` carries any of them, `SUCCESS` when the call
+  ran with bytes other than the authorized ones (`EXECUTED_ARGS_MISMATCH`). It
+  needs the `trail` it is read from, ending in a kind that carries the status,
+  and is refused beside `blocked`. A held trail is closed once, so
   its result is stated on the step that resumes it. The kind alone does not
   tell a call the adapter refused (`BLOCKED`) from one an upstream failed or
   that ran out of time.

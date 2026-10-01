@@ -29,6 +29,23 @@ func TestAStepStatesItsClosingResult(t *testing.T) {
 	}
 }
 
+// A call that ran with other bytes than the authorized ones closes
+// ACTION_FAILED naming EXECUTED_ARGS_MISMATCH and keeps its upstream's result,
+// so a success on a failed trail is a record the enforcer writes.
+func TestASuccessOnAFailedTrailCanBeStated(t *testing.T) {
+	body := strings.NewReplacer(
+		heldStepOne, "1: { verdict: ALLOW, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED], result: { status: SUCCESS } }",
+		heldStepThree, "3: { verdict: ALLOW }",
+	).Replace(heldScenario)
+	if !strings.Contains(body, "ACTION_FAILED], result: { status: SUCCESS }") {
+		t.Fatal("the replacement did not make step 1 a failed trail with a success")
+	}
+	scenario, trajectory := loadPair(t, body)
+	if err := labspec.Validate(scenario, trajectory); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
 func TestAResultNoRecordCanCarryIsRefused(t *testing.T) {
 	for name, step := range map[string]string{
 		"a status the wire does not have": "1: { verdict: ALLOW, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED], result: { status: DONE } }",
@@ -36,7 +53,6 @@ func TestAResultNoRecordCanCarryIsRefused(t *testing.T) {
 		"no status":                       "1: { verdict: ALLOW, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED], result: {} }",
 		"no trail to read it from":        "1: { verdict: ALLOW, result: { status: SUCCESS } }",
 		"a trail that never closes":       "1: { verdict: DENY, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED], result: { status: BLOCKED } }",
-		"success on a failed trail":       "1: { verdict: ALLOW, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED], result: { status: SUCCESS } }",
 		"a failure on a completed trail":  "1: { verdict: ALLOW, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED], result: { status: FAILURE } }",
 		"beside a block":                  "1: { verdict: DENY, blocked: { verdict: DENY }, trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED, ACTION_FAILED], result: { status: BLOCKED } }",
 	} {

@@ -18,8 +18,9 @@ func resultStatuses() []string {
 }
 
 // validateResult holds a stated result to the trail it is read from: the
-// trail is stated and closes, ACTION_COMPLETED with a success and
-// ACTION_FAILED with anything else, and a blocked trail never closes.
+// trail is stated and closes, and a blocked trail never closes. Only a success
+// closes ACTION_COMPLETED; ACTION_FAILED carries any status, a success too when
+// the bytes sent were not the authorized ones.
 func (d DecisionExpectation) validateResult(field string) error {
 	if d.Result == nil {
 		return nil
@@ -27,18 +28,16 @@ func (d DecisionExpectation) validateResult(field string) error {
 	if err := oneOf(field+".result.status", d.Result.Status, resultStatuses()...); err != nil {
 		return err
 	}
-	closing := "ACTION_FAILED"
-	if d.Result.Status == "SUCCESS" {
-		closing = "ACTION_COMPLETED"
-	}
 	switch {
 	case d.Blocked != nil:
 		return fmt.Errorf("%w: %s states a block and a result; a blocked trail is never closed by a result", ErrInvalid, field)
 	case len(d.Trail) == 0:
 		return fmt.Errorf("%w: %s.result is read from the closing record, so the step states the trail it ends", ErrInvalid, field)
-	case d.Trail[len(d.Trail)-1] != closing:
-		return fmt.Errorf("%w: %s.result %s closes a trail with %s, and the trail list ends with %s",
-			ErrInvalid, field, d.Result.Status, closing, d.Trail[len(d.Trail)-1])
+	}
+	last := d.Trail[len(d.Trail)-1]
+	if last != "ACTION_FAILED" && (last != "ACTION_COMPLETED" || d.Result.Status != "SUCCESS") {
+		return fmt.Errorf("%w: %s.result %s is read from an ACTION_FAILED, or from an ACTION_COMPLETED for SUCCESS, and the trail list ends with %s",
+			ErrInvalid, field, d.Result.Status, last)
 	}
 	return nil
 }
