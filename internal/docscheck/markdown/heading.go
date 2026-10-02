@@ -50,18 +50,19 @@ func Slug(text string) string {
 	return b.String()
 }
 
-// Anchors returns the anchor of every heading of the page; a repeated slug
-// takes -1, -2 and so on, as GitHub numbers them.
+// Anchors returns the anchor of every heading of the page. A slug already
+// taken, by a repeat or by a heading whose own slug ends in -N, takes the
+// first free of -1, -2 and so on, as GitHub numbers them.
 func Anchors(body []byte) []string {
-	seen := map[string]int{}
+	taken := map[string]bool{}
 	var anchors []string
 	for _, h := range Headings(body) {
 		slug := Slug(h.Text)
 		anchor := slug
-		if n := seen[slug]; n > 0 {
+		for n := 1; taken[anchor]; n++ {
 			anchor = slug + "-" + strconv.Itoa(n)
 		}
-		seen[slug]++
+		taken[anchor] = true
 		anchors = append(anchors, anchor)
 	}
 	return anchors

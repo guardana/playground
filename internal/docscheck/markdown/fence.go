@@ -13,11 +13,12 @@ type Fence struct {
 	Info string
 }
 
-// OpenFence reads line as the opening of a fenced block: three or more
-// backticks or tildes, and for backticks an info string holding none.
+// OpenFence reads line as the opening of a fenced block: at most three spaces,
+// then three or more backticks or tildes, and for backticks an info string
+// holding none.
 func OpenFence(line string) (Fence, bool) {
-	line = strings.TrimSpace(line)
-	if len(line) < 3 || (line[0] != '`' && line[0] != '~') {
+	line, ok := unindent(line)
+	if !ok || len(line) < 3 || (line[0] != '`' && line[0] != '~') {
 		return Fence{}, false
 	}
 	n := len(line) - len(strings.TrimLeft(line, line[:1]))
@@ -31,11 +32,22 @@ func OpenFence(line string) (Fence, bool) {
 	return Fence{Char: line[0], Len: n, Info: info}, true
 }
 
-// Closes reports whether line ends the block f opened: the same character,
-// at least as many of them, and nothing else.
+// Closes reports whether line ends the block f opened: at most three spaces,
+// the same character, at least as many of them, and nothing else.
 func (f Fence) Closes(line string) bool {
-	line = strings.TrimSpace(line)
-	return len(line) >= f.Len && strings.Trim(line, string(f.Char)) == ""
+	line, ok := unindent(line)
+	line = strings.TrimRight(line, " \t")
+	return ok && len(line) >= f.Len && strings.Trim(line, string(f.Char)) == ""
+}
+
+// unindent drops up to three leading spaces and refuses a line indented
+// further, which CommonMark reads as indented code, never as a fence.
+func unindent(line string) (string, bool) {
+	rest := strings.TrimLeft(line, " ")
+	if len(line)-len(rest) > 3 || strings.HasPrefix(rest, "\t") {
+		return "", false
+	}
+	return rest, true
 }
 
 // outsideFences calls visit with each line outside a fenced block and its

@@ -35,6 +35,22 @@ func TestAnchorsSkipFencesAndNumberRepeats(t *testing.T) {
 	}
 }
 
+func TestRepeatedSlugsSkipEveryTakenAnchor(t *testing.T) {
+	body := "# Topic\n\n## Topic-1\n\n## Topic\n\n## Topic\n"
+	want := []string{"topic", "topic-1", "topic-2", "topic-3"}
+	if got := markdown.Anchors([]byte(body)); !slices.Equal(got, want) {
+		t.Errorf("Anchors = %q, want %q", got, want)
+	}
+}
+
+func TestFourSpacesIndentIsCodeNotAFence(t *testing.T) {
+	body := "# Title\n\n    ```\n## Seen\n\n```sh\n    ```\n## Hidden\n```\n\n## After\n"
+	want := []string{"title", "seen", "after"}
+	if got := markdown.Anchors([]byte(body)); !slices.Equal(got, want) {
+		t.Errorf("Anchors = %q, want %q", got, want)
+	}
+}
+
 func TestFences(t *testing.T) {
 	for line, want := range map[string]markdown.Fence{
 		"```mermaid":           {Char: '`', Len: 3, Info: "mermaid"},
@@ -45,7 +61,7 @@ func TestFences(t *testing.T) {
 			t.Errorf("OpenFence(%q) = %+v, %v; want %+v", line, got, ok, want)
 		}
 	}
-	for _, line := range []string{"``", "```js `x`", "text ```", "~~"} {
+	for _, line := range []string{"``", "```js `x`", "text ```", "~~", "    ```", "\t~~~"} {
 		if got, ok := markdown.OpenFence(line); ok {
 			t.Errorf("OpenFence(%q) = %+v, want no fence", line, got)
 		}
@@ -63,6 +79,9 @@ func TestFences(t *testing.T) {
 		{backticks, "~~~~", false},
 		{backticks, "```` x", false},
 		{tildes, " ~~~ ", true},
+		{tildes, "   ~~~", true},
+		{tildes, "    ~~~", false},
+		{tildes, "\t~~~", false},
 		{tildes, "```", false},
 	} {
 		if got := c.fence.Closes(c.line); got != c.want {
