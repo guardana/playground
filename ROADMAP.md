@@ -68,14 +68,17 @@ effects when neither is installed. A separate Range repository or a generic
 sandbox provider is premature until this local path works for an agent
 outside the lab.
 
-## P6 — Use-case and attack library (planned)
+## P6 — Use-case and attack library (partly implemented)
 
-Add victims where they create a new observable failure, beginning with a code
-host and package registry for coding agents, a tenant-partitioned retrieval
-store, and a payment service that commits before a lost response. Follow with
-infrastructure, calendar and authenticated MCP cases. Cover poisoned content,
-tool descriptions and schemas, secret-bearing arguments, repeated calls and
-denial routed around. Every case gets a deterministic trajectory, an expected
+Add victims where they create a new observable failure. The first is built:
+`victim-pay`, a payments ledger (implemented), graded on a charge over its cap
+(`obligation-02`), a payout after a fetched ticket (`flow-04`) and a charge
+retried after its answer was lost (`gaps-03`), all experimental. A charge that
+commits after its timeout or cancellation (`DEST-05`) is planned. Next, in
+order: a code host and package registry for coding agents, a tenant-partitioned
+retrieval store, then infrastructure, calendar and authenticated MCP cases.
+Cover poisoned content, tool descriptions and schemas, secret-bearing
+arguments, repeated calls and denial routed around. Every case gets a deterministic trajectory, an expected
 verdict, victim-side evidence and a mutation that makes its check fail.
 
 ## P7 — Model artifacts and endpoints (planned)

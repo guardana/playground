@@ -60,6 +60,22 @@ agent's own record, so state the scenario's decisions and effects beside it for
 what the trace cannot tell apart
 ([Trace scenarios](../lab-files.md#trace-scenarios)).
 
+Each effect names the tool as its action and the victim as its target, on the
+sink a `forbidden_sink` names:
+
+| victim | sink |
+|---|---|
+| `victim-crm` | `other` |
+| `victim-db` | `sql` |
+| `victim-fs` | `filesystem` |
+| `victim-shell` | `shell` |
+| `victim-mail` | `email` |
+| `victim-web` | `http` |
+| `victim-pay` | `payment` |
+
+The agent refuses to record a step to a server with no sink rather than file
+it under `other` (`agents/scripted/trace.go`).
+
 ## Say what you expect
 
 `expect.trace` takes the verifier's exit code and the rules it must or must not

@@ -73,7 +73,10 @@ lab owns most of it:
   (left unset, the enforcer at the pin fills in the gateway's `tenant_id`). A
   victim has no tenant unless the scenario names one in
   `gateway.upstream_tenants`, and a material call with a tenant on one side
-  only is `INDETERMINATE`.
+  only is `INDETERMINATE`. `pay.charge`, `pay.refund` and `pay.payout` are
+  `TRANSACT`, which at the pin requires a tenant on both sides
+  (`docs/contracts.md` in the enforcer's repository at `ENFORCER_COMMIT`), so a
+  scenario that calls them names `victim-pay` there.
 
 The victims, their tools and what each lies about are in `victims/*/README.md`.
 

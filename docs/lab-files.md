@@ -166,7 +166,9 @@ three are checked when the files load:
   with none, or an effect on a tool the map does not name, fails. Graded as
   `effects/<victim>/committed`. A double records no effect, so naming one is
   refused. Quote strings: YAML reads an unquoted `NO`, `on` or `y` as a
-  boolean, and `5000.0` as the integer 5000.
+  boolean. Write amounts as plain integers: YAML reads `5000.0`, `5e3` or
+  `0x1388` as 5000, and a fraction past a float's precision as the integer
+  it rounds to, before the lab sees it.
 
   ```yaml
   victim-example: { calls_served: { example.charge: 1 }, committed: { example.charge: [ { amount: 5000, currency: "EUR" } ] } }
@@ -254,9 +256,9 @@ reads into the run's flow state:
 
 | tools | `trust_zone` | `returns.trust` | `returns.sensitivity` |
 |---|---|---|---|
-| `crm.read_customer`, `crm.update_note`, `crm.update_bank_account`, `crm.export_table`, `db.query`, `db.execute`, `fs.read` | `TRUSTED_INTERNAL` | `TRUSTED_INTERNAL` | `CONFIDENTIAL` |
+| `crm.read_customer`, `crm.update_note`, `crm.update_bank_account`, `crm.export_table`, `db.query`, `db.execute`, `fs.read`, `pay.charge`, `pay.refund`, `pay.read_charge` | `TRUSTED_INTERNAL` | `TRUSTED_INTERNAL` | `CONFIDENTIAL` |
 | `db.drop_table`, `fs.write`, `fs.list` | `TRUSTED_INTERNAL` | `TRUSTED_INTERNAL` | `INTERNAL` |
-| `mail.send`, `mail.send_bulk` | `UNTRUSTED_EXTERNAL` | `TRUSTED_INTERNAL` | `INTERNAL` |
+| `mail.send`, `mail.send_bulk`, `pay.payout` | `UNTRUSTED_EXTERNAL` | `TRUSTED_INTERNAL` | `INTERNAL` |
 | `web.fetch` | `UNTRUSTED_EXTERNAL` | `UNTRUSTED_EXTERNAL` | `PUBLIC` |
 | `shell.exec` | none | none | none |
 
@@ -265,10 +267,11 @@ untrusted and its reading unknown for the rest of the run
 (`docs/concepts/how-a-call-is-decided.md` in the enforcer's repository at
 `ENFORCER_COMMIT`). A `TRUSTED_INTERNAL` result holds
 because each run starts its victims in a compose project of its own, and
-`victim-crm`, `victim-db` and `victim-fs` load their compiled-in fixture on
-every start (`victims/crm/store.go`, `victims/db/tables.go`,
-`victims/fs/sandbox.go`): nothing an earlier run wrote is read back as
-trusted.
+`victim-crm`, `victim-db`, `victim-fs` and `victim-pay` load their compiled-in
+fixture on every start (`victims/crm/store.go`, `victims/db/tables.go`,
+`victims/fs/sandbox.go`, `victims/pay/ledger.go`): nothing an earlier run wrote
+is read back as trusted. `pay.payout` is `UNTRUSTED_EXTERNAL` whatever account
+it names, the customer's own included.
 
 The run's trail is read from the collector once the enforcer's spool has
 drained, and the `plane` checks hold the run to the pinned enforcer
