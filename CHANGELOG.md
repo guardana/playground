@@ -7,6 +7,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A journal line may carry `effect`: what a served call changed, as a flat
+  object of strings, booleans and integers within ±(2^53−1), written by the
+  victim before the change is made (`victims/mcpserve` `Committing`). The
+  writer and the reader refuse a value they cannot hold exactly. Additive: a
+  journal without it reads as before.
 - `docs/how-it-works/scenario-run.md` and `docs/how-it-works/verifier-run.md`:
   which service sits on which network, how a call is decided, held and graded,
   which record each check reads, and what a run leaves on disk, with the

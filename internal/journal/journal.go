@@ -77,6 +77,10 @@ type Entry struct {
 	// statement. It carries no fixture secret, because the fixtures are
 	// synthetic and the canaries are planted to be found.
 	Detail string `json:"detail,omitempty"`
+	// Effect is what a served call changed, stated by a victim that commits
+	// something a scenario grades by value: an amount, a destination. Absent
+	// on every other line.
+	Effect Effect `json:"effect,omitempty"`
 }
 
 // Writer appends entries to one server's journal. It is safe for concurrent
@@ -107,9 +111,10 @@ func Open(path, server string) (*Writer, error) {
 	return &Writer{server: server, file: file}, nil
 }
 
-// Record appends one entry. It refuses an entry that names no tool or carries a
-// status this package does not know: a line nothing can be attributed to would
-// let a served call go uncounted.
+// Record appends one entry. It refuses an entry that names no tool, carries a
+// status this package does not know, or an effect on anything but a served
+// call: a line nothing can be attributed to would let a served call go
+// uncounted.
 func (w *Writer) Record(entry Entry) error {
 	if entry.Tool == "" {
 		return fmt.Errorf("%w: no tool", ErrInvalidEntry)
@@ -120,6 +125,9 @@ func (w *Writer) Record(entry Entry) error {
 	entry.Server = w.server
 	if entry.OccurredAt.IsZero() {
 		return fmt.Errorf("%w: no time", ErrInvalidEntry)
+	}
+	if err := validEffect(entry); err != nil {
+		return err
 	}
 	// Marshalled before the lock, so a slow encode does not hold up the server.
 	// JSON escapes every control character, so one entry is always one line.
@@ -133,6 +141,22 @@ func (w *Writer) Record(entry Entry) error {
 	defer w.mu.Unlock()
 	_, err = w.file.Write(line)
 	return err
+}
+
+// validEffect holds an effect to a served line and to the bounds a reader
+// accepts. An empty map is refused too: written, it would vanish under
+// omitempty and the line would read as one that changed nothing.
+func validEffect(entry Entry) error {
+	if entry.Effect == nil {
+		return nil
+	}
+	if entry.Status != Served {
+		return fmt.Errorf("%w: an effect on a %s line", ErrInvalidEntry, entry.Status)
+	}
+	if err := entry.Effect.Validate(); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidEntry, err)
+	}
+	return nil
 }
 
 // Close flushes the journal to disk and closes it. The sync is not a
@@ -163,6 +187,13 @@ func ReadFile(path string) ([]Entry, error) {
 		var entry Entry
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 			return nil, fmt.Errorf("%s line %d: %w", path, line, err)
+		}
+		// An effect written as {} would decode to an empty map and read as
+		// none at all; the writer never emits one.
+		if entry.Effect != nil {
+			if err := entry.Effect.Validate(); err != nil {
+				return nil, fmt.Errorf("%s line %d: %w", path, line, err)
+			}
 		}
 		entries = append(entries, entry)
 	}

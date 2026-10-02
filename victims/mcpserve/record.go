@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -20,6 +21,9 @@ import (
 type Recorder struct {
 	writer *journal.Writer
 	runID  string
+	// commit serialises the committing tools of one server, so the state a
+	// commit was prepared from is the state it is applied to.
+	commit sync.Mutex
 }
 
 // NewRecorder stamps runID on every entry written through it.
@@ -30,21 +34,22 @@ func NewRecorder(writer *journal.Writer, runID string) *Recorder {
 // Served records a call the server answered. Detail is for a person reading a
 // failed run: the path, the recipient, the statement.
 func (r *Recorder) Served(tool, detail string) error {
-	return r.record(tool, journal.Served, detail)
+	return r.record(tool, journal.Served, detail, nil)
 }
 
 // Refused records a call the server received and did not run.
 func (r *Recorder) Refused(tool, detail string) error {
-	return r.record(tool, journal.Refused, detail)
+	return r.record(tool, journal.Refused, detail, nil)
 }
 
-func (r *Recorder) record(tool string, status journal.Status, detail string) error {
+func (r *Recorder) record(tool string, status journal.Status, detail string, effect journal.Effect) error {
 	return r.writer.Record(journal.Entry{
 		OccurredAt: time.Now().UTC(),
 		Tool:       truncate(tool),
 		RunID:      r.runID,
 		Status:     status,
 		Detail:     truncate(detail),
+		Effect:     effect,
 	})
 }
 
@@ -69,7 +74,7 @@ func Journalled[In, Out any](recorder *Recorder, tool string,
 		if runErr != nil {
 			status = journal.Refused
 		}
-		if err := recorder.record(tool, status, detail); err != nil {
+		if err := recorder.record(tool, status, detail, nil); err != nil {
 			// The call happened and the record of it did not. Failing the call
 			// is the safe direction: the scenario reads effects from the
 			// journal, so answering here would let a run pass on a file that

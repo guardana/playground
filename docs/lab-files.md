@@ -3,7 +3,7 @@ title: Trajectory and scenario files
 summary: The two files a run is written in, the checks each expectation becomes, and how a workspace outside the clone holds your own.
 type: contract
 audience: [engineering, product]
-covers: [internal/labspec/**, runner/check/**, runner/workspace.go, runner/locate.go, scenarios/**, trajectories/**]
+covers: [internal/labspec/**, internal/journal/**, runner/check/**, runner/workspace.go, runner/locate.go, scenarios/**, trajectories/**]
 ---
 
 # Trajectory and scenario files
@@ -161,6 +161,22 @@ three are checked when the files load:
 - **A tolerance names the step it applies to.** `INDETERMINATE` where a verdict
   was expected is a failure unless that step is listed, and listing a step whose
   expectation is already `INDETERMINATE` is refused because it says nothing.
+
+### A journal line
+
+Each victim and double appends one JSON line per call it received to
+`journals/<server>.jsonl`, written by the server and never by the caller:
+`occurred_at`, `server` (stamped by the writer), `tool`, `run_id`, `status`
+(`served` or `refused`) and `detail`, which is for a person reading a failed
+run and is cut at 4 KiB with a marker.
+
+A tool that commits a change a scenario grades by value adds `effect` to its
+served line: a flat object of 1 to 16 members, each name at most 64 bytes, each
+value a string of at most 256 bytes, a boolean, or an integer within
+±(2^53−1). The writer and the reader both refuse anything else, a fraction or
+`5e3` included, rather than round or cut it. The line is written before the
+change is made, so a line may name a change that did not happen, never the
+reverse. Lines without `effect` read as before.
 
 ### What decides the run
 
