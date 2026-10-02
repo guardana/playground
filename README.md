@@ -37,9 +37,6 @@ make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 ```
 
-Until the first release is published there, the repository is empty; use the
-checkout you have.
-
 Its result line gives the verdict and report path. The
 [quickstart](docs/runbooks/quickstart.md) covers setup and failures.
 

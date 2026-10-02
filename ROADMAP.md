@@ -45,9 +45,9 @@ release-pin result (experimental).
 The lab's CI workflows run `make quality`, then the catalogue and the examples
 against the pins (experimental). They have not run on GitHub; running them
 there on every change is planned, and [status](docs/status.md) says what has
-run where. Publishing a reviewed lab commit to `github.com/guardana/playground`,
-which is empty today, is planned. Translate the enforcer's own scenario format only after a round trip
-preserves the calls and expected evidence (planned); do not maintain two
+run where. The lab is published at `github.com/guardana/playground`
+(implemented). Translate the enforcer's own scenario format only after a round
+trip preserves the calls and expected evidence (planned); do not maintain two
 conflicting truths for one case.
 
 ## P5 — Agent trials in the same playground (planned)

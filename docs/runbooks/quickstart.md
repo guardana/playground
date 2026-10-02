@@ -21,8 +21,6 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
   from the commit with `git archive`, never from a clone's working tree, and
   refuses an archive whose tree is not `ENFORCER_TREE`.
 - A clone of this lab: `git clone https://github.com/guardana/playground`.
-  Until the first release is published there, the repository is empty; use
-  the checkout you have.
 - Network for the first build: it fetches the enforcer from GitHub and pulls
   the base images, the Go modules and the verifier's Python packages, each
   pinned by commit, digest or hash.
