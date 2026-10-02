@@ -89,9 +89,10 @@ func (v Value) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON reads the raw token, never a float64: 5000.0, 5e3 and an
-// integer past MaxInteger are refused rather than rounded into a match.
-// Scenario files load through this decoder too, so both sides of a comparison
-// are read by one set of rules.
+// integer past MaxInteger are refused rather than rounded into a match. A
+// scenario's committed values reach it after YAML has already written each
+// number in JSON, so a spelling YAML reads as a float arrives as the integer
+// it rounds to.
 func (v *Value) UnmarshalJSON(data []byte) error {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 {

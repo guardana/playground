@@ -56,6 +56,10 @@ func TestAnEffectIsReadBackMemberForMember(t *testing.T) {
 	if got["amount"].Equal(journal.String("5000")) || got["captured"].Equal(journal.Integer(0)) {
 		t.Error("a value of one kind equals a value of another")
 	}
+	fewer := journal.Effect{"amount": journal.Integer(5000), "currency": journal.String("EUR")}
+	if got.Equal(fewer) || fewer.Equal(got) {
+		t.Error("effects with different members compare equal")
+	}
 }
 
 // Each bound is tested at the value past it and at the value on it, so a test

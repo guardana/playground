@@ -16,6 +16,13 @@ func TestEveryVictimHasASink(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("sinks name %v, the lab's victims are %v", got, want)
 	}
+	// The verifier's closed list at VERIFIER_VERSION (docs/usage-contracts.md).
+	closed := []string{"sql", "shell", "filesystem", "http", "messaging", "email", "payment", "cloud_api", "code_execution", "other"}
+	for server, sink := range sinks() {
+		if !slices.Contains(closed, sink) {
+			t.Errorf("%s has sink %q, which is not on the verifier's list", server, sink)
+		}
+	}
 }
 
 func TestAServerWithNoSinkIsAnError(t *testing.T) {

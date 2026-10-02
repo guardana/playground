@@ -9,12 +9,14 @@
 #     docs/reference/obligations.md:24-26, docs/reference/reason-codes.md:57.
 #   cap_amount on a fractional amount is refused, as an obligation the plane
 #     cannot apply: docs/adr/0029-exact-fractions-in-the-canonical-form.md:65-66.
-#   The kernel's decision is recorded untouched in POLICY_DECIDED, and a block
-#     that is the enforcement point's own is a decision it minted on
-#     ACTION_BLOCKED, with pdp_type naming it and the block's code:
-#     docs/adr/0013-mcp-interception-approvals-and-modes.md:237-243,
-#     docs/concepts/evidence-and-the-spool.md:70. The kernel allows step 3 with
-#     the cap, and the gateway, which cannot apply it, blocks.
+#   The kernel's decision is recorded untouched in POLICY_DECIDED:
+#     docs/adr/0013-mcp-interception-approvals-and-modes.md:237-238, so step 3's
+#     is the kernel's ALLOW_WITH_OBLIGATIONS with the cap. ACTION_BLOCKED carries
+#     the kernel's decision or the enforcement point's own:
+#     docs/concepts/evidence-and-the-spool.md:70. That a cap the gateway cannot
+#     apply is an own block is not in ADR-0013's list of them (:239-241); the
+#     gateway's DENY there is the behaviour observed at the pin, recorded as a
+#     finding, not a documented promise.
 #   The bytes sent upstream are the authorized ones, closed ACTION_COMPLETED:
 #     docs/concepts/mcp-gateway.md:43-51,218.
 #   A blocked call ends ACTION_BLOCKED, the server never called:

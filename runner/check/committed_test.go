@@ -73,6 +73,8 @@ func TestCommittedGradesEachEffectInOrder(t *testing.T) {
 			served(journal.Effect{"amount": journal.Integer(5000)}), assertion.Fail, "#1 committed"},
 		{"a member more than stated", map[string][]journal.Effect{"pay.charge": {{"amount": journal.Integer(5000)}}}, 1,
 			served(charged(5000)), assertion.Fail, "#1 committed"},
+		{"a member fewer than stated", map[string][]journal.Effect{"pay.charge": {charged(5000)}}, 1,
+			served(journal.Effect{"amount": journal.Integer(5000)}), assertion.Fail, "#1 committed"},
 		{"an effect where the scenario states none", nil, 1, served(charged(5000)), assertion.Fail,
 			"pay.charge #1 committed {\"amount\":5000,\"currency\":\"EUR\"}, which the scenario does not name"},
 		{"an effect on a refused line", nil, 0, []journal.Entry{committedIn(thisRun, journal.Refused, charged(5000))},

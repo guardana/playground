@@ -2,8 +2,11 @@
 # victim-pay reads is trusted and confidential (config/gateway/classification.yaml).
 # A refund goes back to the charge's own card, a destination the lab classifies
 # TRUSTED_INTERNAL; a payout is UNTRUSTED_EXTERNAL whatever account it names.
-# One DENY flow rule over TRANSACT decides.
+# One DENY flow rule over TRANSACT decides. A payout before the ticket is the
+# control: the same confidential read and the same rule, nothing untrusted yet.
 # Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   Nothing untrusted read: not a toxic flow, the rule does not match:
+#     docs/concepts/how-a-call-is-decided.md:168.
 #   A call counts once it is handed to execution, and its result is what its
 #     tool's returns declares: docs/concepts/how-a-call-is-decided.md:152-158.
 #   Once a run has taken in anything untrusted, a DENY flow rule blocks every
@@ -21,7 +24,8 @@
 #   own account is denied too (docs/concepts/how-a-call-is-decided.md:162-164).
 #   A deployment that pays customers out after reading a ticket needs a narrower
 #   rule or a separate run.
-# Red when: pay.payout is classified TRUSTED_INTERNAL, so both payouts run.
+# Red when: pay.payout is classified TRUSTED_INTERNAL, so both payouts after
+#   the ticket run.
 schema_version: 1
 id: flow-04-a-payout-to-an-account-named-in-a-ticket-is-denied
 title: A payout to an account a fetched ticket names is denied as a toxic flow, and so is one to the customer's own
@@ -43,19 +47,29 @@ expect:
       verdict: ALLOW
       reason_codes_include: [RULE_ALLOW]
       trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+      result: { status: SUCCESS }
+      proposed_tags_include: [flow.v1.untrusted=false, flow.v1.max_read=CONFIDENTIAL]
     3:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    4:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+    5:
       verdict: ALLOW
       reason_codes_include: [RULE_ALLOW]
       trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
       result: { status: SUCCESS }
       proposed_tags_include: [flow.v1.untrusted=true, flow.v1.max_read=CONFIDENTIAL]
-    4:
+    6:
       verdict: DENY
       reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL]
       blocked: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] }
       trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
       proposed_tags_include: [flow.v1.untrusted=true, flow.v1.max_read=CONFIDENTIAL]
-    5:
+    7:
       verdict: DENY
       reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL]
       blocked: { verdict: DENY, reason_codes_include: [TOXIC_FLOW_SENSITIVE_TO_EXTERNAL] }
@@ -63,8 +77,10 @@ expect:
   effects:
     victim-web: { calls_served: { web.fetch: 1 } }
     victim-pay:
-      calls_served: { pay.read_charge: 1, pay.refund: 1 }
+      calls_served: { pay.read_charge: 2, pay.payout: 1, pay.refund: 1 }
       committed:
+        pay.payout:
+          - { destination: "acct_lab_9001", amount: 12000, currency: "EUR" }
         pay.refund:
           - { charge_id: "ch_0001", amount: 12000, refunded_to: "pm_lab_9001_visa" }
   evidence:

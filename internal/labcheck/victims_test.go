@@ -23,6 +23,8 @@ import (
 func TestEveryCopyOfTheVictimListAgrees(t *testing.T) {
 	want := slices.Sorted(slices.Values(labspec.Victims()))
 	services, toxiproxyWaits, enforcerWaits := composeVictims(t)
+	// Each of these names a victim once; a second entry, such as a second
+	// proxy for one victim, is a disagreement and is not compacted away.
 	for place, got := range map[string][]string{
 		"compose/compose.yaml services":                   services,
 		"compose/compose.yaml toxiproxy-tools depends_on": toxiproxyWaits,
@@ -31,8 +33,15 @@ func TestEveryCopyOfTheVictimListAgrees(t *testing.T) {
 		"scripts/classify-victims.sh":                     scriptVictims(t),
 		"victims/*/main.go":                               victimDirs(t),
 		"config/gateway/tools/*.json":                     snapshotNames(t),
-		"config/gateway/classification.yaml":              classifiedUpstreams(t),
-		"config/gateway/fingerprints.yaml":                fingerprintedUpstreams(t),
+	} {
+		if got = slices.Sorted(slices.Values(got)); !slices.Equal(got, want) {
+			t.Errorf("%s names %v, want %v", place, got, want)
+		}
+	}
+	// The classification and the fingerprints hold one line per tool.
+	for place, got := range map[string][]string{
+		"config/gateway/classification.yaml": classifiedUpstreams(t),
+		"config/gateway/fingerprints.yaml":   fingerprintedUpstreams(t),
 	} {
 		if got = slices.Compact(slices.Sorted(slices.Values(got))); !slices.Equal(got, want) {
 			t.Errorf("%s names %v, want %v", place, got, want)
