@@ -106,8 +106,11 @@ all.
 ## Code
 
 - Go. `gofmt` decides formatting; there is nothing to discuss.
-- Files under 250 lines. 350 warns, 500 fails without a written reason.
-- Functions under 50 lines.
+- Go files aim for 250 lines. `scripts/check-file-sizes.sh` counts non-blank
+  lines outside tests, `testdata/` and generated code: over 350 warns, over
+  500 fails.
+- Functions aim for 50 lines. Nothing measures length; `gocyclo` fails any
+  function, tests included, whose complexity exceeds 12.
 - No package named `utils`, `helpers`, `common`, `misc` or `shared`.
 - No package-level mutable state.
 - Anything crossing I/O takes a `context.Context` and carries a deadline.
