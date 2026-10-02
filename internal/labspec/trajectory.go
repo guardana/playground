@@ -105,6 +105,7 @@ func (t Trajectory) validate() error {
 func (s Step) validate(number int) error {
 	if err := first(
 		required(fmt.Sprintf("steps[%d].call.server", number), s.Call.Server),
+		oneOf(fmt.Sprintf("steps[%d].call.server", number), s.Call.Server, Victims()...),
 		required(fmt.Sprintf("steps[%d].call.tool", number), s.Call.Tool),
 		s.validateTiming(number),
 		s.validateOnError(number),

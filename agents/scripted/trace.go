@@ -91,7 +91,11 @@ func (w *traceWriter) record(number int, step labspec.Step, arguments map[string
 		SpanID: fmt.Sprintf("s%d", number), Kind: "tool_execution", Name: step.Call.Tool,
 		Tool: traceTool{Name: step.Call.Tool, Arguments: string(encoded), Status: "failed"},
 	}
-	effect := traceEffect{Sink: sinkOf(step.Call.Server), Action: step.Call.Tool, Target: step.Call.Server, Status: "failed"}
+	sink, err := sinkOf(step.Call.Server)
+	if err != nil {
+		return err
+	}
+	effect := traceEffect{Sink: sink, Action: step.Call.Tool, Target: step.Call.Server, Status: "failed"}
 	switch {
 	case ran:
 		span.Tool.Status, effect.Status = "succeeded", "executed"
@@ -138,23 +142,23 @@ func gatewayRefused(result *mcp.CallToolResult, namespace, code string) bool {
 	return slices.Contains(codes, any(code))
 }
 
-// sinkOf names the effect sink a victim's calls land on, from the verifier's
-// closed list.
-func sinkOf(server string) string {
-	switch server {
-	case "victim-db":
-		return "sql"
-	case "victim-shell":
-		return "shell"
-	case "victim-fs":
-		return "filesystem"
-	case "victim-web":
-		return "http"
-	case "victim-mail":
-		return "email"
-	default:
-		return "other"
+// sinks names the effect sink each victim's calls land on, from the
+// verifier's closed list.
+func sinks() map[string]string {
+	return map[string]string{
+		"victim-crm": "other", "victim-db": "sql", "victim-fs": "filesystem",
+		"victim-shell": "shell", "victim-mail": "email", "victim-web": "http",
 	}
+}
+
+// sinkOf refuses a server it has no sink for rather than call it "other": a
+// contract forbidding that server's sink would then never match its calls.
+func sinkOf(server string) (string, error) {
+	sink, known := sinks()[server]
+	if !known {
+		return "", fmt.Errorf("trace: no effect sink is known for %s", server)
+	}
+	return sink, nil
 }
 
 // write emits the header, every span and, for a replay that ran every step, the

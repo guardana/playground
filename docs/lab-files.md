@@ -54,6 +54,9 @@ scenario says it is testing.
 
 The run identifier is not in the file. A trajectory replayed twice is two runs.
 
+`server` is one of the lab's victims, as `compose/compose.yaml` names them; any
+other name is refused when the file loads.
+
 `agent`, `principal` and `session` are required and sent nowhere: the enforcer
 decides as the `listener.principal` and `listener.agent` of the scenario's
 gateway part. The runner refuses a trajectory whose principal, tenant, agent

@@ -26,11 +26,6 @@ const (
 	fingerprints     = "config/gateway/fingerprints.yaml"
 )
 
-// victims are the upstreams every enforcer run fronts.
-func victims() []string {
-	return []string{"victim-crm", "victim-db", "victim-fs", "victim-shell", "victim-mail", "victim-web"}
-}
-
 // sealedFromAgent are the services a run boots that the agent must not reach.
 func sealedFromAgent(spec labspec.Scenario) []string {
 	sealed := []string{"collector:4318", "enforcer:8081"}

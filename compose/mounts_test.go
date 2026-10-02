@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/guardana/playground/internal/labspec"
 )
 
 type mounted struct {
@@ -59,9 +61,6 @@ const (
 // could forge what the run is graded from.
 func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 	want := map[string][]string{
-		"victim-crm": {runDir + "/journals"}, "victim-db": {runDir + "/journals"},
-		"victim-fs": {runDir + "/journals"}, "victim-shell": {runDir + "/journals"},
-		"victim-mail": {runDir + "/journals"}, "victim-web": {runDir + "/journals"},
 		"scripted-agent": {runDir + "/agent", workspace + "/trajectories"},
 		"pdp-double":     {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
 		"approver":       {runDir + "/journals", workspace + "/config/approver", "approvals"},
@@ -72,6 +71,9 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/export-ca", "spool", "approvals", "holds"},
+	}
+	for _, victim := range labspec.Victims() {
+		want[victim] = []string{runDir + "/journals"}
 	}
 	for name, service := range readMounts(t).Services {
 		var got []string

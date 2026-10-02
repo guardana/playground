@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/guardana/playground/internal/labspec"
 )
 
 // The proxy stands between the enforcer and one victim, so whoever can drive
@@ -75,7 +77,7 @@ func TestEveryVictimHasOneProxyAndNothingElseDoes(t *testing.T) {
 		}
 	}
 	slices.Sort(named)
-	want := []string{"victim-crm", "victim-db", "victim-fs", "victim-mail", "victim-shell", "victim-web"}
+	want := slices.Sorted(slices.Values(labspec.Victims()))
 	if !slices.Equal(named, want) {
 		t.Errorf("proxies for %v, want %v", named, want)
 	}

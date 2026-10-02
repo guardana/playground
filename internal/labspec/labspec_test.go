@@ -298,3 +298,13 @@ func TestValidateRefusesToleranceForAStepThatDoesNotExist(t *testing.T) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
 }
+
+// A trajectory calls the lab's victims and no other server: a name nothing
+// boots would be a call the run can only report as failed to arrive.
+func TestATrajectoryCallsOnlyTheLabsVictims(t *testing.T) {
+	body := strings.Replace(goodTrajectory, "server: victim-web", "server: victim-unlisted", 1)
+	_, err := labspec.LoadTrajectory(writeFile(t, "flow.yaml", body))
+	if !errors.Is(err, labspec.ErrInvalid) || !strings.Contains(err.Error(), "steps[1].call.server") {
+		t.Errorf("err = %v, want ErrInvalid naming steps[1].call.server", err)
+	}
+}

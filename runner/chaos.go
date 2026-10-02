@@ -62,8 +62,8 @@ func (l lab) routedUpstreams(proxied []string) ([]gateway.Upstream, error) {
 		}
 		targets = found
 	}
-	routed := make([]gateway.Upstream, 0, len(victims()))
-	for _, name := range victims() {
+	routed := make([]gateway.Upstream, 0, len(labspec.Victims()))
+	for _, name := range labspec.Victims() {
 		routed = append(routed, gateway.Upstream{Name: name, Endpoint: "http://" + name + ":" + servicePort + "/mcp"})
 	}
 	for _, name := range proxied {
@@ -78,7 +78,7 @@ func (l lab) routedUpstreams(proxied []string) ([]gateway.Upstream, error) {
 }
 
 func victimIndex(name string) int {
-	for i, victim := range victims() {
+	for i, victim := range labspec.Victims() {
 		if victim == name {
 			return i
 		}

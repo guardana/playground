@@ -268,6 +268,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A trajectory step's `server` that is not one of the lab's victims is
+  refused when the file loads, rather than failing the run. One list
+  (`internal/labspec` `Victims`) is the one the runner fronts, and a test holds
+  compose, the chaos proxies, `scripts/classify-victims.sh`, the listing
+  snapshots, the classification and the fingerprints to it; the scripted
+  agent's trace refuses a server it has no sink for instead of calling it
+  `other`.
 - `docs/status.md` is the inventory alone: one row per component with its
   label, what a green result does and does not show, and the page that
   explains it. The mechanism it described is on the how-it-works pages, and
