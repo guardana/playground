@@ -10,8 +10,9 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
 
 ## What you need
 
-- Docker with Compose v2 and buildx. Docker Desktop on macOS and Docker Engine
-  on Linux both work; on Linux, run as an ordinary user in the `docker` group.
+- Docker with Compose v2 and buildx. On Linux, run as an ordinary user in the
+  `docker` group. Where the catalogue has run at these pins is in
+  [status](../status.md).
 - The Go version `go.mod` names, git, make and bash.
 - A clone of the enforcer's repository that holds the commit `ENFORCER_COMMIT`
   in `versions.env`, the commit of the release `ENFORCER_RELEASE`.
@@ -29,8 +30,8 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
 
 ```
 cd /path/to/playground
-scripts/fetch-enforcer.sh /path/to/control.git
-export ENFORCER_SOURCE=/path/to/control.git
+scripts/fetch-enforcer.sh "$HOME/control.git"
+export ENFORCER_SOURCE="$HOME/control.git"
 make images
 ```
 
@@ -90,6 +91,7 @@ the file it read. The files sit beside the report:
 | file | what it holds |
 |---|---|
 | `evidence.jsonl` | the enforcer's trail, decoded from the collector's export |
+| `collector/` | the collector's export itself |
 | `journals/<server>.jsonl` | what each victim, and each double, did with every call it received |
 | `healthz.json` | the enforcer's `/healthz` answer after the replay |
 | `probes.log`, `boot.json` | the topology probes and what came up |
@@ -101,6 +103,7 @@ the file it read. The files sit beside the report:
 | `verifier/` | each verifier step's report, standard error and pin, or the agent's trace and the verifier's report on it |
 | `collector-tls/` | the collector's certificate, and its key while the run is up |
 | `export-ca/` | the run's CA certificate, which the enforcer trusts for the collector |
+| `pki/` | the decision point double's CA certificate, which the enforcer trusts for the double |
 | `junit.xml` | the same results for a CI system |
 
 `make scenarios` runs the whole catalogue. The scenarios red by design, each

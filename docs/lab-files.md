@@ -136,8 +136,8 @@ entries. Neither is graded. Every scenario in the lab's own catalogue names at
 least one failure mode, and a test holds each to the row that lists it; a
 scenario in your workspace may name them or not.
 
-Three rules make a scenario refuse to pass on what it did not look at, and all
-three are checked when the files load:
+These rules make a scenario refuse to pass on what it did not look at, and
+each is checked when the files load:
 
 - **`decisions` covers every step.** A step with no stated expectation is a step
   nobody grades.

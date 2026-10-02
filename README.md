@@ -30,8 +30,8 @@ anonymously:
 ```
 git clone https://github.com/guardana/playground
 cd playground
-scripts/fetch-enforcer.sh /path/to/control.git
-export ENFORCER_SOURCE=/path/to/control.git
+scripts/fetch-enforcer.sh "$HOME/control.git"
+export ENFORCER_SOURCE="$HOME/control.git"
 make images
 make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer

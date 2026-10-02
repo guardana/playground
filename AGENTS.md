@@ -5,8 +5,8 @@ systems it tests: do they actually block, approve, oblige, record and detect wha
 they claim to?
 
 Two systems are under test. [Guardana](https://github.com/guardana/guardana)
-verifies a deployed system and grades a run after the fact. The enforcement
-plane decides one tool call as it is made, and records why. This repository
+verifies a deployed system and grades a run after the fact. Control (the
+enforcer) decides one tool call as it is made, and records why. This repository
 attacks both and checks the evidence they leave behind.
 
 These rules bind everyone and everything that writes code here. Contributors
@@ -18,8 +18,8 @@ They are separate repositories, developed in parallel, and they move. Read them
 if you need to; never change them from here, and never assume today's behaviour
 matches yesterday's checkout.
 
-What this repository tests is a pinned version — an image tag or a released
-binary named in `versions.env`. A test that passes against whatever happened to
+What this repository tests is a pinned version named in `versions.env`: the
+enforcer's commit and its tree, and the verifier's released package. A test that passes against whatever happened to
 be on disk has measured nothing.
 
 ## Assert on evidence, never on narrative
@@ -107,8 +107,8 @@ all.
 
 - Go. `gofmt` decides formatting; there is nothing to discuss.
 - Go files aim for 250 lines. `scripts/check-file-sizes.sh` counts non-blank
-  lines outside tests, `testdata/` and generated code: over 350 warns, over
-  500 fails.
+  lines outside tests, generated code and the root `testdata/`: over 350
+  warns, over 500 fails.
 - Functions aim for 50 lines. Nothing measures length; `gocyclo` fails any
   function, tests included, whose complexity exceeds 12.
 - No package named `utils`, `helpers`, `common`, `misc` or `shared`.
@@ -120,9 +120,10 @@ all.
 
 ## Names are parameters
 
-`versions.env` holds the image, tag and binary names of the systems under test.
-Compose files and scenarios refer to them only through those variables, so
-renaming a system upstream is one file here, not a search across the scenarios.
+`versions.env` holds the repository, commit, package, image and binary names
+of the systems under test. Compose files and scenarios refer to them only
+through those variables, so renaming a system upstream is one file here, not a
+search across the scenarios.
 
 ## Repeated work becomes a skill
 

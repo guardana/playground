@@ -261,10 +261,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   journal and assertion readers a run is graded from.
 - Compose topology in `compose/`, every network marked internal so nothing in
   the lab has a route out.
-- Stub gateway in `services/stub-gateway`: it replays declared verdicts and
-  writes the evidence trail. A step nobody declared is answered
-  `STUB_NO_DECLARED_VERDICT`, so a scenario cannot pass on the stub's silence.
-- Six victim tool servers — crm, db, fs, shell, mail and web — and the
+- Victim tool servers — crm, db, fs, shell, mail and web — and the
   `victims/mcpserve` package they share. Each carries the wrong annotations its
   README names, and each records the calls it served in a journal a scenario is
   graded from.
@@ -276,11 +273,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   replays the trajectory, and grades the run from the evidence trail, the
   victims' journals and what came up. Checks for boot, topology, replay,
   decisions, effects and evidence, with JUnit and Markdown reports.
-- Attack payload catalogue in `attacks/`: four indirect prompt injections served
-  by `attacker-web`.
-- Three scenarios with their trajectories and declared verdicts:
-  `tool-01-permitted-read-is-recorded`, `flow-01-injected-page-to-external-mail`
-  and `auth-01-cross-tenant-export-undecided`.
+- Attack payload catalogue in `attacks/`: indirect prompt injections served by
+  `attacker-web`.
 
 ### Changed
 
@@ -347,11 +341,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The approver reads the `upstream` line `approvals list` prints at the new
   pin; a script cannot match on it yet.
 - A named gap may be one the lab cannot configure yet as well as one the
-  system lacks (`docs/lab-files.md`). `gaps-01` is now that kind: at the new
-  pin the gateway keeps a run's flow, but it reads what a tool returns only
-  from the operator's `returns` declaration, which the lab's classification
-  cannot make yet, so the send stays `INDETERMINATE` where a `DENY` is
-  wanted.
+  system lacks (`docs/lab-files.md`).
 - `make docs-frontmatter` runs in `make quality`: every page under `docs/`
   carries frontmatter (`docs/lab-files.md` as a contract, exempt from a word
   budget), `docs/index.md` gave way to the generated `docs/README.md`, and the
@@ -401,23 +391,6 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The verifier image is built by `make verifier-image` alone: the `verifier`
   service carries no `build:` and the runner's build before a run skips it,
   so the image it checked against `VERIFIER_VERSION` is the one that runs.
-
-### Removed
-
-- `.github/workflows/security.yml`, CodeQL and dependency review: neither
-  has a local equivalent, and CI runs only what `make quality` and
-  `scripts/ci-scenarios.sh` run on a contributor's machine.
-
-- `scripts/fuzz-smoke.sh`, which passed with no fuzz target and with a
-  failing one, and `scripts/bench.sh`, which ran a package the tree does not
-  have; no target ran either.
-
-- The stub gateway: `services/stub-gateway/`, `config/stub-gateway/`, its
-  compose service and the `stub` profile. The enforcer decides every
-  trajectory scenario; a scenario carrying `stub:` is refused at load as an
-  unknown key, and one without `gateway:` or without the `enforcer` profile is
-  refused. The runner no longer pairs a trail by a step number the trail
-  carries.
 
 ### Fixed
 

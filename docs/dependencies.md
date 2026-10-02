@@ -74,11 +74,12 @@ there only, never linked into the lab:
 - `osv-scanner` matches the module's dependencies against known advisories,
   beside `govulncheck`'s reachable-code view. Apache-2.0.
 
-`make bootstrap` installs each one missing or at another version: from
-Homebrew where it exists, otherwise, on Linux amd64 or arm64, from the
-project's release asset, installed only when its sha256 is the one
-`scripts/tool-versions.env` pins for that platform. It fails when a tool's
-version is not the pin exactly.
+`make bootstrap` fails when a tool's version is not the pin exactly. Where
+Homebrew exists, it installs a missing tool from Homebrew at Homebrew's
+version, so a tool Homebrew ships at another version has to be installed by
+hand. Otherwise, on Linux amd64 or arm64, it installs each tool missing or at
+another version from the project's release asset, only when its sha256 is the
+one `scripts/tool-versions.env` pins for that platform.
 
 The container images the lab runs are pinned separately in `versions.env`,
 because they are the subject of the experiment rather than part of the build.
