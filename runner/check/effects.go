@@ -32,12 +32,16 @@ type Effects struct {
 // ID names the check in a report.
 func (Effects) ID() string { return "effects" }
 
-// Run grades one result per victim the scenario names, in victim order.
+// Run grades one result per victim the scenario names, in victim order, and
+// beside it what the victim committed wherever that was stated or recorded.
 func (e Effects) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
 	victims := slices.Sorted(maps.Keys(e.Scenario.Expect.Effects))
 	results := make([]assertion.Result, 0, len(victims))
 	for _, victim := range victims {
 		results = append(results, e.grade(victim, records))
+		if committed, graded := e.committed(victim, records); graded {
+			results = append(results, committed)
+		}
 	}
 	return results, nil
 }

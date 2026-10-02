@@ -3,6 +3,8 @@ package labspec
 import (
 	"fmt"
 	"slices"
+
+	"github.com/guardana/playground/internal/journal"
 )
 
 // Verdicts are the five the wire contract declares, written without the
@@ -89,9 +91,14 @@ type DecisionExpectation struct {
 // victim served nothing, which is what a working DENY looks like from the far
 // side of the gateway; an absent CallsRefused is the assertion that it refused
 // nothing.
+//
+// Committed is what each served call of a tool changed, in journal order, as
+// the victim's effect records state it. It is exhaustive too: absent is the
+// assertion that no served line of the run carries an effect.
 type EffectExpectation struct {
-	CallsServed  map[string]int `json:"calls_served"`
-	CallsRefused map[string]int `json:"calls_refused,omitempty"`
+	CallsServed  map[string]int              `json:"calls_served"`
+	CallsRefused map[string]int              `json:"calls_refused,omitempty"`
+	Committed    map[string][]journal.Effect `json:"committed,omitempty"`
 }
 
 // EvidenceExpectation is what the trail itself has to show, separately from
@@ -126,7 +133,7 @@ func (s Scenario) validate(fileName string) error {
 	if len(s.Profile) == 0 {
 		return fmt.Errorf("%w: profile is empty", ErrInvalid)
 	}
-	if err := first(s.validateEffectCounts(), s.validateHealth()); err != nil {
+	if err := first(s.validateEffectCounts(), s.validateCommitted(), s.validateHealth()); err != nil {
 		return err
 	}
 	if s.IsVerifier() {

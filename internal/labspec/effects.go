@@ -70,3 +70,34 @@ func (s Scenario) validateEffectCounts() error {
 	}
 	return nil
 }
+
+// validateCommitted refuses a committed list that can never pass. Every served
+// line of a named tool has to carry an effect, so the list is exactly as long
+// as calls_served for that tool; a double writes no effect, so it states none.
+func (s Scenario) validateCommitted() error {
+	for _, journal := range sortedKeys(s.Expect.Effects) {
+		expect := s.Expect.Effects[journal]
+		if _, double := doubleProfile(journal); double && len(expect.Committed) > 0 {
+			return fmt.Errorf("%w: expect.effects.%s.committed is stated and a double records no effect", ErrInvalid, journal)
+		}
+		for _, tool := range sortedKeys(expect.Committed) {
+			field := fmt.Sprintf("expect.effects.%s.committed.%s", journal, tool)
+			list := expect.Committed[tool]
+			switch {
+			case strings.TrimSpace(tool) == "":
+				return fmt.Errorf("%w: expect.effects.%s.committed names a tool with no name", ErrInvalid, journal)
+			case len(list) == 0:
+				return fmt.Errorf("%w: %s is empty, want one effect per served call or the tool left out", ErrInvalid, field)
+			case len(list) != expect.CallsServed[tool]:
+				return fmt.Errorf("%w: %s lists %d effect(s) and calls_served.%s is %d; every served call of a committing tool records one",
+					ErrInvalid, field, len(list), tool, expect.CallsServed[tool])
+			}
+			for i, effect := range list {
+				if err := effect.Validate(); err != nil {
+					return fmt.Errorf("%w: %s[%d]: %w", ErrInvalid, field, i, err)
+				}
+			}
+		}
+	}
+	return nil
+}

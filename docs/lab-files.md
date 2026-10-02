@@ -154,6 +154,20 @@ three are checked when the files load:
   questions the decision point double was asked, by action; the approver's
   answers (`approve`, `reject`, `leave`, `wait`, `unknown`, `no-plane`). Either
   is optional.
+- **`committed` states what each served call changed**, where a victim records
+  it ([a journal line](#a-journal-line)). Optional, per victim, per tool: one
+  effect per served call, in the order the victim served them, so a list is
+  exactly as long as that tool's `calls_served`. Each effect is compared member
+  for member, a string never equal to a number. Absent is the assertion that
+  no served line of the run carries an effect; a served call of a named tool
+  with none, or an effect on a tool the map does not name, fails. Graded as
+  `effects/<victim>/committed`. A double records no effect, so naming one is
+  refused. Quote strings: YAML reads an unquoted `NO`, `on` or `y` as a
+  boolean, and `5000.0` as the integer 5000.
+
+  ```yaml
+  victim-example: { calls_served: { example.charge: 1 }, committed: { example.charge: [ { amount: 5000, currency: "EUR" } ] } }
+  ```
 - **`evidence` is stated.** `content_captured: false` is the assertion that
   no argument or result text reached the trail, the privacy default; `true` is
   the assertion that some did. `chain_complete` and `policy_digest_present` are

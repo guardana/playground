@@ -220,6 +220,7 @@ could not read its source is `indeterminate`, which fails the run.
 | `health/*` | `expect.health` counters | `healthz.json` |
 | `decisions/step-<n>`, `trails/opened` | each step's trail, paired by order and tool | `evidence.jsonl` |
 | `effects/<server>` | every journal line of the run is named, and a booted victim the scenario does not name served nothing | `journals/<server>.jsonl` |
+| `effects/<server>/committed` | each served call's effect, in order, member for member; graded when stated or when a line carries one | `journals/<server>.jsonl` |
 | `evidence/*` | chain order, the policy digest, captured content, one run id, the mode on every event, the executed digest and a successful result on every completion | `evidence.jsonl` |
 
 The topology checks, in detail:

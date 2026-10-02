@@ -7,6 +7,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `expect.effects.<victim>.committed` states what each served call changed,
+  in order, member for member, graded from the journal's `effect` as
+  `effects/<victim>/committed`. Exhaustive like the counts: an effect the
+  scenario does not state fails. Additive; the format stays
+  `schema_version: 1`.
 - A journal line may carry `effect`: what a served call changed, as a flat
   object of strings, booleans and integers within ±(2^53−1), written by the
   victim before the change is made (`victims/mcpserve` `Committing`). The
