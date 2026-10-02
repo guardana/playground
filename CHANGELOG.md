@@ -404,6 +404,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- `.github/workflows/security.yml`, CodeQL and dependency review: neither
+  has a local equivalent, and CI runs only what `make quality` and
+  `scripts/ci-scenarios.sh` run on a contributor's machine.
+
 - `scripts/fuzz-smoke.sh`, which passed with no fuzz target and with a
   failing one, and `scripts/bench.sh`, which ran a package the tree does not
   have; no target ran either.
