@@ -16,6 +16,7 @@ import (
 	"github.com/guardana/playground/internal/docscheck/docsconfig"
 	"github.com/guardana/playground/internal/docscheck/frontmatter"
 	"github.com/guardana/playground/internal/docscheck/glob"
+	"github.com/guardana/playground/internal/docscheck/markdown"
 )
 
 // Problem is one finding against one file.
@@ -119,14 +120,9 @@ func titleProblems(meta frontmatter.Meta, body []byte) []string {
 
 func h1s(body []byte) []string {
 	var found []string
-	fenced := false
-	for _, line := range strings.Split(string(body), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
-			fenced = !fenced
-			continue
-		}
-		if heading, ok := strings.CutPrefix(line, "# "); ok && !fenced {
-			found = append(found, strings.TrimSpace(heading))
+	for _, h := range markdown.Headings(body) {
+		if h.Level == 1 {
+			found = append(found, h.Text)
 		}
 	}
 	return found

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/internal/docscheck/claims"
+	"github.com/guardana/playground/internal/docscheck/markdown"
 	"github.com/guardana/playground/internal/docscheck/repofiles"
 )
 
@@ -48,24 +50,43 @@ func TestLocalLinksResolve(t *testing.T) {
 	}
 }
 
+// A link to a heading breaks silently when the heading is renamed: the page
+// still opens, at its top.
+func TestLinkedHeadingsExist(t *testing.T) {
+	problems, err := markdown.BrokenFragments(os.DirFS(repoRoot), listed(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range problems {
+		t.Error(p)
+	}
+}
+
 // A capability written without a status label reads as a promise, and promises
 // rot silently. Saying "planned" costs one word and stays true.
 func TestCapabilityClaimsCarryAStatus(t *testing.T) {
-	labels := []string{"planned", "experimental", "implemented", "pre-alpha"}
-	claims := []string{"supports ", "provides ", "enforces ", "integrates with "}
+	problems, err := claims.Unlabelled(os.DirFS(repoRoot), listed(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range problems {
+		t.Error(p)
+	}
+}
 
-	for _, page := range []string{"README.md", "ROADMAP.md", "docs/status.md"} {
-		body, err := os.ReadFile(filepath.Join(repoRoot, page))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for number, line := range strings.Split(string(body), "\n") {
-			lower := strings.ToLower(line)
-			if !containsAny(lower, claims) || containsAny(lower, labels) {
-				continue
-			}
-			t.Errorf("%s:%d: capability claim without a status label: %q", page, number+1, strings.TrimSpace(line))
-		}
+// A count stated on two pages drifts on one of them; it is stated where the
+// inventory lives and must be the catalogue a clone holds.
+func TestTheScenarioCountHasOneHome(t *testing.T) {
+	tracked, err := repofiles.Tracked(context.Background(), repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	problems, err := claims.ScenarioCount(os.DirFS(repoRoot), listed(t), tracked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range problems {
+		t.Error(p)
 	}
 }
 
@@ -105,24 +126,21 @@ func TestIgnoredRunReportsAreNotPages(t *testing.T) {
 	}
 }
 
-func containsAny(text string, needles []string) bool {
-	for _, needle := range needles {
-		if strings.Contains(text, needle) {
-			return true
-		}
-	}
-	return false
-}
-
-func markdownPages(t *testing.T) []string {
+func listed(t *testing.T) []string {
 	t.Helper()
 
 	files, err := repofiles.List(context.Background(), repoRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return files
+}
+
+func markdownPages(t *testing.T) []string {
+	t.Helper()
+
 	var pages []string
-	for _, file := range files {
+	for _, file := range listed(t) {
 		if strings.HasSuffix(file, ".md") {
 			pages = append(pages, filepath.Join(repoRoot, filepath.FromSlash(file)))
 		}

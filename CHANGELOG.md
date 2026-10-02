@@ -263,6 +263,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explains it. The mechanism it described is on the how-it-works pages, and
   the change that turns a scenario red, where one is recorded, is in that
   scenario's header comment.
+- The documentation check reads the heading a link names, inline or as a
+  reference, every Mermaid fence and its diagram type, holds the how-it-works
+  pages to the status labels, and refuses a scenario count stated outside
+  `docs/status.md`, missing from it, or different from the scenario files.
 
 - Red by design names the check each listed scenario fails on
   (`<id> <check>[,<check>...] <finding>`), and the judge passes the catalogue
