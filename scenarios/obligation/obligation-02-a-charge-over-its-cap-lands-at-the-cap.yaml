@@ -1,0 +1,70 @@
+# The cap is graded on what victim-pay committed, member for member: a charge
+# allowed with cap_amount and passed through uncapped would read the same in
+# every count and every decision.
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   ALLOW_WITH_OBLIGATIONS names OBLIGATIONS_ATTACHED: docs/reference/policy-format.md:56,
+#     docs/reference/reason-codes.md:33.
+#   cap_amount is applied by the gateway: docs/reference/obligations.md:41; a
+#     non-advisory obligation nothing applies is DENY with OBLIGATION_NOT_UNDERSTOOD:
+#     docs/reference/obligations.md:24-26, docs/reference/reason-codes.md:57.
+#   cap_amount on a fractional amount is refused, as an obligation the plane
+#     cannot apply: docs/adr/0029-exact-fractions-in-the-canonical-form.md:65-66.
+#   The kernel's decision is recorded untouched in POLICY_DECIDED, and a block
+#     that is the enforcement point's own is a decision it minted on
+#     ACTION_BLOCKED, with pdp_type naming it and the block's code:
+#     docs/adr/0013-mcp-interception-approvals-and-modes.md:237-243,
+#     docs/concepts/evidence-and-the-spool.md:70. The kernel allows step 3 with
+#     the cap, and the gateway, which cannot apply it, blocks.
+#   The bytes sent upstream are the authorized ones, closed ACTION_COMPLETED:
+#     docs/concepts/mcp-gateway.md:43-51,218.
+#   A blocked call ends ACTION_BLOCKED, the server never called:
+#     docs/concepts/mcp-gateway.md:59-63, docs/concepts/evidence-and-the-spool.md:70.
+#   TRANSACT needs a tenant on both sides: docs/contracts.md:367, so victim-pay
+#     is put in the principal's own tenant.
+# The parameters cap_amount reads, max and field, are named in no page at the
+#   pin (docs/reference/obligations.md:27-28 says no type has a parameter
+#   schema); max is read from internal/gateway/rewrite.go there.
+# Red when: the cap's max is 100000, so the first charge commits 50000 and only
+#   effects/victim-pay/committed goes red.
+schema_version: 1
+id: obligation-02-a-charge-over-its-cap-lands-at-the-cap
+title: A charge over its cap is committed at the cap, and one the cap cannot be applied to is denied
+maps_to: { failure_catalog: [DEST-03, FLOW-04] }
+profile: [core, enforcer]
+enforcement_mode: enforce
+trajectory: trajectories/obligation-02-a-charge-over-its-cap-lands-at-the-cap.yaml
+gateway:
+  config: config/gateway/scenarios/obligation-02-a-charge-over-its-cap-lands-at-the-cap.yaml
+  policy: config/policies/obligation-02-a-charge-over-its-cap-lands-at-the-cap.json
+  upstream_tenants: { victim-pay: tenant_a }
+expect:
+  decisions:
+    1:
+      verdict: ALLOW_WITH_OBLIGATIONS
+      reason_codes_include: [OBLIGATIONS_ATTACHED]
+      obligations_include: [cap_amount]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+      result: { status: SUCCESS }
+    2:
+      verdict: ALLOW_WITH_OBLIGATIONS
+      reason_codes_include: [OBLIGATIONS_ATTACHED]
+      obligations_include: [cap_amount]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_COMPLETED]
+      result: { status: SUCCESS }
+    3:
+      verdict: ALLOW_WITH_OBLIGATIONS
+      reason_codes_include: [OBLIGATIONS_ATTACHED]
+      obligations_include: [cap_amount]
+      blocked: { verdict: DENY, reason_codes_include: [OBLIGATION_NOT_UNDERSTOOD] }
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_BLOCKED]
+  effects:
+    victim-pay:
+      calls_served: { pay.charge: 2 }
+      committed:
+        pay.charge:
+          - { customer_id: "cus_9001", amount: 5000, currency: "EUR" }
+          - { customer_id: "cus_9001", amount: 3000, currency: "EUR" }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

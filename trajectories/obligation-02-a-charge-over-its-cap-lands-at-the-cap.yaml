@@ -1,0 +1,23 @@
+# Three charges under a cap of 5000: one above it, one below it, and one whose
+# amount is a fraction the cap cannot be applied to. victim-pay clamps nothing,
+# so what it commits is what the gateway sent.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: a_charge_above_the_cap
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9001", amount: 50000, currency: "EUR" }
+  - label: a_charge_below_the_cap
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9001", amount: 3000, currency: "EUR" }
+  - label: a_fractional_charge
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9001", amount: 50000.5, currency: "EUR" }

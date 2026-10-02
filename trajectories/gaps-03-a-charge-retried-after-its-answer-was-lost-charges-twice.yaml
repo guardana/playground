@@ -1,0 +1,33 @@
+# Four charges whose answers the proxy holds: one with nothing that tells it
+# from a repeat, and its retry; then one with an idempotency key, and its retry
+# with the same key. Each answer is lost after the charge was made, and the
+# replay carries on as an agent retrying a lost answer would.
+schema_version: 1
+agent: { id: support-agent, framework: scripted, model_ref: none }
+principal: { id: user_123, type: human, tenant_id: tenant_a }
+session: { environment: development }
+steps:
+  - label: charge_without_a_key
+    on_error: continue
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9002", amount: 4500, currency: "EUR" }
+  - label: the_same_charge_retried
+    on_error: continue
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9002", amount: 4500, currency: "EUR" }
+  - label: charge_with_a_key
+    on_error: continue
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9002", amount: 4500, currency: "EUR", idempotency_key: "inv-5208" }
+  - label: the_keyed_charge_retried
+    on_error: continue
+    call:
+      server: victim-pay
+      tool: pay.charge
+      args: { customer_id: "cus_9002", amount: 4500, currency: "EUR", idempotency_key: "inv-5208" }

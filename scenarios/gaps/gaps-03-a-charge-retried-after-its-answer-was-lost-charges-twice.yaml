@@ -1,0 +1,71 @@
+# The proxy holds every answer victim-pay sends, after the charge is made: the
+# effect happened and the trail says the call failed. A retry of a charge with
+# nothing that tells it from a repeat runs again, and so does a retry with the
+# same idempotency key, which victim-pay promises to honour and does not.
+# Expectations from the enforcer's docs at ENFORCER_COMMIT:
+#   An upstream that answers nothing within upstream.call_timeout is closed with
+#     a TIMEOUT result, sent once and never retried by the plane:
+#     docs/reference/failure-modes.md#an-upstream-that-dies-mid-call,
+#     docs/reference/wire/result.md:49.
+#   RULE_ALLOW on an ALLOW a rule made: docs/reference/reason-codes.md:30.
+#   TRANSACT needs a tenant on both sides: docs/contracts.md:367, so victim-pay
+#     is put in the principal's own tenant.
+# Wanted on steps 1 and 2: DENY IDEMPOTENCY_REQUIRED, "nothing in the request
+# distinguishes it from a repeat": docs/reference/reason-codes.md:50. Nothing in
+# this build produces it; require_idempotency_key is planned:
+# docs/reference/obligations.md:40. Steps 3 and 4 carry a key, which satisfies
+# that definition; the second charge is the victim's lie and the enforcer's
+# cost, and the wanted verdict there is the same ALLOW.
+schema_version: 1
+id: gaps-03-a-charge-retried-after-its-answer-was-lost-charges-twice
+title: "Gap: a charge retried after its answer was lost charges twice"
+maps_to: { failure_catalog: [DEST-03, AVAIL-03] }
+profile: [core, enforcer, chaos]
+enforcement_mode: enforce
+trajectory: trajectories/gaps-03-a-charge-retried-after-its-answer-was-lost-charges-twice.yaml
+gateway:
+  config: config/gateway/scenarios/gaps-03-a-charge-retried-after-its-answer-was-lost-charges-twice.yaml
+  policy: config/policies/gaps-03-a-charge-retried-after-its-answer-was-lost-charges-twice.json
+  upstream_tenants: { victim-pay: tenant_a }
+chaos:
+  - toxic: { victim: victim-pay, type: hang }
+gap:
+  wanted:
+    1: { verdict: DENY, reason_codes_include: [IDEMPOTENCY_REQUIRED] }
+    2: { verdict: DENY, reason_codes_include: [IDEMPOTENCY_REQUIRED] }
+  why: a charge with nothing that tells it from a repeat is allowed, and nothing in this build produces IDEMPOTENCY_REQUIRED
+expect:
+  decisions:
+    1:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+      result: { status: TIMEOUT }
+    2:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+      result: { status: TIMEOUT }
+    3:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+      result: { status: TIMEOUT }
+    4:
+      verdict: ALLOW
+      reason_codes_include: [RULE_ALLOW]
+      trail: [ACTION_PROPOSED, POLICY_DECIDED, ACTION_STARTED, ACTION_FAILED]
+      result: { status: TIMEOUT }
+  effects:
+    victim-pay:
+      calls_served: { pay.charge: 4 }
+      committed:
+        pay.charge:
+          - { customer_id: "cus_9002", amount: 4500, currency: "EUR" }
+          - { customer_id: "cus_9002", amount: 4500, currency: "EUR" }
+          - { customer_id: "cus_9002", amount: 4500, currency: "EUR", idempotency_key: "inv-5208" }
+          - { customer_id: "cus_9002", amount: 4500, currency: "EUR", idempotency_key: "inv-5208" }
+  evidence:
+    chain_complete: true
+    policy_digest_present: true
+    content_captured: false

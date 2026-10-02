@@ -1,0 +1,14 @@
+# A bound the held answers will pass.
+mode: ENFORCE
+project_id: lab
+tenant_id: tenant_a
+environment: development
+listener:
+  kind: stateless_http
+  principal:
+    id: user_123
+    tenant_id: tenant_a
+  agent:
+    id: support-agent
+upstream:
+  call_timeout: 3s

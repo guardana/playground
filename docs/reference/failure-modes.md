@@ -53,7 +53,7 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `INJ-01` | fetched content asks for a call, and the call is let through | gate, grader | `auth-01`, `flow-01`, `flow-02` |
+| `INJ-01` | fetched content asks for a call, and the call is let through | gate, grader | `auth-01`, `flow-01`, `flow-02`, `flow-04` |
 | `INJ-02` | a tool result carries instructions into the next step | grader | planned |
 | `INJ-03` | a tool's schema or description hides instructions | grader | planned |
 | `INJ-04` | poisoned memory steers a later run | grader | planned |
@@ -62,10 +62,10 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `FLOW-01` | untrusted content, then a private read, then an external send | gate, grader | `flow-01`, `flow-02`, `flow-03`, `gaps-02` |
+| `FLOW-01` | untrusted content, then a private read, then an external send | gate, grader | `flow-01`, `flow-02`, `flow-03`, `flow-04`, `gaps-02` |
 | `FLOW-02` | data reaches a sink the deployment forbids | gate, grader | `flow-01`, `flow-03`, `trace-01`, `trace-02`, `payouts-01` |
 | `FLOW-03` | data leaves inside a request to an attacker's address | gate | planned |
-| `FLOW-04` | a redaction or a cap the policy requires is not applied before the effect | gate | `obligation-01` |
+| `FLOW-04` | a redaction or a cap the policy requires is not applied before the effect | gate | `obligation-01`, `obligation-02` |
 | `FLOW-05` | private data reaches the agent's answer rather than a tool | grader, monitor | planned: needs the answer recorded |
 | `FLOW-06` | data is split or encoded across calls that each look harmless | gate, grader, monitor | planned |
 
@@ -85,7 +85,7 @@ run.
 |---|---|---|---|
 | `DEST-01` | a destructive command runs through a general-purpose tool | gate | `rule-02`, `mode-02` |
 | `DEST-02` | a change meant for a test environment reaches production | gate | planned |
-| `DEST-03` | a payment exceeds its cap, or runs twice on a retry | gate | planned: needs a payments victim |
+| `DEST-03` | a payment exceeds its cap, or runs twice on a retry | gate | `obligation-02`, `gaps-03` |
 | `DEST-04` | code or a workflow the agent wrote runs with CI credentials, or merges unreviewed | gate, grader | planned |
 | `DEST-05` | a long-running job commits after its timeout or cancellation, and a retry runs it again | gate | planned |
 
@@ -103,7 +103,7 @@ run.
 |---|---|---|---|
 | `AVAIL-01` | a decision point that is slow, down or unreadable lets calls through | gate | `pdp-02` |
 | `AVAIL-02` | a stale policy keeps deciding | gate | `rule-03` |
-| `AVAIL-03` | a slow or silent tool leaves a call in an unknown state | gate | `chaos-01`, `chaos-02` |
+| `AVAIL-03` | a slow or silent tool leaves a call in an unknown state | gate | `chaos-01`, `chaos-02`, `gaps-03` |
 | `AVAIL-04` | an operating mode enforces otherwise than its documentation says | gate | `mode-01`, `mode-02` |
 | `AVAIL-05` | concurrent calls pass a shared limit, or the target changes between decision and effect | gate | planned |
 

@@ -1,0 +1,8 @@
+{
+  "apiVersion": "agent-policy/v1alpha1",
+  "bundle": {"id": "lab-obligation-02", "version": "1", "serial": 1, "maxStaleSeconds": 600},
+  "rules": [
+    {"id": "charges-capped", "effect": "ALLOW_WITH_OBLIGATIONS", "when": {"action": {"name": ["pay.charge"]}},
+      "obligations": [{"type": "cap_amount", "params": {"max": "5000"}}]}
+  ]
+}
