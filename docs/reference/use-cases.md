@@ -75,9 +75,8 @@ read the same runs.
 
 ## Other products
 
-The gate the lab runs today is the enforcer at `ENFORCER_COMMIT` and the grader
-is the verifier at `VERIFIER_VERSION`. Every victim, trajectory, payload and
-record reader is theirs to share: a victim's journal and a trajectory say
-nothing about which gate stood between them. Running another gate or grader
-against the same scenarios needs a driver for it: how it is built, configured
-per scenario and read back. That is `planned` in the roadmap.
+The gate the lab runs today is the enforcer at `ENFORCER_COMMIT`, and the
+grader the verifier at `VERIFIER_VERSION`. A victim's journal and a trajectory
+say nothing about which gate stood between them; running another gate, grader
+or monitor against the same victims is
+[planned](../../ROADMAP.md#p8--more-gates-graders-and-monitors-planned).

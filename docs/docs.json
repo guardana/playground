@@ -16,7 +16,6 @@
     "docs": "project",
     "docs/contracts": "contract",
     "docs/how-it-works": "explanation",
-    "docs/product": "explanation",
     "docs/reference": "reference",
     "docs/runbooks": "runbook"
   },

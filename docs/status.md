@@ -8,150 +8,35 @@ covers: [agents/**, attacks/**, compose/**, config/**, examples/**, internal/**,
 
 # Status
 
-What exists, stated once, so no other page has to guess.
-
 Labels: `implemented` runs and is tested · `experimental` runs, may change
 without notice · `planned` does not exist.
 
 | Component | Status | Notes |
 |---|---|---|
-| Repository rules and quality gate | implemented | `make quality`; `make bootstrap` installs the gate's tools from Homebrew or, on Linux amd64 and arm64, from release assets checked against the sha256 `scripts/tool-versions.env` pins, and refuses a version that is not the pin exactly; `check-hygiene.sh` refuses a hidden name anywhere in a path but the project's own dotfiles at the root, and also refuses a path only a maintainer's machine has: a home directory other than the distroless images' own, the macOS `/tmp` by its real path and the macOS per-user temporary directory, a sibling checkout of either system under test; a path counts only where one starts, so a URL segment passes |
-| Pinned versions of the systems under test | implemented | `versions.env`, every pulled image by tag and index digest; the enforcer at `ENFORCER_COMMIT`, the commit of its public release `ENFORCER_RELEASE`, which `scripts/fetch-enforcer.sh` fetches anonymously by id after checking that the release's tag names it; `make images` builds the enforcer from `git archive` of its commit, refused unless the archive hashes to that commit's tree, and the verifier from its hash-locked release; every report prints the pins, the machine, and each image on this machine with its ID, the pin its label names and whether that label matches, and for the enforcer whether its tree label is `ENFORCER_TREE`. The verifier image runs in the `verifier` profile and, as `trace-verifier`, in the `trace` profile; compose never pulls or builds it, and a verifier or trace run is refused unless the local image is labelled with `VERIFIER_VERSION`. The enforcer image runs in the `enforcer` profile; a run the enforcer decides fails unless its own enforcer container runs the image tagged with the pin and that image was built from it |
-| Trajectory and scenario file formats | implemented | `internal/labspec`; an unknown key is refused and the two files cross-validate, and the runner refuses a trajectory whose principal, tenant, agent or environment is not the one its gateway part's listener names. Steps pair with the trails they open by order and by tool, can wait, retry a held call, resume a held trail or open none, and can state their trail's closing result status and the flow tags on its proposal; named gaps are their own suite. A verifier scenario has probe steps instead of a trajectory, and is refused a `gateway`. `-all` refuses a file in a suite directory it would not run. The trail cannot tell which retry resumed a hold. The catalogue grades every shape against the enforcer's trails at its pin: held, resumed, opening none, blocked and a named gap |
-| Evidence, journal and assertion readers | implemented | `internal/evidence` mirrors the enforcer's v1 contract at its pinned commit and reads its OTLP log export, refusing a last line cut before its newline; `internal/journal`, `internal/assertion`. Journals and the collector's export are read as regular files of a bounded size, never through a link and never blocking on a FIFO. `content_captured` covers argument and result text, and every `ACTION_COMPLETED` has to carry a successful result. `runner/otlp.go` decodes the collector's file export into a run's `evidence.jsonl`, refusing an empty or eventless export rather than writing an empty one. A run the enforcer decides reads its trail this way, after the enforcer's `/healthz` shows nothing unacknowledged and nothing quarantined, truncated, refused or dropped; `evidence/run-id` requires every event on a request to name the one run the enforcer minted, or none where its proposal says it was decided with no run |
-| Documentation checks | experimental | `make docs-check` (in the gate): local links over the files the repository lists, the index `docs/README.md` current, the frontmatter check and both scripts compiled. `make docs-frontmatter` (in the gate) checks every page's frontmatter, every README's word budget and `covers` from `docs/docs.json`. `make docs-impact` names the pages a change makes suspect |
-| Compose topology | implemented | `compose/`; a run directory is the runner's at 0755, and each part of it a service writes into is world-writable and sticky; the runner writes every file of its own as a new one, never through a link, and refuses to run as the uid the services run as; a reports directory inside the clone, however its path is spelled, is taken only at or under its `reports/`; each service mounts only the parts of the run it writes or reads (victims, the double and the approver `journals/`, the agent `agent/`); the victims and the chaos proxy (profile `chaos`) on `tool-net`; the enforcer (profile `enforcer`) as the only service on `agent-net` beside the agent, at a fixed address in a /27 of `10.231.0.0/16` the runner picks per run from the run id's random suffix, the only address its agent listener binds (a subnet already in use fails the boot); the collector with the enforcer alone on `evidence-net`, receiving the trail over TLS with a certificate the runner signs for the run with a CA of its own, the only other root the enforcer trusts; the decision point double (profile `pdp`) with the enforcer alone on `pdp-net`; the approver (profile `approvals`) alone on `approver-net`; the trace verifier (profile `trace`) alone on `trace-net`; every network internal. Each run is its own compose project; the trajectories, contracts and the doubles' scripts are bind-mounted read-only from `LAB_WORKSPACE`, which the runner sets to the clone or to the workspace it was given, and a missing source directory is refused rather than created |
-| Victim tool servers | implemented | all six: crm, db, fs, shell, mail, web; each lies in the way its README states. victim-shell's `cat` reads regular files only, at most 1 MiB in all. victim-web refuses a redirect to another host than attacker-web |
-| AuthZEN decision point double | experimental | `services/pdp-double`: HTTPS with a CA it makes in memory and scopes to its own names, answers scripted per scenario (allow, deny, obligation, timeout, 500, no echo, malformed, extra member; unscripted is denied), every question journalled. `pdp-01`..`03` use it and grade its journal |
-| Approver | experimental | `services/approver`: answers held approvals per scenario script through the enforcer's own `approvals` command, never while no plane holds the directory; every action and every outcome it cannot confirm journalled. `approval-01`..`05` and `trace-01` use it, and the approval scenarios grade its journal |
-| Enforcer in the lab | experimental | `make lab-key` once, then a scenario with `gateway:` runs the enforcer built from its pinned commit: its policy signed for the run with the lab key by the enforcer's own `policy sign`, its configuration assembled from the scenario's part (only the keys the lab lets a scenario set) and the lab's classification pinned to the fingerprints its `doctor` printed and to the listing snapshots they were taken from (`make classify-victims`), its trail read from the collector after the spool drained; the run fails when the enforcer does not report the pinned commit |
-| Scripted agent | implemented | `agents/scripted`; replays a trajectory and forwards each step's output into the next; with `-trace` it writes its own record of the run in the verifier's native trace dialect, with each call's effect and approval |
-| Scenario runner and assertions | implemented | `make scenario ID=...`; boot, topology (the agent reaches the enforcer and nothing else; from the victim the trajectory calls first, and the decision point double when its profile is up, the enforcer refuses a connection at its address on their network and its agent-net address is out of reach; the enforcer's own output names that address as the only one its agent listener bound), replay, decisions, trails, effects (every journal line of the run, served or refused, named by the scenario; a victim the profile booted and the scenario does not name is held to having served nothing) and evidence checks; a verifier scenario is graded on boot, the verifier's reach and routing tables, each step's exit code, pin and JSON report, and every victim's journal; a run the enforcer decides also on the mode every event records, and the executed digest and a successful result on every completion; a scenario with `trace:` is also graded on the verifier's analysis of the agent's trace against a contract; every run in a compose project of its own; `LAB_WORKSPACE=<dir>` runs scenarios from a directory outside the clone, laid out like the lab (`docs/lab-files.md`), refused before boot inside the clone or the reports, with the reports inside it, with a mounted directory that is a link, with the lab key inside it, or when a named file is missing, and named with its commit in every report when it is the top of a checkout; every image the profile builds, the agent's included, is built before anything starts; every file a service writes and the runner reads is created readable by another uid, so the runner works on a Linux host as an ordinary user (the catalogue on a Linux Docker host as uid 1000, at an enforcer pin from before its public releases: 32 of 34 pass, the two that fail being `mode-01` and `verify-04`, red by design; no public release of the enforcer has been run on Linux, and `v0.3.0-alpha` has run on macOS with Docker Desktop only) |
-| Scenario catalogue | experimental | 32 against the enforcer at its pinned commit: reads (`tool-02`), a payout change its server annotates read-only decided as a write (`tool-01`), rules and a stale policy (`rule-01`..`03`), an unclassified tool (`tool-03`), tenancy (`tenant-01`, `tenant-03`), an export granted to another principal refused to the configured one after a page claims an administrator's authority (`auth-01`), a send after a private read refused under `deny_external_sink` at a sink classified untrusted, its closing result graded `BLOCKED` (`flow-01`), a mail after an untrusted page undetermined and, after a private read, denied as a toxic flow, each step's flow tags graded (`flow-02`), the same private read written to a sink classified trusted and run under both `deny_external_sink` and a toxic-flow rule (`flow-03`), approvals (`approval-01`..`05`), the decision point (`pdp-01`..`03`), obligations (`obligation-01`), modes (`mode-01`, `mode-02`), a full spool (`evidence-01`, `evidence-02`), one named gap (`gaps-02`: one result the lab declares nothing about, `shell.exec`'s, makes the run's reading unknown, so a private read mailed out after it is undetermined rather than denied, which the enforcer names as a limit at its pin), two whose trace the verifier grades (`scenarios/trace/`) and four under chaos (`chaos-01`..`04`); four verifier scenarios against the verifier at 0.26.1. Two are red by design (below): `verify-04` and `mode-01` |
-| Development builds of the enforcer | experimental | `make dev-scenarios CONTROL=<checkout> [ID=<scenario>]` builds the enforcer from a checkout's working tree, uncommitted changes included (`scripts/build-enforcer-dev.sh`: tracked and untracked files without ignored ones, the checkout only read), as `playground-enforcer-dev:<first 12 hex of the tree it hashed>`, labelled with the checkout's path, HEAD, clean or dirty and that tree, and refuses a checkout holding a nested repository or a submodule, whose files the tree would not name. `runner -enforcer-dev <image>` grades scenarios against it: policies are signed and approvals answered with its own command, `plane/version` and `plane/image` hold the run to its version, its tree and the image ID read when the run started, every result line and JUnit case reads `dev-<suite>`, and the report names the build and the pinned commit it is not. CI never runs it |
-| Smoke loop | experimental | `make smoke` runs five green scenarios through the ordinary runner: an allowed read, a send refused under an obligation, an approval, trace grading and a verifier probe. It needs both pinned images and the lab key; a missing record or a scenario that cannot run makes the command red |
-| Attack payload catalogue | experimental | four indirect injections in `attacks/`, served by `attacker-web` |
-| Chaos matrix | experimental | a scenario's `chaos:` faults, applied after boot and lifted before the drain, each graded from a record that shows it in place (`docs/lab-files.md`): a latency or a hang on one victim's answers through the proxy (profile `chaos`), the collector down, a second listing of a victim's tools. `chaos-01`..`04` against the enforcer at its pinned commit: a latency inside `upstream.call_timeout` runs, a hang closes `ACTION_FAILED` with `RESULT_STATUS_TIMEOUT` at that bound after the victim served the call, a collector outage is waited out and drained whole, and `fs.read` described anew by victim-fs under the running gateway is blocked `ACTION_UNCLASSIFIED`. Planned: cut links, a full disk, clock skew, faults on the decision point's or the collector's own path |
-| Verifier probes | experimental | `scenarios/verify/`: a pin written then compared, drift on victim-fs, no drift on a stable manifest, no pin reported unverified, drift at its catalogued severity (red). Expectations are copied from the verifier's own docs at 0.26.1. Each step, and each reach dial, starts a container from the image `make verifier-image` built |
-| Verifier loop | experimental | a scenario with `trace:` has the pinned verifier grade the agent's own trace of a run through the enforcer against a security contract in `config/contracts/`; `trace-01` (approved change, a denied shell command, contract holds, exit 0) and `trace-02` (a widened policy lets the change run unapproved, exit 1 with the contract's HIGH finding) pass at the pins. The trace is the agent's record: the verifier's verdict cannot tell a change approved and run from one that never ran, which the decisions and effects checks do. Comparing two runs' reports (`verifier diff`) and probing the gateway's own listener are planned |
-| Adopter runbooks | experimental | `docs/runbooks/`: a quickstart from a checkout to one green scenario, and one page each for bringing your own policy, gateway configuration and verifier contract through a workspace; `README.md` points to them |
-| Failure-mode and use-case catalogues | experimental | `docs/reference/failure-modes.md` names each way an agent deployment goes wrong that the lab simulates or plans to, the kind of tooling that must catch it and the scenarios that do; `docs/reference/use-cases.md` maps the deployments agent tooling most often meets to those modes and to the victims and scenarios that cover them. Every scenario of the lab's catalogue names its modes in `maps_to.failure_catalog`, and `internal/labcheck` holds the pages and the scenarios to each other |
-| Worked example | experimental | `examples/helpdesk-payouts/`: one adopter scenario as a workspace (policy, gateway part, approver script, contract, trajectory, scenario) for a helpdesk assistant that reads customers, changes a payout account only after an approval and mails nothing outside; run by copying it out of the clone and setting `LAB_WORKSPACE`; `internal/labcheck` loads every `examples/*/` as a workspace (each scenario loads, matches its trajectory and is decided by the enforcer, every named file exists, no file is unused or outside the directory the runner reads it from, no file is a byte copy of a lab file); green from a copy at the pinned enforcer and verifier, red when its policy lets the payout change run without an approval, and red when it lets the mail out. `make scenarios` does not run it |
-| Continuous integration | experimental | `.github/workflows/ci.yml` runs `make quality`. `.github/workflows/scenarios.yml` fetches the enforcer's commit from `ENFORCER_REPOSITORY` by its id, anonymously (`scripts/fetch-enforcer.sh`, red with the reason when it cannot), then runs `scripts/ci-scenarios.sh`: both images from their pins, a lab key of its own, the whole catalogue judged by `runner -all -red-by-design scenarios/red-by-design.txt` (green only when the scenarios not passing are exactly the listed ones, each failing on exactly the checks the list names for it and passing every other), and every `examples/*/` from a copy outside the clone. `.github/workflows/security.yml` runs CodeQL and, on a pull request, GitHub's dependency review; neither has a local equivalent in `make quality`. The public `guardana/playground` repository is empty, so no workflow has run on GitHub. Locally on macOS with Docker Desktop, `scripts/ci-scenarios.sh` with the enforcer fetched by `scripts/fetch-enforcer.sh` is green at the pins: the catalogue red on exactly the two listed scenarios, the example green |
-| Agent trial (Range path) | planned | run an external agent image and synthetic tasks against the same victims, check direct egress and host access, and report observation gaps before giving a verdict; Control and Guardana stay optional integrations |
-| Model artifact and endpoint tests | planned | inert artifacts with known defects and a recorded endpoint for deterministic prompt cases |
-| Live model overlay | planned | recorded to cassettes, replayed in CI |
-| Benchmarks | planned | decision latency against policy bundle size |
-
-`tool-01`, `auth-01` and `flow-01` each assert what no other scenario does:
-the operator's classification, not a tool's `readOnlyHint`, decides the effect
-class; an export the policy grants only to another
-principal is refused to the listener's configured one (the page claiming an
-administrator's authority puts nothing into the call, so this shows the rule's
-principal scoping, not the gateway resisting the page); and a send after a
-private read is refused under the MCP adapter's `deny_external_sink`, at a sink
-the lab classifies untrusted. `flow-03` is its positive control: the same read,
-written to a sink the lab classifies `TRUSTED_INTERNAL`, runs under the same
-obligation and under a toxic-flow rule; without that trust zone the flow rule
-denies the write, and without the rule as well `deny_external_sink` refuses it.
-The adapter closes that refusal `ACTION_FAILED` with a `BLOCKED` result, which
-`flow-01` grades, and the code `OBLIGATION_NOT_UNDERSTOOD`, the same code as an
-obligation it cannot apply, so the trail alone does not say which of the two
-stopped the send; the lab does not grade that code.
-
-`flow-02` and `gaps-02` read the run's flow state, which the enforcer builds
-from each tool's `returns` in the lab's classification: every tool but
-`shell.exec` declares what it returns. The flow tags on each proposal
-(`flow.v1.untrusted`, `flow.v1.max_read`) are graded beside the verdict, so a
-toxic-flow verdict reached from another state than the one it names is red.
-The classification is per tool, never per path: `fs.read` is `CONFIDENTIAL`
-whatever file it reads.
-
-`tool-02-permitted-read-is-recorded-by-the-enforcer` is two reads the
-enforcer's policy allows, graded from the trail the enforcer exported and the
-victims' journals. It was made to fail on purpose by
-signing a policy that allows only writes: the enforcer denied both reads with
-`NO_MATCHING_RULE` and the victims served nothing. Its green is evidence about
-that one path at the pinned commit and nothing wider.
-
-The catalogue against the enforcer states each expectation from the
-enforcer's docs at its pin, cited page and line in each scenario, and every
-scenario was made to fail on purpose once by changing the policy, the
-configuration, a double's script or a step, never the expectation.
-`mode-01-observe-runs-what-it-records` is red by design, on a contradiction
-recorded as a finding for the enforcer: under `OBSERVE` a call whose decision
-refused its action digest completes with an executed digest, as if the bytes
-sent were authorized. While it is red, a second regression in it goes unseen.
-Whether the decision point was asked is graded from its journal, since the
-decision names it for a question it could not send as well. The cause of
-`evidence-01`'s blocks and `evidence-02`'s unrecorded read, which no trail
-records, is graded from the enforcer's `/healthz` after the replay
-(`expect.health`: blocks by reason code, `reads_unrecorded`,
-`sink_failures_before_effect`), kept in the run directory as `healthz.json`. A
-principal with no tenant cannot be configured at the pin (the gateway fills in
-its own), so only the other one-sided tenant case is graded (`tenant-03`).
-`plane/image` requires the image the run's enforcer container runs to carry
-the `io.guardana.playground.enforcer.tree` label equal to `ENFORCER_TREE`.
-Only the lab's build scripts set it: `make enforcer-image` after checking that
-the archive hashes to the commit's tree and that tree is the pinned one, and
-the development build to the tree it hashed, so an image built by hand with
-the pinned build arguments fails the check. The label is still a claim
-the build makes about itself: an image that sets it by hand, or builds `FROM`
-an image that carries it, passes. The enforcer's agent listener binds the
-enforcer's own address on `agent-net` and nothing else, although the enforcer
-sits on four networks. Three checks under `network-isolation/` read it:
-`listener-closed-to/<service>` has a service on another of those networks list the enforcer's tools at its
-service name, which there resolves to the enforcer's address on that network,
-and passes only on a refused connection at that address;
-`agent-address-unreachable-from/<service>` has it list them at the agent-net
-address, and passes only on no route or no answer; and
-`listener-bound-to-agent-net` reads the enforcer's own output, which names the
-address its agent listener bound, and passes only when that is the agent-net
-address alone. Any other error is indeterminate. The probes run from the first
-victim the trajectory calls and from the decision point double, not from the
-collector or the chaos proxy, whose images carry no lister; the enforcer's
-own line covers every network. Two runs at once share a subnet one time in
-2047; docker refuses the second network, and that run's boot fails with the
-reason in its boot record.
-
-The chaos scenarios were each made to fail on purpose by changing a fault, the
-configuration or the runner: a call timeout under the latency (`chaos-01`
-closed the call `ACTION_FAILED` after 1.0s and the chaos check found it faster
-than the latency), an obligation that shortens the held call's timeout to one
-second (`chaos-02` closed it `RESULT_STATUS_TIMEOUT` after 1.0s, outside the
-window its configuration sets, and the chaos check went red on the duration),
-a call timeout of three minutes, past the agent's two-minute bound on a replay
-(`chaos-02` closed the call `RESULT_STATUS_FAILURE`, and the chaos check went
-red on the status), a collector never started again (`chaos-03`'s fault was not
-lifted and the trail never drained), and no second listing (`chaos-04` allowed
-and ran `fs.read`). What they do not show: the answer the agent gets
-for a call cut off at the timeout, which the enforcer's docs do not state; the
-enforcer's behaviour when a victim's connection is cut rather than held; and a
-drift the enforcer learns of any other way than the victim announcing it.
-`list.ttl` bounds how long the agent and the gateway keep the gateway's own
-list and never makes the gateway read an upstream again, so a victim that
-changed its tools without announcing it stays classified as first listed.
-
-The verifier scenarios run the verifier's `probe` at its pin against the
-victims. Three pass; each was made to fail on purpose by changing the steps, not
-the expectations (a pin taken after the drift, a drifting server where a stable
-one was expected, a pin where none was expected). Their green is evidence about
-the verifier's MCP manifest checks at 0.26.1 and nothing wider.
-`verify-04-drift-severity-is-the-catalogued-one` is red, and stays red until the
-verifier or its rule catalogue changes: the catalogue lists
-`guardana.agent.mcp_server_manifest` as `HIGH` and the verifier reports the drift
-`CRITICAL`, so `make scenarios` is red on it.
-
-The two trace scenarios run the same calls under two policies. Each was made to
-fail on purpose: `trace-02` with a contract that no longer covers the payout
-change turned only its two trace checks red (the verifier exited 0 with no
-finding), `trace-01` under the widened policy turned its decisions, its
-trails, its effects and its trace checks red, and `trace-01` under a policy that
-also allows its shell command turned the command's decision, the shell's
-effects and two trace checks red, the verifier reporting `never-shell` as
-`CRITICAL`. Their green is evidence about the verifier's
-`approval_required` and `forbidden_sink` assertions over a trace this lab's
-agent writes, at 0.26.1, and nothing wider.
-
-No benchmark has been measured yet. Any number this repository publishes later
-comes with the machine that produced it.
+| Repository rules and quality gate | implemented | Green `make quality`: formatting, vet, lint, tests, scanners, docs checks, attribution and hygiene, with the tools `make bootstrap` installs at their pins. Runs no scenario. [Contributing](../CONTRIBUTING.md#working-locally), [tool pins](dependencies.md#outside-the-module) |
+| Pinned versions of the systems under test | implemented | Every report names the pins, the machine and each image's ID and label; a run the enforcer decides fails unless its image is tagged `ENFORCER_COMMIT` and labelled `ENFORCER_TREE`, and a verifier or trace run is refused unless its image is labelled `VERIFIER_VERSION`. A label is the build's claim about itself. [Dependencies](dependencies.md#the-systems-under-test), [how a scenario runs](how-it-works/scenario-run.md) |
+| Trajectory and scenario file formats | implemented | `internal/labspec` refuses an unknown key and a pair of files that disagree, before anything boots. Does not show which retry resumed a hold: the trail cannot tell. [Lab files](lab-files.md) |
+| Evidence, journal and assertion readers | implemented | `internal/evidence` mirrors the enforcer's v1 wire contract at its pin and reads the collector's export after the enforcer reports nothing lost; `internal/journal` reads the victims' journals; every check starts `indeterminate`. A record nobody wrote cannot be read. [How a scenario runs](how-it-works/scenario-run.md#one-decided-call) |
+| Documentation checks | experimental | `make docs-check` and `make docs-frontmatter`, in the gate: links, the generated index, frontmatter, word budgets, `covers`. `make docs-impact` names suspect pages and fails nothing. A page can pass and still disagree with the code. `docs/docs.json` |
+| Compose topology | implemented | `compose/`: one compose project per run, every network internal, each service on the networks and run directories it needs and no others. [How a scenario runs](how-it-works/scenario-run.md) |
+| Victim tool servers | implemented | All six (crm, db, fs, shell, mail, web), each lying the way its README states; graded from their own journals. `victims/*/README.md` |
+| AuthZEN decision point double | experimental | `services/pdp-double`: scripted answers per scenario, every question journalled; `pdp-01`..`03` grade its journal. Shows the enforcer against a scripted decision point, not a real one. [Its README](../services/pdp-double/README.md) |
+| Approver | experimental | `services/approver` answers held calls by script through the enforcer's own `approvals` command; `approval-01`..`05` and `trace-01` use it. Shows the enforcer's held-call path, not a person's. [Its README](../services/approver/README.md) |
+| Enforcer in the lab | experimental | A scenario with `gateway:` runs the enforcer built from its pinned commit, with a policy signed for the run and the lab's classification. Fails when the enforcer does not report the pinned commit. [Bring your own policy](runbooks/bring-your-own-policy.md), [gateway configuration](runbooks/bring-your-own-gateway-configuration.md) |
+| Scripted agent | implemented | `agents/scripted` replays a trajectory, the same calls every run; with `-trace` it writes its own record in the verifier's trace dialect, graded as the agent's account and never as proof of an effect. [Trace scenarios](lab-files.md#trace-scenarios) |
+| Scenario runner and assertions | implemented | `make scenario ID=...` boots, probes the topology, replays and grades decisions, trails, effects, evidence and health from records. Topology probes run from the first victim the trajectory calls and the decision point double, not from the collector or the chaos proxy. [How a scenario runs](how-it-works/scenario-run.md), [quickstart](runbooks/quickstart.md) |
+| Scenario catalogue | experimental | 36 scenarios: 32 decided by the enforcer at `ENFORCER_COMMIT`, 4 against the verifier at `VERIFIER_VERSION`, each expectation cited in its file from that system's docs at the pin. Two are red by design, each on a finding in [`scenarios/red-by-design.txt`](../scenarios/red-by-design.txt): `mode-01` and `verify-04`; while listed, a second fault in the same check goes unseen. Run at these pins on macOS with Docker Desktop, red on exactly that pair; on a Linux Docker host as an ordinary user only at an older enforcer commit. Green is evidence about each path at the pins and nothing wider. [Failure modes](reference/failure-modes.md) |
+| Development builds of the enforcer | experimental | `make dev-scenarios CONTROL=<checkout>` grades scenarios against a checkout's working tree; every result reads `dev-<suite>` and the report names the build and the pin it is not. CI never runs it. [Quickstart](runbooks/quickstart.md#try-an-unreleased-enforcer-change-experimental) |
+| Smoke loop | experimental | `make smoke`: five green scenarios across both systems through the ordinary runner. Does not replace the catalogue. `scripts/smoke.sh` |
+| Attack payload catalogue | experimental | Four inert indirect injections served by `attacker-web`. Whether an agent obeys one is not tested: the scripted agent never follows a page. [Attack payloads](../attacks/README.md) |
+| Chaos matrix | experimental | A latency or a hang on one victim, the collector down, a victim listing its tools again; `chaos-01`..`04`, each fault graded from a record that shows it in place. Does not show the answer the agent gets at a timeout, a cut connection, or a drift the victim does not announce. Planned: cut links, a full disk, clock skew, faults on the decision point's or the collector's path. [Chaos](lab-files.md#chaos) |
+| Verifier probes | experimental | `scenarios/verify/`: the verifier's MCP manifest checks against the victims, expectations copied from its docs at the pin. Evidence about those checks and nothing wider. [Verifier scenarios](lab-files.md#verifier-scenarios), [how a verifier scenario runs](how-it-works/verifier-run.md) |
+| Verifier loop | experimental | `trace-01`, `trace-02`: the pinned verifier grades the agent's own trace against a contract, covering `approval_required` and `forbidden_sink`; what that trace cannot tell apart is in [Trace scenarios](lab-files.md#trace-scenarios). Planned: `verifier diff` and probing the gateway's listener. [Bring your own contract](runbooks/bring-your-own-contract.md) |
+| Adopter runbooks | experimental | A quickstart, and one page each for your own policy, gateway configuration and verifier contract run through a workspace. `docs/runbooks/` |
+| Failure-mode and use-case catalogues | experimental | Every scenario names its failure modes; `internal/labcheck` holds the pages and the scenarios to each other. [Failure modes](reference/failure-modes.md), [use cases](reference/use-cases.md) |
+| Worked example | experimental | `examples/helpdesk-payouts/`, a workspace that loads under `internal/labcheck`; green from a copy at the pins, red when its policy skips the approval or lets the mail out. `make scenarios` does not run it. [Its README](../examples/helpdesk-payouts/README.md) |
+| Continuous integration | experimental | `.github/workflows/`: `make quality`, then the catalogue judged against `scenarios/red-by-design.txt` and every example from a copy; CodeQL and dependency review have no local equivalent. No workflow has run on GitHub; the scenario job's script has run locally (Scenario catalogue). |
+| Agent trial (Range path) | planned | Run an external agent image and synthetic tasks against the same victims, check direct egress and host access, and report observation gaps before giving a verdict; the enforcer and the verifier stay optional. [Roadmap](../ROADMAP.md#p5--agent-trials-in-the-same-playground-planned) |
+| Model artifact and endpoint tests | planned | Inert artifacts with known defects and a recorded endpoint for deterministic prompt cases. [Roadmap](../ROADMAP.md#p7--model-artifacts-and-endpoints-planned) |
+| Live model overlay | planned | Recorded to cassettes, replayed in CI |
+| Benchmarks | planned | Decision latency against policy bundle size; none measured, and none published without the machine that produced it |

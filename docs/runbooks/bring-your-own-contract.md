@@ -11,7 +11,7 @@ covers: [runner/trace.go, runner/check/verifier_report.go, agents/scripted/trace
 The verifier at `VERIFIER_VERSION` grades the trace the lab's agent writes of a
 run through the enforcer against a security contract you write in the
 verifier's own format. The contract is yours; the trace is the agent's.
-Trace grading is `experimental` (`docs/status.md`, "Verifier loop").
+Trace grading is `experimental` ([status](../status.md), "Verifier loop").
 
 ## Where it goes
 
@@ -52,14 +52,13 @@ analysis indeterminate, exit `2`.
 
 ## What the trace records
 
-One span per step, in the verifier's native dialect (`docs/lab-files.md`,
-"Trace scenarios"): the call's effect is `executed` when the victim returned a
-result, `attempted` when it returned an error, and `failed` when the enforcer
-blocked or held it; its approval is `not_requested`, `granted`, `timed_out`,
-`denied` or `unknown`. The trace is the agent's own record, so the verifier
-cannot tell a change that was approved and ran from one that never ran; the
-scenario's decisions and effects, read from the enforcer's trail and the
-victims' journals, can. State both.
+One span per step, in the verifier's native dialect: the call's effect is
+`executed` when the victim returned a result, `attempted` when it returned an
+error, and `failed` when the enforcer blocked or held it; its approval is
+`not_requested`, `granted`, `timed_out`, `denied` or `unknown`. It is the
+agent's own record, so state the scenario's decisions and effects beside it for
+what the trace cannot tell apart
+([Trace scenarios](../lab-files.md#trace-scenarios)).
 
 ## Say what you expect
 

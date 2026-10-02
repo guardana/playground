@@ -7,6 +7,9 @@
 # The toxic delays victim-fs's answers by 1.5s, inside the 5s bound. The chaos
 # check holds the toxic to the trail: the fs.list result took at least 1.5s
 # from start to end, which a call that bypassed the proxy would not.
+# Red when: its gateway configuration sets upstream.call_timeout to 1s, under
+#   the toxic's latency, which closes fs.list ACTION_FAILED after 1.0s, and the
+#   chaos check finds the call faster than the latency.
 schema_version: 1
 id: chaos-01-a-slow-victim-within-the-call-timeout-still-runs
 title: A victim slower than usual but inside the call timeout is answered and recorded

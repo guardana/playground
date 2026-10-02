@@ -6,9 +6,9 @@ image the run uses (`/enforcer/control`); it writes no record itself.
 
 Every `-interval` (`250ms`) it runs `approvals list <dir>` and deals once with
 each approval still pending. A listing that fails or does not parse is an
-error, never "nothing waits". While no plane holds the directory, nothing is
-answered: the answer would be written and the held call would never run.
-`/healthz` is 200 only while listings go through and a plane holds the
+error, never "nothing waits". While no enforcer holds the directory, nothing
+is answered: the answer would be written and the held call would never run.
+`/healthz` is 200 only while listings go through and the enforcer holds the
 directory.
 
 Flags: `-dir`, `-script`, `-control`, `-listen` (`:8080`), `-exec-timeout`
@@ -49,7 +49,7 @@ the approval.
 | `unknown` | `served` | `approval=<id> answer=<answer>`: the command was killed, so it may have written |
 | `approve`, `reject`, `unknown` | as below | after `unknown`: `record=<state>/<resolution>` and `answered_by=<id>` |
 | `wait` | `served` | `approval=<id> rule=<n> delay=<delay>`, at the first sighting of a delayed answer |
-| `no-plane` | `served` | `approval=<id>`, once, seen while no plane held the directory; never answered |
+| `no-plane` | `served` | `approval=<id>`, once, seen while no enforcer held the directory; never answered |
 | `leave` | `served` | `approval=<id> rule=<n>`, `approval=<id> unmatched`, or `approval=<id> unmatched unreadable` |
 
 After an `unknown`, the next listing decides the line: `served` when the record

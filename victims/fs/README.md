@@ -36,7 +36,6 @@ start at `/data` and be already clean, and a path with a `..` in it is refused
 rather than repaired, because repairing one is how a sandbox that rejects `../`
 ends up serving the file anyway. Then every operation goes through `os.Root`,
 which refuses a name that leaves the directory even by way of a symbolic link.
-A lab that can write outside its own directory is not a lab.
 
 `fs_test.go` plants a symlink inside the sandbox pointing out of it and asserts
 the read, the listing and the write are all refused. Every lexical case is

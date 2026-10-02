@@ -15,6 +15,8 @@
 # change to every open session. The relist fault is that second listing, made
 # from inside victim-fs by a client of its own after the enforcer has listed
 # it; fs.list is unchanged and stays classified.
+# Red when: the relist fault is left out, so fs.read is never listed a second
+#   time, which allows and runs fs.read where step 1 expects it blocked.
 schema_version: 1
 id: chaos-04-a-description-changed-under-the-gateway-unclassifies-the-tool
 title: A tool whose description changes under the running gateway is blocked as unclassified

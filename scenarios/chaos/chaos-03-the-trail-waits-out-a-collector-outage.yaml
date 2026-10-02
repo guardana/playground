@@ -10,6 +10,8 @@
 # enforcer's /healthz, read before the collector starts again, to show records
 # waiting for it; the drain then requires every one handed over with nothing
 # lost, and the decisions are graded from the trail that arrived afterwards.
+# Red when: the runner never starts the collector again, which leaves the
+#   fault unlifted, and the trail never drains.
 schema_version: 1
 id: chaos-03-the-trail-waits-out-a-collector-outage
 title: Calls decided while the collector is down reach it whole once it returns

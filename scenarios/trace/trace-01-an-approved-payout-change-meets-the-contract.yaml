@@ -17,6 +17,11 @@
 #   A granted approval before an executed effect holds; a failed effect needs none:
 #     docs/usage-contracts.md:91-100.
 #   Exit 0 only when the contract applies and every invariant holds: docs/usage-contracts.md:131-140.
+# Red when: it runs under trace-02's widened policy, which turns its decisions,
+#   its trails, its effects and its trace checks red.
+# Red when: its policy also allows shell.exec, which turns the command's
+#   decision, victim-shell's effects and two trace checks red, the verifier
+#   reporting never-shell CRITICAL.
 schema_version: 1
 id: trace-01-an-approved-payout-change-meets-the-contract
 title: The trace of a payout change approved before it ran meets the contract that requires it

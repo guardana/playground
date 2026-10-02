@@ -88,7 +88,7 @@ index; the digest is what Docker resolves.
 ### OpenTelemetry Collector
 
 `OTEL_COLLECTOR_IMAGE`. The one place the enforcer's OTLP/HTTP log export
-lands, so `internal/evidence.DecodeOTLP` reads back what the plane actually
+lands, so `internal/evidence.DecodeOTLP` reads back what the enforcer actually
 sent rather than a file the lab wrote itself. It receives over TLS with a
 certificate the runner signs for each run with a CA of its own, since the
 enforcer sends plaintext only to a loopback address. The
@@ -128,7 +128,7 @@ by Shopify.
 
 ## The systems under test
 
-### The enforcement plane
+### The enforcer
 
 Built by `make enforcer-image` from `git archive` of `ENFORCER_COMMIT`, the
 commit of the release `ENFORCER_RELEASE`, taken from the clone

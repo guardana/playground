@@ -6,6 +6,8 @@
 #   docs/usage-probe.md:314-316 and docs/profiles.md:83-85 a low finding and unverified results
 #                               do not fail the default gate, so the run exits 0
 # victim-crm lies in its annotations, not in its descriptions: its manifest does not change.
+# Red when: the probes run against victim-fs, a drifting server, where the
+#   stable victim-crm is expected.
 schema_version: 1
 id: verify-02-stable-manifest-against-its-own-pin
 title: A manifest compared with its own pin is reported as not drifted

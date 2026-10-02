@@ -100,15 +100,15 @@ the old identifier would report under a name nothing on disk carries.
 
 ```yaml
 schema_version: 1
-id: flow-02-private-to-public-sink
+id: flow-90-example-private-read-to-public-sink
 title: A private read followed by an external send is refused at the sink
 maps_to: { failure_catalog: [FLOW-02], owasp_asi: [ASI01] }
 profile: [core, enforcer]
 enforcement_mode: enforce
-trajectory: trajectories/flow-02-private-to-public-sink.yaml
+trajectory: trajectories/flow-90-example-private-read-to-public-sink.yaml
 gateway:
-  config: config/gateway/scenarios/flow-02-private-to-public-sink.yaml
-  policy: config/policies/flow-02-private-to-public-sink.json
+  config: config/gateway/scenarios/flow-90-example-private-read-to-public-sink.yaml
+  policy: config/policies/flow-90-example-private-read-to-public-sink.json
   upstream_tenants: { victim-mail: tenant_a }
 expect:
   decisions:
@@ -170,11 +170,11 @@ decides with, and the profile names `enforcer`:
 ```yaml
 profile: [core, enforcer, approvals]
 gateway:
-  config: config/gateway/scenarios/tool-11-held-payout-change.yaml
-  policy: config/policies/tool-11-held-payout-change.json
+  config: config/gateway/scenarios/tool-90-example-held-payout-change.yaml
+  policy: config/policies/tool-90-example-held-payout-change.json
   unclassified: [victim-shell/shell.exec]
   upstream_tenants: { victim-crm: tenant_b }
-  approver_script: held-payout-change.yaml
+  approver_script: tool-90-example-held-payout-change.yaml
 ```
 
 - `config` is the scenario's part of the enforcer's configuration, in the
@@ -201,11 +201,7 @@ gateway:
   `config/gateway/classification.yaml` pinned to `fingerprints.yaml`, the
   approvals directories when the provider is `file`, and the decision point's
   identifier when `pdp_script` is set. The classification gives each tool its
-  effect and resource, its `trust_zone` (where a call sends data) and its
-  `returns` (`trust` and `sensitivity`: what its result holds, which the
-  enforcer reads into the run's flow state); every tool but `shell.exec`
-  declares `returns`, so one call to it leaves a flow rule undetermined for the
-  rest of the run.
+  effect and resource, and the flow values in the table below.
 - `policy` is an `agent-policy/v1alpha1` document, signed for the run with the
   lab key (`make lab-key`) by the enforcer's own `policy sign`. The key lives
   outside the clone, the reports directory and the workspace (`LAB_KEYS_DIR`);
@@ -219,15 +215,33 @@ gateway:
   `config/pdp/`; `approver_script` (profile `approvals`) the approver's under
   `config/approver/`. Each profile comes with its script and not without.
 
-The run's trail is read from the collector, after the enforcer's `/healthz`
-reports nothing unacknowledged and nothing lost (no quarantined or truncated
-spool record, nothing the exporter quarantined or the collector refused or
-dropped, the exporter still running) and the collector has been stopped so its
-file is flushed. The `plane` checks report the drain, that the running enforcer
-reports the pinned commit, and that the run's own enforcer container runs the
-image tagged with the pin, built from it. Under `runner -enforcer-dev <image>`
-they hold the run to that build's version, tree and image ID instead
-(`docs/status.md`, "Development builds of the enforcer").
+The classification declares, per tool and never per path, where a call sends
+data (`trust_zone`) and what its result holds (`returns`), which the enforcer
+reads into the run's flow state:
+
+| tools | `trust_zone` | `returns.trust` | `returns.sensitivity` |
+|---|---|---|---|
+| `crm.read_customer`, `crm.update_note`, `crm.update_bank_account`, `crm.export_table`, `db.query`, `db.execute`, `fs.read` | `TRUSTED_INTERNAL` | `TRUSTED_INTERNAL` | `CONFIDENTIAL` |
+| `db.drop_table`, `fs.write`, `fs.list` | `TRUSTED_INTERNAL` | `TRUSTED_INTERNAL` | `INTERNAL` |
+| `mail.send`, `mail.send_bulk` | `UNTRUSTED_EXTERNAL` | `TRUSTED_INTERNAL` | `INTERNAL` |
+| `web.fetch` | `UNTRUSTED_EXTERNAL` | `UNTRUSTED_EXTERNAL` | `PUBLIC` |
+| `shell.exec` | none | none | none |
+
+`shell.exec` declares neither, so at the pin one call to it leaves the run
+untrusted and its reading unknown for the rest of the run
+(`docs/concepts/how-a-call-is-decided.md` in the enforcer's repository at
+`ENFORCER_COMMIT`). A `TRUSTED_INTERNAL` result holds
+because each run starts its victims in a compose project of its own, and
+`victim-crm`, `victim-db` and `victim-fs` load their compiled-in fixture on
+every start (`victims/crm/store.go`, `victims/db/tables.go`,
+`victims/fs/sandbox.go`): nothing an earlier run wrote is read back as
+trusted.
+
+The run's trail is read from the collector once the enforcer's spool has
+drained, and the `plane` checks hold the run to the pinned enforcer
+([How a scenario runs](how-it-works/scenario-run.md#one-decided-call)), or to
+a development build under `runner -enforcer-dev <image>`
+([Try an unreleased enforcer change](runbooks/quickstart.md#try-an-unreleased-enforcer-change-experimental)).
 
 The last `/healthz` answer the drain reads is kept in the run directory as
 `healthz.json`. `expect.health`, optional and only in a scenario the enforcer
@@ -408,16 +422,9 @@ expect:
   `expect.decisions`, `expect.evidence` and `expect.trace` are refused: nothing
   in the run could grade them.
 
-The `verifier` profile brings up the victims without the gateway. Before the
-steps, the runner dials each probed server and a documentation address outside
-the lab from the verifier's network, and reads the verifier's
-`/proc/net/route` and `/proc/net/ipv6_route`. A run fails when the outside
-dial connects, and when either table holds a usable default route; a dial
-that ends in anything but "no route" or an unknown name is indeterminate. The
-verifier sees one host directory, the run's `verifier/`, where its pins land;
-the victims' journals it is graded from are out of its reach. The runner writes
-each step's report and streams there only to a path that does not exist yet, so
-a file the verifier left under that name fails the step instead of being graded.
+How the runner runs these steps, proves the verifier's network sealed and
+grades each step is in
+[How a verifier scenario runs](how-it-works/verifier-run.md).
 
 ### Trace scenarios
 
@@ -453,15 +460,9 @@ expect:
   so the same call sent again later without a new hold is `not_requested`. The
   footer is written only when every step ran, so a replay cut short reads as
   truncated.
-- The runner copies the trace, a regular file of at most 8 MiB, into the run's
-  `verifier/` directory and runs `analyze-trace <trace> --contract <file>
-  --ai-system <name> --format json` as the service `trace-verifier`, which
-  mounts that directory and `config/contracts/` read-only and is alone on its
-  network. The report is written only to a path that does not exist yet, and
-  a pin a probing verifier wrote is read only as a regular file.
-- Compose never pulls the verifier image, and before a trace or verifier run
-  the runner refuses a local image whose `org.opencontainers.image.version` is
-  not `VERIFIER_VERSION`.
+- The runner hands the trace to the verifier's `analyze-trace` as
+  [How a verifier scenario runs](how-it-works/verifier-run.md#the-agents-trace)
+  shows.
 - `expect.trace` takes the fields of one `expect.verifier` step and names at
   least one `contract.` rule in `findings_include` or `findings_exclude`: an
   exit code alone passes on a trace cut short, whose rules all came back
@@ -587,20 +588,3 @@ The runner refuses before anything boots, with the reason:
 Every report names the workspace, and its commit when the workspace is the top
 of a git checkout; a workspace inside another repository is reported as not a
 checkout, with that repository's top named, and never under its commit.
-
-## What a runner reads
-
-- `internal/evidence` decodes the enforcement plane's evidence as the frozen v1
-  wire contract carries it over JSON, and checks the documented event order. The
-  lab never imports the enforcement plane's Go module: it tests a pinned image,
-  and calling the producer's own validator would ask the system under test
-  whether it agrees with itself. The plane exports its trail as OTLP/HTTP JSON
-  logs; the reader takes one event from each log record's body, refuses a record
-  whose attributes disagree with it, collapses a redelivered event and refuses
-  two different events under one id, and orders each trail by its links. A trail
-  whose events leave its request, project or tenant is refused as broken.
-- `internal/journal` reads what each victim recorded about the calls it received.
-- `internal/assertion` is the check interface. The zero value of an outcome is
-  `indeterminate`, so a check that returned nothing, a report with no results
-  and a service that never started all say the same thing: nothing was
-  established. Pass is written down by something that read a record.

@@ -3,33 +3,33 @@
 A lab for finding out whether agent security tooling does what it says.
 
 Two systems are under test. [Guardana](https://github.com/guardana/guardana),
-the verifier, grades recorded runs; Control, the enforcer, decides tool calls
-inline. The lab replays scripted agent trajectories against deceptive tool
-servers and injected content, then checks both systems' records and the
+the verifier, grades recorded runs;
+[Control](https://github.com/guardana/control), the enforcer, decides tool
+calls inline. The lab replays scripted agent trajectories against deceptive
+tool servers and injected content, then checks both systems' records and the
 victims' effects.
 
 Maintainers test releases; adopters test their own policy, gateway
 configuration or verifier contract. See the [use cases](docs/reference/use-cases.md)
 and [failure modes](docs/reference/failure-modes.md).
 
-**Status: experimental.** The catalogue of 34 scenarios runs against the
-enforcer and the verifier at the versions `versions.env` pins; two of them are
-red on purpose, each on a recorded finding. `docs/status.md` says what exists,
-component by component.
+**Status: experimental.** The scenario catalogue runs against the enforcer and
+the verifier at the versions `versions.env` pins. [Status](docs/status.md) says
+what exists, component by component, and which scenarios are red on purpose.
 
 Planned: Range will run an external agent against the same victims and grade
-its observed effects. Control and Guardana remain optional. The
+its observed effects. The enforcer and the verifier remain optional. The
 [roadmap](ROADMAP.md) also covers model artifacts and endpoints.
 
 ## One green scenario
 
-You need a checkout of this lab; the public Playground repository is empty,
-so ask the maintainers for one until it is published. You also need Docker
-with Compose v2 and buildx, Go, git and make. Control is pinned to a public
-release, which `scripts/fetch-enforcer.sh` fetches anonymously:
+You need Docker with Compose v2 and buildx, Go, git and make. The enforcer is
+pinned to a public release, which `scripts/fetch-enforcer.sh` fetches
+anonymously:
 
 ```
-cd /path/to/playground
+git clone https://github.com/guardana/playground
+cd playground
 scripts/fetch-enforcer.sh /path/to/control.git
 export ENFORCER_SOURCE=/path/to/control.git
 make images
@@ -37,12 +37,15 @@ make lab-key
 make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 ```
 
+Until the first release is published there, the repository is empty; use the
+checkout you have.
+
 Its result line gives the verdict and report path. The
 [quickstart](docs/runbooks/quickstart.md) covers setup and failures.
 
 `make smoke` (experimental) runs five green paths across both systems and
 fails on any red or unrunnable path. `make scenarios` runs the whole catalogue
-and is red on the two scenarios red by design.
+and is red on the scenarios [red by design](scenarios/red-by-design.txt).
 
 ## Your own policy, configuration or contract
 
@@ -76,9 +79,8 @@ and the attack payloads sit on compose networks with no route out.
 
 ## Versions
 
-`versions.env` pins the enforcer by commit and tree, the verifier by release
-with every dependency hash-locked, and every other image by digest. A run
-against whatever happened to be on disk has measured nothing.
+`versions.env` pins both systems and every image the lab runs;
+[dependencies](docs/dependencies.md) says how each is built and checked.
 
 ## Contributing
 

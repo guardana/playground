@@ -17,6 +17,8 @@
 #   not_requested before an executed effect is the absence of authority, a
 #     finding at the assertion's severity: docs/usage-contracts.md:91-100.
 #   An invariant that does not hold exits 1: docs/usage-contracts.md:131-140.
+# Red when: its contract no longer covers crm.update_bank_account, which turns
+#   only its two trace checks red: the verifier exits 0 with no finding.
 schema_version: 1
 id: trace-02-a-policy-that-skips-the-approval-breaks-the-contract
 title: The trace of a payout change a widened policy let run unapproved breaks the contract

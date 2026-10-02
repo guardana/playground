@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `docs/how-it-works/scenario-run.md` and `docs/how-it-works/verifier-run.md`:
+  which service sits on which network, how a call is decided, held and graded,
+  which record each check reads, and what a run leaves on disk, with the
+  diagrams drawn from the files they name. `docs/reference/glossary.md` gives
+  one name per concept.
+
 - The lab's classification declares what each tool returns (`returns.trust`,
   `returns.sensitivity`, which the enforcer reads into a run's flow state) and
   where it sends (`trust_zone`), per tool: every tool but `shell.exec`, whose
@@ -251,6 +257,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `auth-01-cross-tenant-export-undecided`.
 
 ### Changed
+
+- `docs/status.md` is the inventory alone: one row per component with its
+  label, what a green result does and does not show, and the page that
+  explains it. The mechanism it described is on the how-it-works pages, and
+  the change that turns a scenario red, where one is recorded, is in that
+  scenario's header comment.
 
 - Red by design names the check each listed scenario fails on
   (`<id> <check>[,<check>...] <finding>`), and the judge passes the catalogue

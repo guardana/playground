@@ -6,12 +6,12 @@ import (
 	"github.com/guardana/playground/runner/gateway"
 )
 
-// The classification is what docs/status.md and the bring-your-own-policy
-// runbook say it is: every tool but the shell declares what it returns, the
-// CRM, database and filesystem are trusted destinations and mail and the web
-// untrusted ones, a page is untrusted and public, and a private read is
-// trusted and confidential. A flow scenario's verdict turns on these values.
-func TestTheClassificationDeclaresWhatTheDocsSay(t *testing.T) {
+// Every tool but the shell declares what it returns, the CRM, database and
+// filesystem are trusted destinations and mail and the web untrusted ones, a
+// page is untrusted and public, and a private read is trusted and
+// confidential. A flow scenario's verdict turns on these values, so changing
+// one is a decision, never a side effect.
+func TestTheClassificationDeclaresWhatFlowScenariosRelyOn(t *testing.T) {
 	var classes []gateway.Class
 	readYAML(t, "config/gateway/classification.yaml", &classes)
 	zones := map[string]string{

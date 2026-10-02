@@ -19,9 +19,15 @@ with `make docs-gen`; an edit made here does not survive the next run.
 - [Bring your own policy](runbooks/bring-your-own-policy.md): Run a policy of your own through the pinned enforcer against the lab's victims, and see what it allows, denies and holds.
 - [Quickstart](runbooks/quickstart.md): From a checkout to one scenario graded green against the pinned enforcer, what a red run means, and how to clean up.
 
+## How it works
+
+- [How a scenario runs](how-it-works/scenario-run.md): Which service sits on which network, how one call is decided and held, which file each check reads, and what a run leaves on disk.
+- [How a verifier scenario runs](how-it-works/verifier-run.md): How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
+
 ## Reference
 
 - [Failure modes](reference/failure-modes.md): How an agent deployment goes wrong, which kind of tooling must catch each failure, and the scenarios that simulate it today.
+- [Glossary](reference/glossary.md): The lab's own terms, one name per concept, and the name each page uses for the two systems under test.
 - [Agent use cases](reference/use-cases.md): The agent deployments the lab simulates or plans to, what each acts through, the failure modes it meets, and what the lab covers of it today.
 
 ## Contracts

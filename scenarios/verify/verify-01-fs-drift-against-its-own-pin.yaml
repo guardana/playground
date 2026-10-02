@@ -7,6 +7,7 @@
 #   docs/usage-probe.md:165,171-174 session binding needs a credential to say anything
 # victims/fs/README.md names fs.read as the tool whose description changes.
 # This scenario is about the drift; the severity it is reported at is verify-04's.
+# Red when: the pin is taken after the drift.
 schema_version: 1
 id: verify-01-fs-drift-against-its-own-pin
 title: A manifest that changes after it was pinned is reported as drift

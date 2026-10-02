@@ -5,6 +5,7 @@
 #   docs/usage-probe.md:162     guardana.mcp.unauthenticated_access is low on a private address
 #   docs/usage-probe.md:314-316 and docs/profiles.md:83-85 a low finding and unverified results
 #                               do not fail the default gate, so the run exits 0
+# Red when: the probe is given a pin where none is expected.
 schema_version: 1
 id: verify-03-unpinned-manifest-is-unverified
 title: A manifest probed with no pin is reported unverified, not clean

@@ -53,7 +53,7 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `INJ-01` | a call that fetched content asked for is let through | gate, grader | `auth-01`, `flow-01`, `flow-02` |
+| `INJ-01` | fetched content asks for a call, and the call is let through | gate, grader | `auth-01`, `flow-01`, `flow-02` |
 | `INJ-02` | a tool result carries instructions into the next step | grader | planned |
 | `INJ-03` | a tool's schema or description hides instructions | grader | planned |
 | `INJ-04` | poisoned memory steers a later run | grader | planned |

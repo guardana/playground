@@ -11,7 +11,7 @@ covers: [runner/gateway/**, runner/enforcer.go, runner/env.go, compose/compose.y
 Your part of the enforcer's configuration: its mode, who the agent is, how it
 holds approvals, how its evidence spool behaves, its timeouts. The runner adds
 everything that ties the enforcer into the lab and refuses a part that sets any
-of it. Running the enforcer in the lab is `experimental` (`docs/status.md`,
+of it. Running the enforcer in the lab is `experimental` ([status](../status.md),
 "Enforcer in the lab").
 
 ## Where it goes

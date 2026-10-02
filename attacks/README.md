@@ -7,7 +7,8 @@ page whole, injected instructions and all.
 They exist to be blocked. The scripted agent never follows a page: it makes the
 calls its trajectory names. Fetching one puts untrusted content into the run,
 which the enforcer's flow rules read (`flow-02`); whether an agent obeys the
-instructions is `planned` with the agent trials (ROADMAP, P5).
+instructions is `planned` with the
+[agent trials](../ROADMAP.md#p5--agent-trials-in-the-same-playground-planned).
 
 ## Identifiers
 

@@ -5,7 +5,7 @@
 #     docs/concepts/mcp-gateway.md:219, docs/concepts/evidence-and-the-spool.md:40,69;
 #     the answer the agent gets is not graded.
 #   An upstream that answers nothing within upstream.call_timeout is closed with
-#     a TIMEOUT result: docs/reference/failure-modes.md:92-93,
+#     a TIMEOUT result: docs/reference/failure-modes.md#an-upstream-that-dies-mid-call,
 #     docs/reference/wire/result.md:49. The chaos check requires it on the held
 #     call, closed between the 3s call_timeout its gateway configuration sets and
 #     one second after; that window is the lab's reading of the bound.
@@ -15,6 +15,12 @@
 # reaches the victim and is served, and the answer never comes back: the
 # effect happened and the trail says the call failed. The next call, to a
 # victim reached directly, shows the plane still serves.
+# Red when: its policy's rule carries a shorten_timeout obligation of one
+#   second, which closes the held call RESULT_STATUS_TIMEOUT after 1.0s, outside
+#   the window its configuration sets, and the chaos check goes red on the duration.
+# Red when: its gateway configuration sets upstream.call_timeout to 3m, past the
+#   scripted agent's two-minute bound on a replay, which closes the held call
+#   RESULT_STATUS_FAILURE, and the chaos check goes red on the status.
 schema_version: 1
 id: chaos-02-a-victim-that-never-answers-fails-at-the-call-timeout
 title: A victim whose answer never arrives is cut off at the call timeout and recorded as failed

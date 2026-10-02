@@ -1,10 +1,12 @@
 # Roadmap
 
 This repository is one playground for testing AI security controls; testing
-agents and models is planned (P5, P7). Guardana Control is the inline gate;
-Guardana is the independent verifier. The planned Range path will run an agent
-as the subject under test. Each path uses synthetic victims, scripted
-scenarios and records of actual effects. The enforcer's scenarios and the
+agents and models is planned
+([P5](#p5--agent-trials-in-the-same-playground-planned),
+[P7](#p7--model-artifacts-and-endpoints-planned)). Control (the enforcer) is
+the inline gate; Guardana (the verifier) grades independently. The planned
+Range path will run an agent as the subject under test. Each path uses synthetic victims,
+scripted scenarios and records of actual effects. The enforcer's scenarios and the
 verifier's probes return a verdict without the other system; the verifier's
 trace grading reads a run made through the enforcer.
 
@@ -16,16 +18,17 @@ prove.
 ## P0–P3 — Lab and first catalogue (implemented)
 
 Pinned systems, six deliberately deceptive victim servers, a scripted agent,
-policy and approval doubles, an isolated Compose topology, the runner, 34
-scenarios, an adopter workspace, runbooks and the quality gate. The enforcer
-decides calls from its pinned commit; the verifier probes victims and grades
-recorded traces from its pinned release. Two scenarios are red by design.
-Several parts are still `experimental`; [status](docs/status.md) says which.
+policy and approval doubles, an isolated Compose topology, the runner, the
+scenario catalogue, an adopter workspace, runbooks and the quality gate. The
+enforcer decides calls from its pinned commit; the verifier probes victims and
+grades recorded traces from its pinned release. Several parts are still
+`experimental`; [status](docs/status.md) says which, and which scenarios are
+red by design.
 
 ## P4 — Public, repeatable release loop (partly implemented)
 
-Control is pinned to its public release `v0.3.0-alpha`, fetched anonymously by
-commit id after its tag is checked (implemented). Each later release is taken
+The enforcer is pinned to its public release `v0.3.0-alpha`, fetched
+anonymously by commit id after its tag is checked (implemented). Each later release is taken
 the same way: pin the commit, its tree and the release, rebuild both systems,
 regrade every scenario and example from records, and update expectations only
 from the new version's contract. A release is ready for this lab's CI when the
@@ -35,14 +38,16 @@ documented red scenarios.
 `make smoke` is a smaller local loop over allowed, obligation-refused, held,
 trace-graded and probe-graded paths (experimental). It uses the same pins and
 evidence checks; it does not replace the full catalogue. `make dev-scenarios`
-builds Control from a local, possibly dirty tree and grades scenarios against
+builds the enforcer from a local, possibly dirty tree and grades scenarios against
 it, with a report that names that tree and cannot be mistaken for a
 release-pin result (experimental).
 
-Planned: publish a reviewed lab commit to the public Playground repository,
-which is empty, after the maintainer authorizes that action; the lab's CI has
-not run until then. Translate Control's own scenario format only after a round
-trip preserves the calls and expected evidence; do not maintain two
+The lab's CI workflows run `make quality`, then the catalogue and the examples
+against the pins (experimental). They have not run on GitHub; running them
+there on every change is planned, and [status](docs/status.md) says what has
+run where. Publishing a reviewed lab commit to `github.com/guardana/playground`,
+which is empty today, is planned. Translate the enforcer's own scenario format only after a round trip
+preserves the calls and expected evidence (planned); do not maintain two
 conflicting truths for one case.
 
 ## P5 — Agent trials in the same playground (planned)
@@ -56,8 +61,8 @@ probes. If a path or a required record cannot be observed, the trial is
 `INDETERMINATE` and fails the gate.
 
 Start with the existing scenario runner and result semantics. Add an agent
-driver only where the scripted trajectory cannot express the trial. Guardana
-may grade its trace and Control may gate its tool calls, independently and at
+driver only where the scripted trajectory cannot express the trial. The
+verifier may grade its trace and the enforcer may gate its tool calls, independently and at
 their own pins. The agent trial must still judge its own task and victim
 effects when neither is installed. A separate Range repository or a generic
 sandbox provider is premature until this local path works for an agent
@@ -85,7 +90,7 @@ with a stated budget and version; replay, not a live response, decides CI.
 
 Use a driver for each other control under test: pinned build, scenario
 configuration, record reader and checks against the same victim effects.
-Compare Guardana reports between pins once both have stable result records.
+Compare the verifier's reports between pins once both have stable result records.
 Add a monitor when it can be checked on a stream with known missed and false
 alerts. Do not infer a pass from the absence of a finding.
 

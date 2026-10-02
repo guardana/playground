@@ -20,8 +20,9 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
   release's tag there names that commit. The lab builds the pinned enforcer
   from the commit with `git archive`, never from a clone's working tree, and
   refuses an archive whose tree is not `ENFORCER_TREE`.
-- A checkout of this lab. The public `guardana/playground` repository is empty
-  today; ask the maintainers for the checkout until it is published.
+- A clone of this lab: `git clone https://github.com/guardana/playground`.
+  Until the first release is published there, the repository is empty; use
+  the checkout you have.
 - Network for the first build: it fetches the enforcer from GitHub and pulls
   the base images, the Go modules and the verifier's Python packages, each
   pinned by commit, digest or hash.
@@ -36,6 +37,9 @@ make images
 ```
 
 Any clone that holds the pinned commit will do; `ENFORCER_SOURCE` names it.
+`scripts/fetch-enforcer.sh` refuses a directory that exists and is not empty.
+A directory it filled before already holds the pinned commit: skip the fetch
+and point `ENFORCER_SOURCE` at it, or name a new directory.
 
 `make images` builds the enforcer image from the pinned commit and the
 verifier image from its pinned release. Each prints the image it made. A
@@ -63,8 +67,8 @@ make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 The runner builds every lab image the scenario uses, boots its compose profile
 in a project of its own, proves the topology, replays the trajectory, drains
 the enforcer's trail to the collector, grades the run and takes the profile
-down. It prints one line per scenario: the outcome, the suite, the scenario
-and its report:
+down ([How a scenario runs](../how-it-works/scenario-run.md)). It prints one
+line per scenario: the outcome, the suite, the scenario and its report:
 
 ```
 pass       catalogue tool-02-permitted-read-is-recorded-by-the-enforcer  reports/<run id>/report.md
@@ -82,8 +86,8 @@ It needs the same images and lab key as the one-scenario command.
 
 `reports/<run id>/report.md` opens with what produced the run: the lab commit,
 the workspace, the machine, and each image with its ID and the pin its label
-names. Then one row per check: what it wanted, what it got, and the record it
-read. The records sit beside the report:
+names. Then one row per check: what it wanted, what it got, and its source,
+the file it read. The files sit beside the report:
 
 | file | what it holds |
 |---|---|
@@ -92,13 +96,21 @@ read. The records sit beside the report:
 | `healthz.json` | the enforcer's `/healthz` answer after the replay |
 | `probes.log`, `boot.json` | the topology probes and what came up |
 | `plane.log` | the enforcer's version, image and drain |
+| `replay.log` | what the agent printed |
+| `chaos.log` | each fault applied and lifted, in a chaos scenario |
+| `gateway/` | the enforcer's assembled `gateway.yaml` and the bundle signed for the run |
+| `agent/` | the agent's own log, which no check reads, and its trace in a trace scenario |
+| `verifier/` | each verifier step's report, standard error and pin, or the agent's trace and the verifier's report on it |
+| `collector-tls/` | the collector's certificate, and its key while the run is up |
+| `export-ca/` | the run's CA certificate, which the enforcer trusts for the collector |
 | `junit.xml` | the same results for a CI system |
 
-`make scenarios` runs the whole catalogue. Two scenarios are red by design,
-each on a finding in a system under test; `scenarios/red-by-design.txt` names
-them, the check each fails on and the finding, and `go run ./runner -all
--red-by-design scenarios/red-by-design.txt` passes only when the reds are
-exactly those, each failing on its named checks and passing every other.
+`make scenarios` runs the whole catalogue. The scenarios red by design, each
+on a finding in a system under test, are listed in
+`scenarios/red-by-design.txt` with the check each fails on and the finding;
+`go run ./runner -all -red-by-design scenarios/red-by-design.txt` passes only
+when the reds are exactly those, each failing on its named checks and passing
+every other.
 
 ## Try an unreleased enforcer change (experimental)
 
@@ -111,10 +123,18 @@ changes included, and grades the scenario against it; without `ID` it runs
 the catalogue. The result line reads `dev-catalogue` and the report starts by
 naming the build. It says nothing about the pinned release.
 
+The `plane` checks hold the run to that build instead of the pin:
+`plane/version` passes when the enforcer reports `dev-` and the first twelve
+characters of the tree the build hashed, and `plane/image` when the container
+runs the image the build made, labelled by `scripts/build-enforcer-dev.sh`
+with that tree. `plane/drained` is unchanged. A checkout
+holding a nested repository or a submodule is refused: the build could not
+name what it contains.
+
 ## When it is red
 
-A red check names the record it read and what it found there; open that file.
-A check is `indeterminate` when it could not read its record at all, which
+A red check names its source and what it found there; open that file. A
+check is `indeterminate` when it could not read its source at all, which
 fails the run as surely as a wrong verdict. Common causes:
 
 - `plane/prepared` failed: no lab key, or the policy did not sign; the detail

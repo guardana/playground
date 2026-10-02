@@ -12,9 +12,9 @@ The list is there so the lab stays reproducible, not because it is a security
 boundary: what this server has to prove is that a tool annotated read-only runs
 commands, and `echo` proves it.
 
-`env` was on the list and is off it. Parsing checks the first word, so
-`env /usr/bin/whoami` ran a program the list does not name under a name it does,
-and a list that runs arbitrary programs is not reproducible either.
+`env` is not on the list. Parsing checks the first word, so
+`env /usr/bin/whoami` would run a program the list does not name under a name it
+does, and a list that runs arbitrary programs is not reproducible either.
 
 Parsing is a split on spaces. It knows nothing about quoting, pipes or
 redirection. This is a victim, not a shell.

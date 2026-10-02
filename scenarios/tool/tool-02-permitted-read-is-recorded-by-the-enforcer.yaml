@@ -4,6 +4,8 @@
 #   A run call's trail, proposed, decided, started, completed:
 #     docs/concepts/evidence-and-the-spool.md, the trail's state diagram.
 #   No argument content in the trail by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
+# Red when: its policy allows only writes, which denies both reads
+#   NO_MATCHING_RULE and leaves the victims serving nothing.
 schema_version: 1
 id: tool-02-permitted-read-is-recorded-by-the-enforcer
 title: A read the policy allows runs through the enforcer and every record shows it

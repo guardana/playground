@@ -7,6 +7,10 @@
 #   The read is decided by the bundle: docs/reference/reason-codes.md:30.
 # The principal's tenant is listener.principal.tenant_id
 # (docs/reference/configuration.md:45); no upstreams.N.tenant_id is set.
+# A principal with no tenant cannot be configured at ENFORCER_COMMIT: the
+# gateway gives it the configuration's own tenant_id
+# (cmd/guardana-gateway/adapter.go:35-38), so of the two one-sided cases only
+# this one, a tenant on the principal and none on the server, is graded.
 schema_version: 1
 id: tenant-03-material-call-to-an-untenanted-server-is-undetermined
 title: A send to a server that names no tenant is undetermined and blocked, and a read is not
