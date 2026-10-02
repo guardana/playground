@@ -1,4 +1,4 @@
-# The lab's world: six victim tool servers, a page that attacks them, a mail
+# The lab's world: the victim tool servers, a page that attacks them, a mail
 # sink, the enforcer, the agent, the verifier, the collector the enforcer's
 # trail lands on, the decision point double, the approver and the proxy chaos
 # scenarios put in front of a victim.
@@ -151,6 +151,19 @@ services:
     depends_on:
       attacker-web:
         condition: service_healthy
+
+  victim-pay:
+    image: ${LAB_IMAGE_PREFIX}-victim-pay
+    <<: *victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/pay
+    environment:
+      <<: *server-env
+      LAB_SERVER_NAME: victim-pay
 
   # The pages the victims fetch. Catalogued, inert, and on a network with no
   # route out; they exist to be blocked.
@@ -324,6 +337,7 @@ services:
       victim-shell: {condition: service_healthy}
       victim-mail: {condition: service_healthy}
       victim-web: {condition: service_healthy}
+      victim-pay: {condition: service_healthy}
 
   # The enforcement plane under test, from the image `make enforcer-image`
   # builds out of its pinned commit. The runner names it in LAB_ENFORCER_REF,
@@ -386,6 +400,7 @@ services:
       victim-shell: {condition: service_healthy}
       victim-mail: {condition: service_healthy}
       victim-web: {condition: service_healthy}
+      victim-pay: {condition: service_healthy}
       collector: {condition: service_started}
       pdp-double: {condition: service_healthy, required: false}
       toxiproxy-tools: {condition: service_healthy, required: false}

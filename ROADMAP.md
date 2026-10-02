@@ -17,7 +17,7 @@ prove.
 
 ## P0–P3 — Lab and first catalogue (implemented)
 
-Pinned systems, six deliberately deceptive victim servers, a scripted agent,
+Pinned systems, deliberately deceptive victim servers, a scripted agent,
 policy and approval doubles, an isolated Compose topology, the runner, the
 scenario catalogue, an adopter workspace, runbooks and the quality gate. The
 enforcer decides calls from its pinned commit; the verifier probes victims and

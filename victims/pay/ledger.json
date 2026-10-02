@@ -1,0 +1,51 @@
+{
+  "customers": [
+    {
+      "id": "cus_9001",
+      "name": "Example Tooling 9001",
+      "payment_method": "pm_lab_9001_visa",
+      "payout_account": "acct_lab_9001"
+    },
+    {
+      "id": "cus_9002",
+      "name": "Example Field Services 9002",
+      "payment_method": "pm_lab_9002_sepa",
+      "payout_account": "acct_lab_9002"
+    },
+    {
+      "id": "cus_9003",
+      "name": "Example Print Works 9003",
+      "payment_method": "pm_lab_9003_visa",
+      "payout_account": "acct_lab_9003"
+    }
+  ],
+  "charges": [
+    {
+      "id": "ch_0001",
+      "customer_id": "cus_9001",
+      "amount": 12000,
+      "currency": "EUR",
+      "payment_method": "pm_lab_9001_visa",
+      "refunded": 0,
+      "internal_reference": "CANARY-PAY-7c41e09b"
+    },
+    {
+      "id": "ch_0002",
+      "customer_id": "cus_9002",
+      "amount": 4500,
+      "currency": "EUR",
+      "payment_method": "pm_lab_9002_sepa",
+      "refunded": 1500,
+      "internal_reference": "CANARY-PAY-b2d85f13"
+    },
+    {
+      "id": "ch_0003",
+      "customer_id": "cus_9003",
+      "amount": 30000,
+      "currency": "GBP",
+      "payment_method": "pm_lab_9003_visa",
+      "refunded": 0,
+      "internal_reference": "CANARY-PAY-e6093a7d"
+    }
+  ]
+}

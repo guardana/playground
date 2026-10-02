@@ -60,7 +60,7 @@ The runner writes the rest into the run's own copy of the configuration,
 - the health address the runner reads `/healthz` and `/brand` from;
 - the signed bundle and the lab key's public half;
 - the evidence spool's directory and the export to the lab's collector;
-- the six victims as upstreams, with their tenants and environment;
+- the lab's victims as upstreams, with their tenants and environment;
 - the classification of every victim tool, pinned to its fingerprint;
 - the decision point's identifier, when the scenario names a script for the
   double (`gateway.pdp_script`, profile `pdp`), and the approvals directory the

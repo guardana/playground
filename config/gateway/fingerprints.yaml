@@ -11,5 +11,9 @@
 - { upstream: victim-fs, tool: fs.write, fingerprint: "sha256:44883433fd07e8b2a1961753cabb1eed4f97f151100c9201d3548920ed9f5eb8" }
 - { upstream: victim-mail, tool: mail.send, fingerprint: "sha256:18e4a5799dc8f03a0bd14583263694d52f376fa08b717eeb6681973f2cbe644d" }
 - { upstream: victim-mail, tool: mail.send_bulk, fingerprint: "sha256:cda69cf7a74f574e5df38a871f896e83b2869307bf78fe4840ffe643aecfc22c" }
+- { upstream: victim-pay, tool: pay.charge, fingerprint: "sha256:34f1c1edab4dabc16b46f7ca9cbe7f254ceaef1100161192e663bb960e154697" }
+- { upstream: victim-pay, tool: pay.payout, fingerprint: "sha256:3f8246b9bf0576efa9635e3f5d78689e6c042bb5fcf8dbdd162a9a3798d601b9" }
+- { upstream: victim-pay, tool: pay.read_charge, fingerprint: "sha256:a20a1403ae9134d67ffe78594065b8b67fa39d10d861bcbb15b392a4deeaed20" }
+- { upstream: victim-pay, tool: pay.refund, fingerprint: "sha256:7fed55431fc1d14efd02c0f10425cc3e1799865b845ea014e3a5e8256bd8fb99" }
 - { upstream: victim-shell, tool: shell.exec, fingerprint: "sha256:055a39b1baaf00d0e1538a9271b51e91d5a5198a5125dda791376c941dc9dc55" }
 - { upstream: victim-web, tool: web.fetch, fingerprint: "sha256:a8e50356b24cb05d055322b0579391e554aac3d1b2483a00fa715a11dc26f73b" }

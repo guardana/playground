@@ -148,6 +148,7 @@ func sinks() map[string]string {
 	return map[string]string{
 		"victim-crm": "other", "victim-db": "sql", "victim-fs": "filesystem",
 		"victim-shell": "shell", "victim-mail": "email", "victim-web": "http",
+		"victim-pay": "payment",
 	}
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Writes config/gateway/fingerprints.yaml: the fingerprint the pinned enforcer's
-# own `doctor` prints for every tool definition the six victims list, so the
+# own `doctor` prints for every tool definition the victims list, so the
 # classification in config/gateway/classification.yaml pins exactly those
 # definitions; and config/gateway/tools.sha256, the digest of each listing
 # snapshot those fingerprints were taken with, which internal/labcheck compares. The lab never computes a fingerprint itself; that would be a
@@ -46,7 +46,7 @@ chmod 755 "$work/reports" "$work/reports/classify"
 chmod 1777 "$work/reports/classify/journals"
 chmod 700 "$work/gateway/spool"
 
-victims=(victim-crm victim-db victim-fs victim-shell victim-mail victim-web)
+victims=(victim-crm victim-db victim-fs victim-shell victim-mail victim-web victim-pay)
 for victim in "${victims[@]}"; do
 	(cd "$root" && go test "./victims/${victim#victim-}/" -run TestTheListingIsTheOneClassified -count=1 -args -update >/dev/null) ||
 		refuse "could not snapshot $victim's listing"

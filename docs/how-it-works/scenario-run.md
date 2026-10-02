@@ -29,8 +29,8 @@ flowchart LR
   end
   enforcer["enforcer, on agent-net, tool-net, evidence-net and pdp-net"]
   subgraph toolnet["tool-net"]
-    subgraph victimset["the six victims"]
-      victims["victim-crm, victim-db, victim-fs, victim-shell"]
+    subgraph victimset["the victims"]
+      victims["victim-crm, victim-db, victim-fs, victim-shell, victim-pay"]
       web["victim-web"]
       mail["victim-mail"]
     end
@@ -67,7 +67,7 @@ Sources: `compose/compose.yaml`, `runner/env.go`, `runner/enforcer.go`, `victims
 | network | who sits on it | why |
 |---|---|---|
 | `agent-net` | `scripted-agent`, `enforcer` | the agent reaches the enforcer and nothing else |
-| `tool-net` | the six victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier` (profile `verifier`), `enforcer` | the attack pages and the canary tokens stay behind it |
+| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier` (profile `verifier`), `enforcer` | the attack pages and the canary tokens stay behind it |
 | `evidence-net` | `collector`, `enforcer` | a victim that could post to the collector could forge the trail |
 | `pdp-net` | `pdp-double`, `enforcer` | the double answers the enforcer alone |
 | `approver-net` | `approver` | a service with no network would land on compose's default one, which has a route out; the approver needs only the `approvals` volume it shares with the enforcer |
@@ -90,7 +90,7 @@ and the parts of `LAB_WORKSPACE` (the clone, or
 
 | service | from the run directory | from `LAB_WORKSPACE`, read-only |
 |---|---|---|
-| the six victims | `journals/` | |
+| the victims | `journals/` | |
 | `approver` | `journals/` | `config/approver/` |
 | `pdp-double` | `journals/`, `pki/`, where it writes its CA | `config/pdp/` |
 | `scripted-agent` | `agent/` | `trajectories/` |

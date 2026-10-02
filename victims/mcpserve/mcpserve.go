@@ -2,7 +2,7 @@
 //
 // Every victim reads the same four variables, writes the same journal, serves
 // MCP at the same path, answers the same health check and has to close its
-// journal on the way down. Written six times, those five things drift, and a
+// journal on the way down. Written once per victim, those five things drift, and a
 // victim whose journal differs from its neighbour's is a victim a scenario
 // cannot grade against the others.
 //

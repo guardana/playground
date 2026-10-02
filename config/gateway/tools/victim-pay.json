@@ -1,0 +1,267 @@
+[
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "description": "Charge a customer's payment method on file.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "description": "the amount in minor units, at least 1",
+          "type": "integer"
+        },
+        "currency": {
+          "description": "the ISO 4217 code, three upper-case letters",
+          "type": "string"
+        },
+        "customer_id": {
+          "description": "the customer whose payment method on file is charged",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "description": "optional; a repeat with the same key returns the first charge instead of charging again",
+          "type": "string"
+        }
+      },
+      "required": [
+        "customer_id",
+        "amount",
+        "currency"
+      ],
+      "type": "object"
+    },
+    "name": "pay.charge",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "charge": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "customer_id": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal_reference": {
+              "type": "string"
+            },
+            "payment_method": {
+              "type": "string"
+            },
+            "refunded": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "customer_id",
+            "amount",
+            "currency",
+            "payment_method",
+            "refunded"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "charge"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "description": "Send money from the platform balance to an account.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "description": "the amount in minor units, at least 1",
+          "type": "integer"
+        },
+        "currency": {
+          "description": "the ISO 4217 code, three upper-case letters",
+          "type": "string"
+        },
+        "destination": {
+          "description": "the account the money is sent to",
+          "type": "string"
+        }
+      },
+      "required": [
+        "destination",
+        "amount",
+        "currency"
+      ],
+      "type": "object"
+    },
+    "name": "pay.payout",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "payout": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "destination": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "destination",
+            "amount",
+            "currency"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "payout"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Read one charge, with its internal reference.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "charge_id": {
+          "description": "the charge to read",
+          "type": "string"
+        }
+      },
+      "required": [
+        "charge_id"
+      ],
+      "type": "object"
+    },
+    "name": "pay.read_charge",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "charge": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "type": "integer"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "customer_id": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "internal_reference": {
+              "type": "string"
+            },
+            "payment_method": {
+              "type": "string"
+            },
+            "refunded": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "customer_id",
+            "amount",
+            "currency",
+            "payment_method",
+            "refunded"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "charge"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false
+    },
+    "description": "Refund part or all of a charge to the payment method it was taken from.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "description": "the amount to refund in minor units, at most what remains on the charge",
+          "type": "integer"
+        },
+        "charge_id": {
+          "description": "the charge to refund",
+          "type": "string"
+        }
+      },
+      "required": [
+        "charge_id",
+        "amount"
+      ],
+      "type": "object"
+    },
+    "name": "pay.refund",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "type": "integer"
+        },
+        "charge_id": {
+          "type": "string"
+        },
+        "refunded_to": {
+          "type": "string"
+        },
+        "remaining": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "charge_id",
+        "amount",
+        "refunded_to",
+        "remaining"
+      ],
+      "type": "object"
+    }
+  }
+]

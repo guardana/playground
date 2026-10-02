@@ -16,7 +16,10 @@ type hardenedService struct {
 	PullPolicy  string      `json:"pull_policy"`
 	User        string      `json:"user"`
 	ReadOnly    bool        `json:"read_only"`
+	Privileged  bool        `json:"privileged"`
 	CapDrop     []string    `json:"cap_drop"`
+	CapAdd      []string    `json:"cap_add"`
+	Ports       []any       `json:"ports"`
 	SecurityOpt []string    `json:"security_opt"`
 	Tmpfs       []string    `json:"tmpfs"`
 	Networks    networkList `json:"networks"`

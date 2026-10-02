@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `victim-pay`, a payments ledger: `pay.charge`, `pay.refund`, `pay.payout`
+  and `pay.read_charge`, the first tools the lab classifies `TRANSACT`. Its
+  lie is in `pay.charge`'s schema: a repeat with the same `idempotency_key`
+  is said to return the first charge, and the server charges again. It
+  enforces no amount cap, no tenancy and no de-duplication, so a cap or a
+  flow is the enforcer's to decide. The three tools that move money record
+  what they moved as the journal line's `effect`. A payout is classified
+  `UNTRUSTED_EXTERNAL` whatever account it names.
 - `expect.effects.<victim>.committed` states what each served call changed,
   in order, member for member, graded from the journal's `effect` as
   `effects/<victim>/committed`. Exhaustive like the counts: an effect the

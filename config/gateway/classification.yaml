@@ -6,7 +6,8 @@
 #
 # trust_zone is where a call sends data; returns is what its result holds, which
 # the enforcer reads into the run's flow state. Both are per tool, never per
-# path: fs.read is CONFIDENTIAL whatever file it reads. A TRUSTED_INTERNAL
+# path: fs.read is CONFIDENTIAL whatever file it reads, and pay.payout is
+# UNTRUSTED_EXTERNAL whatever account it names, the customer's own included. A TRUSTED_INTERNAL
 # result holds because every victim starts from its fixture with the run and
 # nothing outside the run writes to it. shell.exec declares neither: its cat
 # reads any path in its container, the run's journals included.
@@ -23,4 +24,8 @@
 - { upstream: victim-shell, tool: shell.exec, effect: EXECUTE, resource_type: command }
 - { upstream: victim-mail, tool: mail.send, effect: COMMUNICATE, resource_type: recipient, resource_from: /to, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
 - { upstream: victim-mail, tool: mail.send_bulk, effect: COMMUNICATE, resource_type: recipient, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-pay, tool: pay.charge, effect: TRANSACT, resource_type: customer, resource_from: /customer_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-pay, tool: pay.refund, effect: TRANSACT, resource_type: charge, resource_from: /charge_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
+- { upstream: victim-pay, tool: pay.payout, effect: TRANSACT, resource_type: account, resource_from: /destination, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: INTERNAL } }
+- { upstream: victim-pay, tool: pay.read_charge, effect: READ, resource_type: charge, resource_from: /charge_id, trust_zone: TRUSTED_INTERNAL, returns: { trust: TRUSTED_INTERNAL, sensitivity: CONFIDENTIAL } }
 - { upstream: victim-web, tool: web.fetch, effect: READ, resource_type: url, resource_from: /url, trust_zone: UNTRUSTED_EXTERNAL, returns: { trust: UNTRUSTED_EXTERNAL, sensitivity: PUBLIC } }
