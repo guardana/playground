@@ -39,7 +39,9 @@ func readRegular(path string, limit int, afterCheck func()) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !os.SameFile(named, opened) {
+	// SameFile compares device and inode, and a removed file's inode can go to
+	// the next file created, so the opened file's type is checked too.
+	if !os.SameFile(named, opened) || !opened.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s changed while it was opened", path)
 	}
 	body, err := io.ReadAll(io.LimitReader(file, int64(limit)+1))

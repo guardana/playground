@@ -401,8 +401,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   at or under its `reports/`, where `attacks/`, which attacker-web serves, was
   accepted; the placement checks compare directories, so another spelling of
   the clone does not pass; an existing reports directory keeps its mode.
-- Journals and the collector's export are read as regular files of a bounded
-  size, never through a link, and opening them cannot block on a FIFO.
+- Journals, traces, the collector's export and the verifier's report are read
+  as regular files of a bounded size, never through a link; opening one cannot
+  block on a FIFO, and a FIFO swapped in after the check is refused, also where
+  the file system gives it the removed file's inode number.
 - `scripts/lab-key.sh` compares every directory above the key's place, with
   links resolved, with the clone by device and inode, also when the script is
   reached through a link; it refuses a `.` or `..` component and a path
