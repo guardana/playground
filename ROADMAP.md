@@ -42,10 +42,10 @@ builds the enforcer from a local, possibly dirty tree and grades scenarios again
 it, with a report that names that tree and cannot be mistaken for a
 release-pin result (experimental).
 
-The lab's CI workflows run `make quality`, then the catalogue and the examples
-against the pins (experimental). They have not run on GitHub; running them
-there on every change is planned, and [status](docs/status.md) says what has
-run where. The lab is published at `github.com/guardana/playground`
+The lab's CI workflows run `make quality`, and the catalogue and the examples
+against the pins, on GitHub for every push to `main` and every pull request
+(experimental); [status](docs/status.md) says what their first run showed and
+what has run where. The lab is published at `github.com/guardana/playground`
 (implemented). Translate the enforcer's own scenario format only after a round
 trip preserves the calls and expected evidence (planned); do not maintain two
 conflicting truths for one case.
