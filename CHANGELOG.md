@@ -34,6 +34,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pending by the next push's, and a manual run of the scenario job no longer
   cancels a push's; a newer push to a pull request still supersedes its run.
   `quality` stops after 30 minutes.
+- A `REPORTS` path holding a space reaches the runner whole from every make
+  target, and the runner refuses an argument that is not a flag, where the
+  tail of such a path was dropped. `.gitattributes` keeps every checkout at LF,
+  so a script checked out on Windows still runs.
 
 ## 0.1.0 - 2026-10-03
 

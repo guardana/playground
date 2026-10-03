@@ -43,7 +43,7 @@ done < <(files)
 while IFS= read -r f; do
 	case "$f" in
 	.github/.* | .github/*/.*) note "local tooling must not be tracked: $f" ;;
-	.github/* | .gitignore | .editorconfig | .golangci.yml | .dockerignore) ;;
+	.github/* | .gitignore | .gitattributes | .editorconfig | .golangci.yml | .dockerignore) ;;
 	.* | */.*) note "local tooling must not be tracked: $f" ;;
 	esac
 done < <(files)
