@@ -128,7 +128,7 @@ dev-scenarios:
 	ref=$$(scripts/build-enforcer-dev.sh "$(CONTROL)" | sed -n 's/^enforcer-dev: \([^ ]*\) .*/\1/p'); \
 	test -n "$$ref" || { echo "dev-scenarios: the development image was not built" >&2; exit 1; }; \
 	echo "dev-scenarios: $$ref"; \
-	$(GO) run ./runner $(if $(ID),-scenario $(ID),-all) -enforcer-dev "$$ref" -reports $(REPORTS)
+	$(GO) run ./runner $(if $(ID),-scenario $(ID),-all) -enforcer-dev "$$ref" -reports "$(REPORTS)"
 
 # The lab's policy signing key, made once per machine outside the clone by the
 # pinned enforcer's own keygen. Scenarios the enforcer decides sign with it.
@@ -159,21 +159,21 @@ down:
 # directory outside the clone, laid out like the lab, instead of from the clone.
 scenario:
 	@test -n "$(ID)" || { echo "usage: make scenario ID=<scenario id>" >&2; exit 2; }
-	$(GO) run ./runner -scenario $(ID) -reports $(REPORTS)
+	$(GO) run ./runner -scenario $(ID) -reports "$(REPORTS)"
 
 scenarios:
-	$(GO) run ./runner -all -reports $(REPORTS)
+	$(GO) run ./runner -all -reports "$(REPORTS)"
 
 # A smaller representative loop over both pinned systems. It still grades each
 # path from the same records as a full catalogue run.
 smoke:
-	REPORTS=$(REPORTS) scripts/smoke.sh
+	REPORTS="$(REPORTS)" scripts/smoke.sh
 
 # What CI runs after the gate: images, a throwaway lab key, the catalogue judged
 # against scenarios/red-by-design.txt, and every example from a copy outside
 # the clone. Needs ENFORCER_SOURCE; scripts/fetch-enforcer.sh <dir> makes one.
 ci-scenarios:
-	REPORTS=$(REPORTS) scripts/ci-scenarios.sh
+	REPORTS="$(REPORTS)" scripts/ci-scenarios.sh
 
 quality-quick: check-go-version fmt-check vet test check-attribution check-hygiene
 

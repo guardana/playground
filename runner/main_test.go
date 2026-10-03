@@ -27,6 +27,13 @@ func TestParseDefaultsToTheReportsDirectoryTheMakefileUses(t *testing.T) {
 	}
 }
 
+func TestParseRefusesAnArgumentThatIsNoFlag(t *testing.T) {
+	var out strings.Builder
+	if got, err := parse([]string{"-scenario", "flow-01", "-reports", "/tmp/lab", "runs"}, &out); err == nil {
+		t.Fatalf("parsed %+v; a path split at its space must be refused", got)
+	}
+}
+
 func TestParseTakesATimeoutForASlowerMachine(t *testing.T) {
 	var out strings.Builder
 	got, err := parse([]string{"-scenario", "flow-01", "-timeout", "45m"}, &out)

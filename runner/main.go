@@ -152,6 +152,11 @@ func parse(args []string, out io.Writer) (settings, error) {
 	if err := set.Parse(args); err != nil {
 		return settings{}, err
 	}
+	// A reports path split at a space leaves its tail here, and the run would
+	// write somewhere the caller did not name.
+	if set.NArg() > 0 {
+		return settings{}, fmt.Errorf("unexpected argument %q: the runner takes flags only", set.Arg(0))
+	}
 	var empty error
 	set.Visit(func(given *flag.Flag) {
 		if given.Name == "enforcer-dev" && chosen.enforcerDev == "" {
