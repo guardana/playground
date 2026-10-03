@@ -34,8 +34,11 @@ func fifo(t *testing.T, path string) {
 }
 
 // A container can replace the file between the runner's check and its open.
-// What it swaps in is neither waited on nor followed.
+// What it swaps in is neither waited on nor followed. The swap repeats because
+// only a reused inode number gets past the identity check, and ext4 reuses one
+// often but not every time; APFS and tmpfs never do.
 func TestWhatIsSwappedInAfterTheCheckIsRefusedWithoutBlocking(t *testing.T) {
+	const swaps = 50
 	for name, plant := range map[string]func(t *testing.T, dir, path string){
 		"a FIFO": func(t *testing.T, _, path string) { fifo(t, path) },
 		"a link to a FIFO": func(t *testing.T, dir, path string) {
@@ -47,19 +50,21 @@ func TestWhatIsSwappedInAfterTheCheckIsRefusedWithoutBlocking(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			dir := t.TempDir()
-			path := filepath.Join(dir, "journal.jsonl")
-			if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			swap := func() {
-				if err := os.Remove(path); err != nil {
-					t.Error(err)
+			for range swaps {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "journal.jsonl")
+				if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+					t.Fatal(err)
 				}
-				plant(t, dir, path)
-			}
-			if err := readWithin(t, path, swap); err == nil {
-				t.Errorf("%s swapped in after the check was read", name)
+				swap := func() {
+					if err := os.Remove(path); err != nil {
+						t.Error(err)
+					}
+					plant(t, dir, path)
+				}
+				if err := readWithin(t, path, swap); err == nil {
+					t.Fatalf("%s swapped in after the check was read", name)
+				}
 			}
 		})
 	}
