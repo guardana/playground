@@ -50,6 +50,7 @@ x-hardened: &hardened
 # carries, because the runtime base has no shell to run one in.
 x-victim: &victim
   <<: *hardened
+  user: "65532:65532"
   networks: [tool-net]
   # `verifier` brings the victims up without the gateway, which lists every
   # victim's tools at startup and would spend the listing a drift is read on.
@@ -256,6 +257,7 @@ services:
   scripted-agent:
     image: ${LAB_IMAGE_PREFIX}-scripted-agent
     <<: *hardened
+    user: "65532:65532"
     build:
       context: ..
       dockerfile: compose/Dockerfile.go-service
@@ -333,6 +335,8 @@ services:
   collector:
     image: ${OTEL_COLLECTOR_IMAGE}
     <<: *hardened
+    # The image's own user, pinned here rather than left to the image.
+    user: "10001:10001"
     command: ["--config=/etc/otelcol/config.yaml"]
     networks: [evidence-net]
     profiles: [enforcer]
@@ -391,6 +395,7 @@ services:
     image: ${LAB_ENFORCER_REF:-${ENFORCER_IMAGE}:${ENFORCER_COMMIT}}
     pull_policy: never
     <<: *hardened
+    user: "65532:65532"
     command: ["run", "--config", "/gateway/gateway.yaml"]
     # The agent listener binds this address alone (runner/gateway), so no
     # service on the enforcer's other networks can open a session at it.
@@ -452,6 +457,7 @@ services:
   pdp-double:
     image: ${LAB_IMAGE_PREFIX}-pdp-double
     <<: *hardened
+    user: "65532:65532"
     build:
       context: ..
       dockerfile: compose/Dockerfile.go-service
@@ -497,6 +503,7 @@ services:
   approver:
     image: ${LAB_IMAGE_PREFIX}-approver:${LAB_ENFORCER_TAG:-${ENFORCER_COMMIT}}
     <<: *hardened
+    user: "65532:65532"
     build:
       context: ..
       dockerfile: compose/Dockerfile.approver

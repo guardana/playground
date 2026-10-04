@@ -7,6 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"github.com/guardana/playground/runner/report"
 )
 
 // signer signs a policy document into a bundle with the lab key. The key is
@@ -17,24 +20,35 @@ const bundleName = "policy.bundle"
 
 // signWithEnforcer signs with the pinned enforcer's own `policy sign`, in a
 // container with no network, no capability and no image but the local pin, as
-// the invoking user so the key's owner reads it.
+// a user whose files the invoking user owns, so the key's owner reads it.
 func signWithEnforcer(root string, run lookup) signer {
+	var once sync.Once
+	var sign signer
+	var err error
 	return func(ctx context.Context, keysDir, policy, outDir string) error {
-		pins, err := readPins(filepath.Join(root, versionFile))
+		once.Do(func() {
+			var pins []report.Pin
+			if pins, err = readPins(filepath.Join(root, versionFile)); err == nil {
+				sign = signWithImage(pinValue(pins, "ENFORCER_IMAGE")+":"+pinValue(pins, "ENFORCER_COMMIT"), run)
+			}
+		})
 		if err != nil {
 			return err
 		}
-		image := pinValue(pins, "ENFORCER_IMAGE") + ":" + pinValue(pins, "ENFORCER_COMMIT")
-		return signWithImage(image, run)(ctx, keysDir, policy, outDir)
+		return sign(ctx, keysDir, policy, outDir)
 	}
 }
 
 // signWithImage signs with the `policy sign` of the enforcer image named.
 func signWithImage(image string, run lookup) signer {
+	user := onceUser(image, run)
 	return func(ctx context.Context, keysDir, policy, outDir string) error {
-		_, err := run(ctx, "docker", "run", "--rm", "--pull", "never", "--network", "none", "--read-only",
-			"--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-			"--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
+		as, err := user(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = run(ctx, "docker", "run", "--rm", "--pull", "never", "--network", "none", "--read-only",
+			"--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", as,
 			"-v", keysDir+":/key:ro", "-v", filepath.Dir(policy)+":/policy:ro", "-v", outDir+":/out",
 			"--entrypoint", "/enforcer/control", image,
 			"policy", "sign", "--key", "/key/signing.key", "--out", "/out/"+bundleName, "/policy/"+filepath.Base(policy))

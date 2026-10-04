@@ -125,7 +125,8 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 //
 // The runner writes the run directory itself; compose bind-mounts only its
 // subdirectories, and the services write there as nonroot, uid 65532, which on
-// Linux is the uid on the mount. So the run directory and journals/ are the
+// Linux is the uid on the mount, or a subordinate uid of the runner's user under
+// rootless Docker. So the run directory and journals/ are the
 // runner's at 0755, and each directory a service writes into is world-writable
 // and sticky: the service can add its record, and another local user can neither
 // remove nor replace one. The services share one uid, so the bit does not keep
