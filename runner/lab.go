@@ -126,27 +126,26 @@ func (l lab) runScenario(
 		env["LAB_APPROVER_SCRIPT"] = spec.Gateway.ApproverScript
 	}
 	compose := l.compose.WithEnv(env)
+	if !l.keep {
+		defer l.takeDown(ctx, compose, spec.Profile, runDir)
+	}
+	inProfile, err := compose.Services(ctx, spec.Profile)
+	switch {
+	case err != nil && ctx.Err() == nil:
+		// A compose that cannot read the topology, an older one included, would
+		// leave a boot with nothing observed; the report carries compose's words.
+		return composeRefused(spec.ID, runID, err, l.clock()), nil
+	case err != nil:
+		// A run already out of time is not compose's failure: boot records that
+		// nothing came up.
+		l.note("listing the profile's services: %v", err)
+	}
 	// Taken before anything boots. assertion.Run times the checks, which are
 	// the fast part; a report that said a run took no time because the reading
 	// of its records took no time would be telling a reader the wrong thing
 	// about where the minutes went.
 	started := l.clock()
-	boot := l.boot(ctx, compose, spec, runDir)
-	if !l.keep {
-		defer func() {
-			// Not this run's context: a scenario that ran out of time is the
-			// one whose containers are still up, and a cancelled context would
-			// leave them there.
-			down, stop := context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
-			defer stop()
-			if err := compose.Down(down, spec.Profile); err != nil {
-				l.note("taking the profile down: %v", err)
-			}
-			if err := dropCollectorKey(runDir); err != nil {
-				l.note("removing the collector's key: %v", err)
-			}
-		}()
-	}
+	boot := l.boot(ctx, compose, spec, inProfile, runDir)
 
 	var graded assertion.Report
 	var rows []check.DecisionRow
@@ -166,13 +165,8 @@ func (l lab) runScenario(
 // plane loads its policy, whose freshness a build under load would spend; then
 // it brings up the long running services and records what came up. The agent
 // and the verifier are one-shots the runner drives after the topology is proved.
-func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, runDir string) assertion.Boot {
+func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, inProfile []string, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
-	inProfile, err := compose.Services(ctx, spec.Profile)
-	if err != nil {
-		l.note("listing the profile's services: %v", err)
-		return boot
-	}
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
 		return name == agentService || name == verifierService || name == traceService
 	})
@@ -200,6 +194,33 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, r
 	}
 	boot.Services = status
 	return l.writeBoot(runDir, boot)
+}
+
+// takeDown brings the profile down and removes the collector's key. It uses
+// not the run's context: a scenario that ran out of time is the one whose
+// containers are still up, and a cancelled context would leave them there.
+func (l lab) takeDown(ctx context.Context, compose Compose, profile []string, runDir string) {
+	down, stop := context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
+	defer stop()
+	if err := compose.Down(down, profile); err != nil {
+		l.note("taking the profile down: %v", err)
+	}
+	if err := dropCollectorKey(runDir); err != nil {
+		l.note("removing the collector's key: %v", err)
+	}
+}
+
+// composeRefused is the report of a run whose compose file did not load for its
+// profile, so nothing was built or brought up.
+func composeRefused(id, runID string, cause error, at time.Time) assertion.Report {
+	return assertion.Report{
+		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
+		Results: []assertion.Result{{
+			Check: "compose/loaded", Outcome: assertion.Fail,
+			Want: "docker compose reads the topology for the scenario's profile",
+			Got:  "the run was refused before anything was built", Detail: cause.Error(),
+		}},
+	}
 }
 
 func (l lab) writeBoot(runDir string, boot assertion.Boot) assertion.Boot {

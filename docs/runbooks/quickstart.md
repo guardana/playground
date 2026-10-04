@@ -10,7 +10,7 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
 
 ## What you need
 
-- Docker with Compose v2 and buildx. On Linux, run as an ordinary user in the
+- Docker with Compose 2.20 or later and buildx. On Linux, run as an ordinary user in the
   `docker` group. Where the catalogue has run at these pins is in
   [status](../status.md).
 - The Go version `go.mod` names, git, make, bash and curl. `make quality`
@@ -143,6 +143,8 @@ fails the run as surely as a wrong verdict. Common causes:
 
 - `plane/prepared` failed: no lab key, or the policy did not sign; the detail
   says which.
+- `compose/loaded` failed: compose could not read `compose/compose.yaml`. The
+  detail is compose's own message; a Compose older than 2.20 is the usual cause.
 - `boot/*` failed: a service did not start. `boot.json` carries compose's own
   reason, a subnet another run is using included.
 - `plane/image` failed: the enforcer image was not built by `make images` from

@@ -23,7 +23,8 @@ its observed effects. The enforcer and the verifier remain optional. The
 
 ## One green scenario
 
-You need Docker with Compose v2 and buildx, Go, git and make. The enforcer is
+You need Docker with Compose and buildx, Go, git and make, at the versions
+[the quickstart](docs/runbooks/quickstart.md#what-you-need) names. The enforcer is
 pinned to a public release, which `scripts/fetch-enforcer.sh` fetches
 anonymously:
 
