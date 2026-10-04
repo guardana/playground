@@ -66,12 +66,28 @@ func TestGuardsFailWhenTheListIsEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 	copyScripts(t, dir)
-	for _, guard := range []string{"check-attribution.sh", "check-hygiene.sh", "check-file-sizes.sh"} {
+	for _, guard := range []string{"check-attribution.sh", "check-hygiene.sh", "check-file-sizes.sh", "check-actions-pinned.sh"} {
 		command := exec.Command("./scripts/" + guard) // #nosec G204 -- script names from the literal list.
 		command.Dir = dir
 		if err := command.Run(); err == nil {
 			t.Errorf("%s passed on an empty file list", guard)
 		}
+	}
+}
+
+// A tree with files and no workflow gives the pin check nothing to read, and a
+// check that read nothing has checked nothing.
+func TestThePinCheckFailsWhenItFindsNoWorkflow(t *testing.T) {
+	dir := t.TempDir()
+	copyScripts(t, dir)
+	command := exec.Command("./scripts/check-actions-pinned.sh")
+	command.Dir = dir
+	out, err := command.CombinedOutput()
+	if err == nil {
+		t.Fatalf("passed a tree without a workflow: %s", out)
+	}
+	if !strings.Contains(string(out), "nothing was checked") {
+		t.Fatalf("failed for another reason: %s", out)
 	}
 }
 

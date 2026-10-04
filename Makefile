@@ -52,8 +52,8 @@ security:
 	$(GO) tool govulncheck ./...
 	gitleaks dir --no-banner --redact .
 	osv-scanner scan source -r .
-	actionlint .github/workflows/*.yml
-	zizmor --min-severity medium .github/workflows
+	set -eu -o pipefail; scripts/repo-files.sh | grep -a -E '^\.github/workflows/[^/]+\.ya?ml$$' | tr '\n' '\0' | xargs -0 actionlint
+	zizmor --min-severity medium .github
 
 check-sizes:
 	scripts/check-file-sizes.sh
