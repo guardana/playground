@@ -8,13 +8,17 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request supersedes its run. Any other run is grouped
+# by its commit, so a run on main is neither cancelled nor held pending behind
+# the next push, and a dispatch runs apart from both.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pin: v7.0.1
         with:

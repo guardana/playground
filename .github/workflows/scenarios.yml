@@ -9,9 +9,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request supersedes its run. Any other run is grouped
+# by its commit, so a run on main is neither cancelled nor held pending behind
+# the next push, and a dispatch runs apart from both.
 concurrency:
-  group: scenarios-${{ github.ref }}
-  cancel-in-progress: true
+  group: scenarios-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Needs Docker; GitHub's hosted Ubuntu runner has it. A run that cannot fetch

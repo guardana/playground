@@ -16,6 +16,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   action kept under `.github/actions/`, and fails when it finds none: a
   `.yaml` workflow on a tag passed. `actionlint` reads the same workflows, and
   `zizmor` all of `.github`, `dependabot.yml` included.
+- Each head pushed to `main` keeps its own run, neither cancelled nor held
+  pending by the next push's, and a manual run of the scenario job no longer
+  cancels a push's; a newer push to a pull request still supersedes its run.
+  `quality` stops after 30 minutes.
 
 ## 0.1.0 - 2026-10-03
 
