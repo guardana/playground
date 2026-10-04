@@ -43,24 +43,28 @@ func TestGuardsRejectWhatTheyClaimTo(t *testing.T) {
 		{"a macOS per-user temporary directory by its real path", "check-hygiene.sh", "probe.md", "At /priv" + "ate/var/folders/7x/T.\n"},
 		{"the enforcer's sibling checkout", "check-hygiene.sh", "probe.md", "Build from ../con" + "trol at the pin.\n"},
 		{"the verifier's sibling checkout", "check-hygiene.sh", "probe.md", "Read ../guar" + "dana/docs first.\n"},
+		{"an action on a tag in a .yaml workflow", "check-actions-pinned.sh", ".github/workflows/probe.yaml", unpinnedStep},
+		{"an action on a tag inside a local action", "check-actions-pinned.sh", ".github/actions/probe/action.yml", "runs:\n  using: composite\n  steps:\n" + unpinnedStep[len("jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n"):]},
+		{"an action on a tag in a flow mapping", "check-actions-pinned.sh", ".github/workflows/probe.yaml", "jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - { uses: actions/check" + "out@v4 }\n"},
+		{"an action on a tag under a quoted key", "check-actions-pinned.sh", ".github/workflows/probe.yaml", "jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - \"uses\": actions/check" + "out@v4\n"},
+		{"an action on a tag under a complex key", "check-actions-pinned.sh", ".github/workflows/probe.yaml", "jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - ? uses\n        : actions/check" + "out@v4\n"},
+		{"a local action outside .github/actions", "check-actions-pinned.sh", ".github/workflows/probe.yaml", "jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: ./tools/probe\n"},
 	}
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			planted := filepath.Join(repoRoot, test.file)
-			// A case may name a directory this repository no longer has. Create
-			// it only if it is missing, and then take it away again.
-			if directory := filepath.Dir(planted); directory != repoRoot {
-				if _, err := os.Stat(directory); os.IsNotExist(err) {
-					if err := os.MkdirAll(directory, 0o750); err != nil {
-						t.Fatal(err)
-					}
-					defer func() {
-						if err := os.Remove(directory); err != nil {
-							t.Errorf("planted directory left behind: %v", err)
-						}
-					}()
+			// A case may name directories this repository does not have. Create
+			// them only if they are missing, and then take them away again.
+			if created := firstMissing(filepath.Dir(planted)); created != "" {
+				if err := os.MkdirAll(filepath.Dir(planted), 0o750); err != nil {
+					t.Fatal(err)
 				}
+				defer func() {
+					if err := os.RemoveAll(created); err != nil {
+						t.Errorf("planted directory left behind: %v", err)
+					}
+				}()
 			}
 			if _, err := os.Stat(planted); err == nil {
 				t.Fatalf("%s already exists; refusing to overwrite", test.file)
@@ -120,6 +124,24 @@ func TestGuardsPassOnTheRepositoryAsItStands(t *testing.T) {
 		name := filepath.Base(script)
 		if err := runGuard(name); err != nil {
 			t.Errorf("%s failed on a clean tree: %v", name, err)
+		}
+	}
+}
+
+// unpinnedStep is a workflow whose one step names an action by a tag.
+const unpinnedStep = "jobs:\n  probe:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/check" + "out@v4\n"
+
+// firstMissing returns the outermost directory on the way to path that does
+// not exist yet, or "" when path exists.
+func firstMissing(path string) string {
+	missing := ""
+	for at := path; ; at = filepath.Dir(at) {
+		if _, err := os.Stat(at); err == nil {
+			return missing
+		}
+		missing = at
+		if filepath.Dir(at) == at {
+			return missing
 		}
 	}
 }

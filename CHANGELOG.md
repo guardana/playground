@@ -5,6 +5,18 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+
+- Dependabot proposes a new version of a module or an action seven days after
+  its release at the earliest.
+
+### Fixed
+
+- `check-actions-pinned.sh` reads every workflow, `.yaml` included, and every
+  action kept under `.github/actions/`, and fails when it finds none: a
+  `.yaml` workflow on a tag passed. `actionlint` reads the same workflows, and
+  `zizmor` all of `.github`, `dependabot.yml` included.
+
 ## 0.1.0 - 2026-10-03
 
 ### Added
