@@ -1,7 +1,11 @@
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -eu -o pipefail -c
-# scripts/bootstrap.sh installs into ./bin where Homebrew is absent.
-export PATH := $(CURDIR)/bin:$(PATH)
+# scripts/bootstrap.sh installs the pinned tools into BIN, ./bin unless named,
+# and the gate runs them from there by path, after check-tools has matched each
+# with the bytes bootstrap verified. actionlint's shellcheck and pyflakes, which
+# it would take from PATH, are off, and gofmt is the one of the Go checked.
+BIN ?= $(CURDIR)/bin
+export BIN
 
 GO ?= go
 # The Go files scripts/repo-files.sh lists. A list that failed, or one without a
@@ -13,7 +17,7 @@ GO_FILES = set -eu -o pipefail; files=$$(scripts/repo-files.sh); \
 
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
-	check-sizes check-attribution check-hygiene check-actions-pinned \
+	check-sizes check-attribution check-hygiene check-actions-pinned check-go-version check-tools \
 	enforcer-image verifier-image images enforcer-dev-image dev-scenarios lab-key classify-victims up down \
 	scenario scenarios smoke ci-scenarios \
 	quality-quick quality
@@ -32,7 +36,7 @@ fmt:
 
 fmt-check:
 	@$(GO_FILES); \
-	unformatted=$$(printf '%s\n' "$$gofiles" | tr '\n' '\0' | xargs -0 gofmt -l --); \
+	unformatted=$$(printf '%s\n' "$$gofiles" | tr '\n' '\0' | xargs -0 "$$($(GO) env GOROOT)/bin/gofmt" -l --); \
 	if [ -n "$$unformatted" ]; then echo "unformatted:"; echo "$$unformatted"; exit 1; fi; \
 	echo "format: clean"
 
@@ -40,7 +44,7 @@ vet:
 	$(GO) vet ./...
 
 lint:
-	golangci-lint run ./...
+	"$(BIN)/golangci-lint" run ./...
 
 test:
 	$(GO) test -count=1 -shuffle=on ./...
@@ -50,10 +54,10 @@ test-race:
 
 security:
 	$(GO) tool govulncheck ./...
-	gitleaks dir --no-banner --redact .
-	osv-scanner scan source -r .
-	set -eu -o pipefail; scripts/repo-files.sh | grep -a -E '^\.github/workflows/[^/]+\.ya?ml$$' | tr '\n' '\0' | xargs -0 actionlint
-	zizmor --min-severity medium .github
+	"$(BIN)/gitleaks" dir --no-banner --redact .
+	"$(BIN)/osv-scanner" scan source -r .
+	set -eu -o pipefail; scripts/repo-files.sh | grep -a -E '^\.github/workflows/[^/]+\.ya?ml$$' | tr '\n' '\0' | xargs -0 "$(BIN)/actionlint" -shellcheck= -pyflakes=
+	"$(BIN)/zizmor" --min-severity medium .github
 
 check-sizes:
 	scripts/check-file-sizes.sh
@@ -66,6 +70,12 @@ check-hygiene:
 
 check-actions-pinned:
 	scripts/check-actions-pinned.sh
+
+check-go-version:
+	scripts/check-go-version.sh
+
+check-tools:
+	scripts/bootstrap.sh --verify
 
 # `go test ./...` never compiles the tagged whole-tree test or the two
 # `//go:build ignore` scripts, so a rename they miss would stay green.
@@ -165,8 +175,8 @@ smoke:
 ci-scenarios:
 	REPORTS=$(REPORTS) scripts/ci-scenarios.sh
 
-quality-quick: fmt-check vet test check-attribution check-hygiene
+quality-quick: check-go-version fmt-check vet test check-attribution check-hygiene
 
-quality: fmt-check vet lint test test-race security docs-check docs-frontmatter check-sizes \
+quality: check-go-version check-tools fmt-check vet lint test test-race security docs-check docs-frontmatter check-sizes \
 	check-attribution check-hygiene check-actions-pinned
 	@echo "quality: green"

@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `make bootstrap` installs every gate tool into `./bin` from its pinned,
+  hashed release asset on Linux (glibc) and macOS, amd64 and arm64. It
+  downloads and verifies each asset on every run, keeps a binary already in
+  `./bin` only when its bytes are the verified one's, and records their
+  sha256. `make quality` runs the tools from `./bin` by path, after
+  `check-tools` has matched each with that record; Homebrew, or any tool
+  elsewhere on `PATH`, is no longer used, and actionlint no longer lints
+  workflow shell with whatever shellcheck a machine has.
+- `make quality` and `make quality-quick` refuse a Go other than the version
+  `go.mod` names (`scripts/check-go-version.sh`), and say to set `GOTOOLCHAIN`.
 - Dependabot proposes a new version of a module or an action seven days after
   its release at the earliest.
 
