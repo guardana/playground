@@ -33,6 +33,9 @@ key_id=$(sed -n 's/^key_id: //p' "$keys/public.txt")
 public_key=$(sed -n 's/^public_key: //p' "$keys/public.txt")
 image="$(pin ENFORCER_IMAGE):$(pin ENFORCER_COMMIT)"
 docker image inspect "$image" >/dev/null 2>&1 || refuse "no image $image; run make enforcer-image first"
+# shellcheck source=SCRIPTDIR/container-user.sh
+source "$root/scripts/container-user.sh"
+user=$(container_user "$image") || exit 1
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/classify.XXXXXX")
 compose=(docker compose -p "$project" --env-file "$root/versions.env" -f "$root/compose/compose.yaml" --profile core)
@@ -59,7 +62,7 @@ done
 LAB_RUN_HOST_DIR="$work/reports/classify" LAB_RUN_ID=classify "${compose[@]}" up -d --build --wait "${victims[@]}" >/dev/null
 
 docker run --rm --pull never --network none --read-only --cap-drop ALL \
-	--security-opt no-new-privileges --user "$(id -u):$(id -g)" \
+	--security-opt no-new-privileges --user "$user" \
 	-v "$keys:/key:ro" -v "$root/config/policies:/policies:ro" -v "$work/gateway:/out" \
 	--entrypoint /enforcer/control "$image" \
 	policy sign --key /key/signing.key --out /out/policy.bundle /policies/classify.json >/dev/null
@@ -78,7 +81,7 @@ docker run --rm --pull never --network none --read-only --cap-drop ALL \
 } >"$work/gateway/gateway.yaml"
 
 out=$(docker run --rm --pull never --network "${project}_tool-net" --read-only --cap-drop ALL \
-	--security-opt no-new-privileges --user "$(id -u):$(id -g)" \
+	--security-opt no-new-privileges --user "$user" \
 	-v "$work/gateway:/gateway" "$image" doctor --config /gateway/gateway.yaml) ||
 	refuse "doctor did not pass: $(printf '%s\n' "$out" | tail -3)"
 

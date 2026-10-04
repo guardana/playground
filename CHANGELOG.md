@@ -34,6 +34,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Under rootless Docker, `make lab-key`, the runner's policy signing and
+  `make classify-victims` ran the enforcer's container as the caller's uid,
+  which the daemon maps to a subordinate uid that cannot write the caller's
+  directories, so every enforcer scenario failed on `plane/prepared`. They now
+  run it as the user whose files the caller owns, found by a probe: the
+  caller's own ids, or root when `docker info` says the daemon is rootless,
+  never otherwise; when neither holds, the refusal carries what each probe
+  saw. Every service that mounts part of a run pins a numeric uid and gid
+  other than 0 in compose.
 - `check-actions-pinned.sh` reads every workflow, `.yaml` included, and every
   action kept under `.github/actions/`, and fails when it finds none: a
   `.yaml` workflow on a tag passed. `actionlint` reads the same workflows, and

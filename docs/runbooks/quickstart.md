@@ -11,7 +11,7 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
 ## What you need
 
 - Docker with Compose 2.20 or later and buildx. On Linux, run as an ordinary user in the
-  `docker` group. Where the catalogue has run at these pins is in
+  `docker` group, or with rootless Docker. Where the catalogue has run at these pins is in
   [status](../status.md).
 - The Go version `go.mod` names, git, make, bash and curl. `make quality`
   refuses another Go, a newer one included; `GOTOOLCHAIN=go<that version>`

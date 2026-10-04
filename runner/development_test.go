@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,6 +80,9 @@ func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]
 	answer := inspectDevelopment(devLabels("development", devVersion))
 	var signed []string
 	docker := func(ctx context.Context, name string, args ...string) (string, error) {
+		if slices.Contains(args, "keygen") {
+			return "", writeProbeKey(args)
+		}
 		if len(args) > 0 && args[0] == "run" {
 			signed = append(signed, strings.Join(args, " "))
 			return "", writeBundle(args)

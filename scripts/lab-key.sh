@@ -69,6 +69,9 @@ fi
 
 image="$(pin ENFORCER_IMAGE):$(pin ENFORCER_COMMIT)"
 docker image inspect "$image" >/dev/null 2>&1 || refuse "no image $image; run make enforcer-image first"
+# shellcheck source=SCRIPTDIR/container-user.sh
+source "$root/scripts/container-user.sh"
+user=$(container_user "$image") || exit 1
 
 parent=$(dirname "$dir")
 if [ ! -d "$parent" ]; then
@@ -80,7 +83,7 @@ fi
 stage=$(mktemp -d "$parent/.lab-key.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 lines=$(docker run --rm --pull never --network none --read-only --cap-drop ALL \
-	--security-opt no-new-privileges --user "$(id -u):$(id -g)" \
+	--security-opt no-new-privileges --user "$user" \
 	-v "$stage:/keys" --entrypoint /enforcer/control "$image" \
 	policy keygen --out /keys/key)
 printf '%s\n' "$lines" | grep -Eq '^key_id: ' || refuse "keygen printed no key_id"
