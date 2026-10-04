@@ -211,6 +211,7 @@ could not read its source is `indeterminate`, which fails the run.
 | check | what it establishes | source |
 |---|---|---|
 | `plane/prepared` | a signed bundle and an assembled configuration, before anything boots | the refusal, in the report |
+| `compose/loaded` | compose reads the topology for the scenario's profile, before anything is built | compose's error, in the report |
 | `boot/<service>` | every long-running service of the profile is running | `boot.json` |
 | `network-isolation/*` | the topology above, probed on this run | `probes.log` |
 | `trajectory/replayed` | the agent sent every step | its exit status; output in `replay.log` |

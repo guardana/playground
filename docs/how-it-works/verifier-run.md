@@ -88,6 +88,7 @@ effects checks grade what the enforcer and the victims recorded.
 | check | passes when | source |
 |---|---|---|
 | `verifier/image` | never: it is the refusal of an image not built from the pin | the report |
+| `compose/loaded` | never: it is the refusal of a run whose compose file did not load for its profile | compose's error, in the report |
 | `boot/<service>` | every service of the profile runs | `boot.json` |
 | `verifier-reach/<server>` | the verifier's network connects to each probed server | `probes.log` |
 | `verifier-reach/no-route-out` | the dial to `192.0.2.1:443` ends in no route or an unknown name; a connection fails it, any other error is indeterminate | `probes.log` |

@@ -19,6 +19,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `go.mod` names (`scripts/check-go-version.sh`), and say to set `GOTOOLCHAIN`.
 - Dependabot proposes a new version of a module or an action seven days after
   its release at the earliest.
+- A run whose compose file does not load for its profile fails as
+  `compose/loaded`, carrying compose's own message, before anything is built;
+  it was an `indeterminate` boot with the reason on the console only. The
+  quickstart names Compose 2.20 as the minimum (`depends_on.required`).
 
 ### Fixed
 

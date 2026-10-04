@@ -64,12 +64,14 @@ type fakeCompose struct {
 	inProfile []string
 	status    []assertion.Service
 	buildErr  error
-	built     []string
-	upErr     error
-	gateway   Execution
-	victim    Execution
-	replay    Execution
-	replayErr error
+	// servicesErr is what `compose config --services` answers; nil lists inProfile.
+	servicesErr error
+	built       []string
+	upErr       error
+	gateway     Execution
+	victim      Execution
+	replay      Execution
+	replayErr   error
 	// trail is an evidence.jsonl the fake writes itself when the replay runs,
 	// as nothing in a working run does; empty writes none.
 	trail    string
@@ -127,7 +129,7 @@ func (f *fakeCompose) Services(ctx context.Context, _ []string) ([]string, error
 	if err := f.called(ctx, "services"); err != nil {
 		return nil, err
 	}
-	return f.inProfile, nil
+	return f.inProfile, f.servicesErr
 }
 
 func (f *fakeCompose) Build(ctx context.Context, profiles []string) error {
@@ -563,6 +565,9 @@ func TestRunTakesTheProfileDownAfterItsDeadlineHasPassed(t *testing.T) {
 	}
 	if !compose.wentDown {
 		t.Fatal("the profile was left up after the run's deadline passed")
+	}
+	if found := results(graded)["compose/loaded"]; found.Check != "" {
+		t.Errorf("a run out of time was reported as compose failing: %+v", found)
 	}
 	if compose.downErr != nil {
 		t.Errorf("the teardown inherited the deadline that fired: %v", compose.downErr)

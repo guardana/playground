@@ -57,6 +57,25 @@ func TestAFailedBuildBringsNothingUp(t *testing.T) {
 	}
 }
 
+// A compose too old for the topology, or a topology it cannot read, fails the
+// run with compose's own words before anything is built.
+func TestACompositionThatDoesNotLoadIsRefusedInComposesWords(t *testing.T) {
+	subject, compose, scenario := enforcerLab(t)
+	compose.servicesErr = errors.New("docker compose config --services: exit status 15: " +
+		"services.enforcer.depends_on.pdp-double additional properties 'required' not allowed")
+	graded, err := subject.execute(context.Background(), scenario)
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	found := results(graded)["compose/loaded"]
+	if graded.Outcome() == assertion.Pass || found.Outcome != assertion.Fail || !strings.Contains(found.Detail, "'required' not allowed") {
+		t.Fatalf("the run is %s and compose/loaded is %+v; want failed in compose's words", graded.Outcome(), found)
+	}
+	if len(compose.built) != 0 || len(compose.broughtUp) != 0 {
+		t.Errorf("built %v and brought up %v after compose could not load", compose.built, compose.broughtUp)
+	}
+}
+
 // Boot built the images; a later build would spend the plane's time again, and
 // a run that built nothing up front would start whatever an older checkout left.
 func TestNothingButTheBootBuilds(t *testing.T) {
