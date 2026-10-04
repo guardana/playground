@@ -74,12 +74,18 @@ there only, never linked into the lab:
 - `osv-scanner` matches the module's dependencies against known advisories,
   beside `govulncheck`'s reachable-code view. Apache-2.0.
 
-`make bootstrap` fails when a tool's version is not the pin exactly. Where
-Homebrew exists, it installs a missing tool from Homebrew at Homebrew's
-version, so a tool Homebrew ships at another version has to be installed by
-hand. Otherwise, on Linux amd64 or arm64, it installs each tool missing or at
-another version from the project's release asset, only when its sha256 is the
-one `scripts/tool-versions.env` pins for that platform.
+`make bootstrap` installs each tool into `./bin` from the project's release
+asset for Linux (with glibc) or macOS, amd64 or arm64, only when its sha256 is
+the one `scripts/tool-versions.env` pins for that platform. Every run downloads
+and verifies the assets again, replaces a binary in `./bin` whose bytes differ,
+and records each binary's sha256 in `./bin/.verified`. The gate runs the tools
+from `./bin` by path (`BIN=<dir>` names another directory), after
+`check-tools` has matched each binary with that record and its version; a tool
+elsewhere on `PATH`, Homebrew's included, is never run. actionlint's
+shellcheck and pyflakes integrations are off, since it would take them from
+`PATH`: the shell in workflow `run:` steps is not linted.
+zizmor publishes no checksums: its pins were read from the downloaded assets
+after `gh attestation verify` accepted their build provenance.
 
 The container images the lab runs are pinned separately in `versions.env`,
 because they are the subject of the experiment rather than part of the build.

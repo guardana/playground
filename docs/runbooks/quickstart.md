@@ -13,7 +13,10 @@ covers: [README.md, Makefile, versions.env, scripts/fetch-enforcer.sh, scripts/b
 - Docker with Compose v2 and buildx. On Linux, run as an ordinary user in the
   `docker` group. Where the catalogue has run at these pins is in
   [status](../status.md).
-- The Go version `go.mod` names, git, make and bash.
+- The Go version `go.mod` names, git, make, bash and curl. `make quality`
+  refuses another Go, a newer one included; `GOTOOLCHAIN=go<that version>`
+  fetches it. `make bootstrap` installs the gate's tools into `./bin` on Linux
+  (glibc) or macOS, amd64 or arm64.
 - A clone of the enforcer's repository that holds the commit `ENFORCER_COMMIT`
   in `versions.env`, the commit of the release `ENFORCER_RELEASE`.
   `scripts/fetch-enforcer.sh <dir>` makes one from

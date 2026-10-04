@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Installs the tools the quality gate needs and verifies their versions against
-# scripts/tool-versions.env.
+# Installs the tools the quality gate needs into ./bin and verifies their
+# versions against scripts/tool-versions.env.
 #
-# Homebrew where it exists, release binaries into ./bin otherwise, so a CI
-# runner installs the same versions a laptop does and `make quality` means the
-# same thing in both places. A release binary is installed only when its
-# download matches the sha256 pinned for this platform. goimports and
+# One path on Linux and macOS, amd64 and arm64: the project's release binary,
+# downloaded on every run and installed only when it matches the sha256 pinned
+# for this platform, so a CI runner and a laptop run the same versions and
+# `make quality` means the same thing on both. A binary already in ./bin stays
+# only when its bytes are the verified one's, and the sha256 of each binary
+# installed is recorded in ./bin/.verified. `--verify`, for the gate, checks
+# without the network that each binary is the one recorded, before running it
+# for its version; a tool elsewhere on PATH never counts. goimports and
 # govulncheck come from the go.mod tool directives instead, already pinned by
 # the module.
 set -euo pipefail
@@ -25,27 +29,37 @@ pinned() { # tool suffix
 	printf '%s' "${!name:-}"
 }
 
-linux_arch() {
-	[ "$(uname -s)" = Linux ] ||
-		refuse "no pinned release asset for $(uname -s); install Homebrew or the versions in scripts/tool-versions.env"
+# platform prints this machine as the pins name it: the system, then the
+# architecture.
+platform() {
+	local os
+	case "$(uname -s)" in
+	Linux) os=linux ;;
+	Darwin) os=darwin ;;
+	*) refuse "no pinned release asset for $(uname -s); put the versions in scripts/tool-versions.env into ./bin by hand" ;;
+	esac
 	case "$(uname -m)" in
-	x86_64 | amd64) echo amd64 ;;
-	aarch64 | arm64) echo arm64 ;;
-	*) refuse "no pinned release asset for Linux $(uname -m)" ;;
+	x86_64 | amd64) echo "$os amd64" ;;
+	aarch64 | arm64) echo "$os arm64" ;;
+	*) refuse "no pinned release asset for $os $(uname -m)" ;;
 	esac
 }
 
-asset_url() { # tool arch
+upper() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
+
+asset_url() { # tool os arch
 	local releases=https://github.com
-	case "$1/$2" in
-	golangci-lint/*) echo "$releases/golangci/golangci-lint/releases/download/v$GOLANGCI_LINT_VERSION/golangci-lint-$GOLANGCI_LINT_VERSION-linux-$2.tar.gz" ;;
-	actionlint/*) echo "$releases/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_$2.tar.gz" ;;
-	gitleaks/amd64) echo "$releases/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" ;;
-	gitleaks/arm64) echo "$releases/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_linux_arm64.tar.gz" ;;
-	osv-scanner/*) echo "$releases/google/osv-scanner/releases/download/v$OSV_SCANNER_VERSION/osv-scanner_linux_$2" ;;
-	zizmor/amd64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz" ;;
-	zizmor/arm64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-aarch64-unknown-linux-gnu.tar.gz" ;;
-	*) refuse "no release asset known for $1 on linux $2" ;;
+	case "$1/$2/$3" in
+	golangci-lint/*/*) echo "$releases/golangci/golangci-lint/releases/download/v$GOLANGCI_LINT_VERSION/golangci-lint-$GOLANGCI_LINT_VERSION-$2-$3.tar.gz" ;;
+	actionlint/*/*) echo "$releases/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_$2_$3.tar.gz" ;;
+	gitleaks/*/amd64) echo "$releases/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_$2_x64.tar.gz" ;;
+	gitleaks/*/arm64) echo "$releases/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION/gitleaks_${GITLEAKS_VERSION}_$2_arm64.tar.gz" ;;
+	osv-scanner/*/*) echo "$releases/google/osv-scanner/releases/download/v$OSV_SCANNER_VERSION/osv-scanner_$2_$3" ;;
+	zizmor/linux/amd64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz" ;;
+	zizmor/linux/arm64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-aarch64-unknown-linux-gnu.tar.gz" ;;
+	zizmor/darwin/amd64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-apple-darwin.tar.gz" ;;
+	zizmor/darwin/arm64) echo "$releases/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-aarch64-apple-darwin.tar.gz" ;;
+	*) refuse "no release asset known for $1 on $2 $3" ;;
 	esac
 }
 
@@ -64,11 +78,11 @@ verify_sha256() { # file expected
 	[ "$actual" = "$2" ] || refuse "sha256 mismatch for $1: pinned $2, downloaded $actual"
 }
 
-fetch() { # tool arch bindir
+fetch() { # tool os arch bindir
 	local tool=$1 url expected scratch binary
-	url=$(asset_url "$tool" "$2")
-	expected=$(pinned "$tool" "SHA256_LINUX_$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]')")
-	[ -n "$expected" ] || refuse "scripts/tool-versions.env pins no sha256 for $tool on linux $2"
+	url=$(asset_url "$tool" "$2" "$3")
+	expected=$(pinned "$tool" "SHA256_$(upper "$2")_$(upper "$3")")
+	[ -n "$expected" ] || refuse "scripts/tool-versions.env pins no sha256 for $tool on $2 $3"
 	scratch=$(mktemp -d "${TMPDIR:-/tmp}/bootstrap.XXXXXX")
 	# A refusal exits from inside this function, when its locals are gone, so
 	# the trap carries the path itself.
@@ -84,18 +98,33 @@ fetch() { # tool arch bindir
 	*) binary="$scratch/download" ;;
 	esac
 	[ -n "$binary" ] || refuse "no $tool binary inside $url"
-	mkdir -p "$3"
-	install -m 0755 "$binary" "$3/$tool"
+	mkdir -p "$4"
+	if [ -L "$4/$tool" ] || [ ! -x "$4/$tool" ] || ! cmp -s "$binary" "$4/$tool"; then
+		rm -f "$4/$tool"
+		install -m 0755 "$binary" "$4/$tool"
+	fi
+	printf '%s %s\n' "$tool" "$(sha256_of "$4/$tool")" >>"$4/.verified.new"
 	rm -rf "$scratch"
 	trap - EXIT
 }
 
-# installed prints the version token the tool on PATH reports, without a
+# recorded succeeds when bin/tool is a regular file whose sha256 is the one
+# bootstrap recorded for it.
+recorded() { # bin tool
+	local line
+	[ -f "$1/$2" ] && [ ! -L "$1/$2" ] || return 1
+	line=$(grep -E "^$2 [0-9a-f]{64}$" "$1/.verified" 2>/dev/null) || return 1
+	[ "${line#* }" = "$(sha256_of "$1/$2")" ]
+}
+
+# installed prints the version token the binary at path reports, without a
 # leading v, so 1.7.12 is compared whole and never as a prefix of 1.7.123.
-installed() { # tool
-	local out
-	out=$("$1" "$(version_flag "$1")" 2>&1) || return 0
-	case "$1" in
+installed() { # path
+	local out tool
+	tool=$(basename "$1")
+	[ -x "$1" ] || return 0
+	out=$("$1" "$(version_flag "$tool")" 2>&1) || return 0
+	case "$tool" in
 	golangci-lint) out=$(awk '{ for (i = 1; i < NF; i++) if ($i == "version") { print $(i + 1); exit } }' <<<"$out") ;;
 	osv-scanner) out=$(awk '$1 == "osv-scanner" && $2 == "version:" { print $3; exit }' <<<"$out") ;;
 	zizmor) out=$(awk 'NR == 1 { print $2 }' <<<"$out") ;;
@@ -117,26 +146,28 @@ main() {
 	# shellcheck source=tool-versions.env
 	source scripts/tool-versions.env
 
-	command -v go >/dev/null || refuse "install Go first: https://go.dev/dl/"
-	go mod download
-
-	local bin="$PWD/bin" tool arch status=0 want have
-	export PATH="$bin:$PATH"
-	if command -v brew >/dev/null; then
+	local bin="${BIN:-$PWD/bin}" tool here os arch status=0 want have
+	if [ "${1:-}" != --verify ]; then
+		scripts/check-go-version.sh
+		go mod download
+		here=$(platform)
+		read -r os arch <<<"$here"
+		rm -f "$bin/.verified.new"
 		for tool in $TOOLS; do
-			command -v "$tool" >/dev/null || brew install "$tool"
+			fetch "$tool" "$os" "$arch" "$bin"
 		done
-	else
-		arch=$(linux_arch)
-		for tool in $TOOLS; do
-			[ "$(installed "$tool")" = "$(pinned "$tool" VERSION)" ] || fetch "$tool" "$arch" "$bin"
-		done
+		mv "$bin/.verified.new" "$bin/.verified"
 		if [ -n "${GITHUB_PATH:-}" ]; then echo "$bin" >>"$GITHUB_PATH"; fi
 	fi
 
 	for tool in $TOOLS; do
 		want=$(pinned "$tool" VERSION)
-		have=$(installed "$tool")
+		if ! recorded "$bin" "$tool"; then
+			printf 'FAIL  %-16s not the binary bootstrap verified\n' "$tool" >&2
+			status=1
+			continue
+		fi
+		have=$(installed "$bin/$tool")
 		if [ -n "$want" ] && [ "$have" = "$want" ]; then
 			printf 'ok    %-16s %s\n' "$tool" "$want"
 		else
@@ -144,8 +175,8 @@ main() {
 			status=1
 		fi
 	done
-	[ "$status" -eq 0 ] && echo "bootstrap ok"
-	return "$status"
+	[ "$status" -eq 0 ] || refuse "./bin does not hold the pinned tools; run make bootstrap"
+	echo "bootstrap ok"
 }
 
 # Sourcing defines the functions without installing anything.
