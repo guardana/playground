@@ -100,6 +100,9 @@ type Records struct {
 	// Journals is what each victim tool server recorded, keyed by the name
 	// compose gives the server.
 	Journals map[string][]journal.Entry
+	// Unread says why a journal that is there could not be read, keyed like
+	// Journals; a missing journal is in neither.
+	Unread map[string]string
 }
 
 // Service is one compose service and whether it came up.

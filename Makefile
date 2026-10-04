@@ -144,11 +144,18 @@ classify-victims:
 # scenario run brings up what it needs and takes it down again. `core` is the
 # victims alone. The enforcer's profiles need a run the runner prepares (the
 # signed bundle, the assembled configuration): `go run ./runner -scenario <id>
-# -keep` leaves one up. By hand, the services write under reports/manual.
+# -keep` leaves one up. By hand, the services write under reports/manual, each
+# journal writer into journals/<writer>/ alone; internal/labcheck holds
+# JOURNAL_WRITERS to labspec.
+JOURNAL_WRITERS = victim-crm victim-db victim-fs victim-shell victim-mail victim-web victim-pay pdp-double approver
+MANUAL_JOURNALS = $(addprefix reports/manual/journals/,$(JOURNAL_WRITERS))
 up:
-	mkdir -p reports/manual/journals reports/manual/agent
-	chmod 755 reports/manual
-	chmod 1777 reports/manual/journals reports/manual/agent
+	for d in reports reports/manual reports/manual/agent reports/manual/journals $(MANUAL_JOURNALS); do \
+		if [ -L "$$d" ]; then echo "make up: $$d is a link; remove reports/manual and run again" >&2; exit 1; fi; \
+	done
+	mkdir -p reports/manual/agent $(MANUAL_JOURNALS)
+	chmod 755 reports/manual reports/manual/journals
+	chmod 1777 reports/manual/agent $(MANUAL_JOURNALS)
 	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) up -d --build
 
 down:

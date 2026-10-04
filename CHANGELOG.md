@@ -23,6 +23,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `compose/loaded`, carrying compose's own message, before anything is built;
   it was an `indeterminate` boot with the reason on the console only. The
   quickstart names Compose 2.20 as the minimum (`depends_on.required`).
+- Each service that writes a journal sees only its own directory,
+  `journals/<server>/<server>.jsonl`, so a victim or the approver (which runs
+  the enforcer's `control`) can no longer rewrite another's record. A journal
+  directory holding anything else is not read: its effects fail as `journal
+  unreadable`, naming what was there, as any journal that is there and cannot
+  be read now does, apart from `no journal`. `make up` refuses a link on the
+  way to a directory it makes, and `check-hygiene.sh` a link anywhere in the
+  tree. The file format is unchanged.
 
 ### Fixed
 

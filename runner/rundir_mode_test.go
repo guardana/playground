@@ -19,9 +19,9 @@ func modeOf(t *testing.T, path string) fs.FileMode {
 	return info.Mode() & (fs.ModePerm | fs.ModeSticky)
 }
 
-// Only the runner writes into the run directory itself; the services, as uid
-// 65532, write into its subdirectories, where the sticky bit keeps each one
-// from removing or replacing what another wrote.
+// Only the runner writes into the run directory and its journals directory; the
+// services, as uid 65532, write into the subdirectories below them, where the
+// sticky bit keeps another local user from removing or replacing a record.
 func TestTheRunDirectoryIsTheRunnersAndItsSharedDirectoriesAreSticky(t *testing.T) {
 	old := syscall.Umask(0o077)
 	defer syscall.Umask(old)
@@ -33,16 +33,29 @@ func TestTheRunDirectoryIsTheRunnersAndItsSharedDirectoriesAreSticky(t *testing.
 	if err := makeShared(filepath.Join(runDir, "collector")); err != nil {
 		t.Fatalf("makeShared: %v", err)
 	}
-	for path, want := range map[string]fs.FileMode{
+	want := map[string]fs.FileMode{
 		reports:                            0o755,
 		runDir:                             0o755,
-		filepath.Join(runDir, "journals"):  fs.ModeSticky | 0o777,
+		filepath.Join(runDir, "journals"):  0o755,
 		filepath.Join(runDir, "agent"):     fs.ModeSticky | 0o777,
 		filepath.Join(runDir, "collector"): fs.ModeSticky | 0o777,
-	} {
-		if got := modeOf(t, path); got != want {
-			t.Errorf("%s is %v, want %v", filepath.Base(path), got, want)
+	}
+	for _, writer := range journalWriterNames() {
+		want[filepath.Join(runDir, "journals", writer)] = fs.ModeSticky | 0o777
+	}
+	for path, mode := range want {
+		if got := modeOf(t, path); got != mode {
+			t.Errorf("%s is %v, want %v", filepath.Base(path), got, mode)
 		}
+	}
+}
+
+// journalWriterNames is every service that writes a journal, spelled out
+// rather than read from the runner, which builds the directories from it.
+func journalWriterNames() []string {
+	return []string{
+		"victim-crm", "victim-db", "victim-fs", "victim-shell", "victim-mail", "victim-web", "victim-pay",
+		"pdp-double", "approver",
 	}
 }
 
@@ -57,9 +70,16 @@ func TestAnEnforcerRunsDirectoriesHaveTheirModes(t *testing.T) {
 	if got := modeOf(t, runDir); got != 0o755 {
 		t.Errorf("the run directory is %v, want -rwxr-xr-x", got)
 	}
-	for _, shared := range []string{"journals", "agent", "collector", "pki"} {
-		if got := modeOf(t, filepath.Join(runDir, shared)); got != fs.ModeSticky|0o777 {
-			t.Errorf("%s is %v, want trwxrwxrwx", shared, got)
+	if got := modeOf(t, filepath.Join(runDir, "journals")); got != 0o755 {
+		t.Errorf("journals is %v, want -rwxr-xr-x", got)
+	}
+	shared := []string{"agent", "collector", "pki"}
+	for _, writer := range journalWriterNames() {
+		shared = append(shared, filepath.Join("journals", writer))
+	}
+	for _, dir := range shared {
+		if got := modeOf(t, filepath.Join(runDir, dir)); got != fs.ModeSticky|0o777 {
+			t.Errorf("%s is %v, want trwxrwxrwx", dir, got)
 		}
 	}
 }

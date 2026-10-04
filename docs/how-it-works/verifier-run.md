@@ -100,7 +100,7 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier/step-<n>/finding/<rule>` | a verifier finding of that rule with the stated severity and summary text | the report |
 | `verifier/step-<n>/no-finding/<rule>` | the rule ran and left no verifier finding, waived one, unverified result or error | the report |
 | `verifier/step-<n>/unverified/<rule>` | the rule is reported unverified | the report |
-| `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>.jsonl` |
+| `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>/<victim>.jsonl` |
 | `trace/*` | as the step checks of the same names, over a report whose target is this run's trace, `/lab-run/trace.jsonl#<run id>` | `verifier/trace-report.json` |
 
 Exit codes 0 to 7 mean what `docs/exit-codes.md` in the verifier's repository

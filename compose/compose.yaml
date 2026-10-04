@@ -44,17 +44,16 @@ x-hardened: &hardened
   tmpfs: [/tmp]
 
 # A victim answers MCP at /mcp and readiness at /healthz on the same listener,
-# and writes its journal into the run's journals/, the one host directory it
-# sees. The health check runs the probe that every lab image carries, because
-# the runtime base has no shell to run one in.
+# and writes its journal into journals/<service>/, the one host directory it
+# sees: a writer that reached another's directory could rewrite the journal that
+# one is graded on. The health check runs the probe that every lab image
+# carries, because the runtime base has no shell to run one in.
 x-victim: &victim
   <<: *hardened
   networks: [tool-net]
   # `verifier` brings the victims up without the gateway, which lists every
   # victim's tools at startup and would spend the listing a drift is read on.
   profiles: [core, verifier]
-  volumes:
-    - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
   healthcheck:
     test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
     interval: 2s
@@ -75,6 +74,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-crm
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-crm
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
 
   victim-db:
     image: ${LAB_IMAGE_PREFIX}-victim-db
@@ -88,6 +93,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-db
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-db
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
 
   victim-fs:
     image: ${LAB_IMAGE_PREFIX}-victim-fs
@@ -106,6 +117,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-fs
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-fs
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
 
   victim-shell:
     image: ${LAB_IMAGE_PREFIX}-victim-shell
@@ -119,6 +136,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-shell
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-shell
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
 
   victim-mail:
     image: ${LAB_IMAGE_PREFIX}-victim-mail
@@ -132,6 +155,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-mail
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-mail
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
     depends_on:
       mailpit:
         condition: service_healthy
@@ -148,6 +177,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-web
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-web
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
     depends_on:
       attacker-web:
         condition: service_healthy
@@ -164,6 +199,12 @@ services:
     environment:
       <<: *server-env
       LAB_SERVER_NAME: victim-pay
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-pay
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
 
   # The pages the victims fetch. Catalogued, inert, and on a network with no
   # route out; they exist to be blocked.
@@ -427,7 +468,11 @@ services:
     environment:
       <<: *lab-env
     volumes:
-      - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/pdp-double
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
       - type: bind
         source: ${LAB_WORKSPACE:-..}/config/pdp
         target: /scripts
@@ -467,7 +512,11 @@ services:
     environment:
       <<: *lab-env
     volumes:
-      - ${LAB_RUN_HOST_DIR:-../reports/manual}/journals:/reports/${LAB_RUN_ID:-manual}/journals
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/approver
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
       - type: bind
         source: ${LAB_WORKSPACE:-..}/config/approver
         target: /scripts

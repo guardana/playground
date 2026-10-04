@@ -14,9 +14,10 @@ import (
 
 type mounted struct {
 	Services map[string]struct {
-		Networks networkList `json:"networks"`
-		Profiles []string    `json:"profiles"`
-		Volumes  []any       `json:"volumes"`
+		Networks    networkList    `json:"networks"`
+		Profiles    []string       `json:"profiles"`
+		Volumes     []any          `json:"volumes"`
+		Environment map[string]any `json:"environment"`
 	} `json:"services"`
 }
 
@@ -62,8 +63,8 @@ const (
 func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 	want := map[string][]string{
 		"scripted-agent": {runDir + "/agent", workspace + "/trajectories"},
-		"pdp-double":     {runDir + "/journals", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
-		"approver":       {runDir + "/journals", workspace + "/config/approver", "approvals"},
+		"pdp-double":     {runDir + "/journals/pdp-double", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
+		"approver":       {runDir + "/journals/approver", workspace + "/config/approver", "approvals"},
 		"collector": {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector-tls"},
 		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
@@ -73,7 +74,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/export-ca", "spool", "approvals", "holds"},
 	}
 	for _, victim := range labspec.Victims() {
-		want[victim] = []string{runDir + "/journals"}
+		want[victim] = []string{runDir + "/journals/" + victim}
 	}
 	for name, service := range readMounts(t).Services {
 		var got []string

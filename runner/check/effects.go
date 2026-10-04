@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
-	"path"
 	"slices"
 	"strings"
 
@@ -25,7 +24,8 @@ import (
 // pass a run in which the gateway let through a call the victim turned away.
 type Effects struct {
 	Scenario labspec.Scenario
-	// JournalDir holds one file per victim, named for the victim.
+	// JournalDir is the run's journals directory, which holds one directory
+	// per writer, named for it (journal.File).
 	JournalDir string
 }
 
@@ -51,7 +51,7 @@ func (e Effects) grade(victim string, records assertion.Records) assertion.Resul
 	result := assertion.Result{
 		Check:  "effects/" + victim,
 		Want:   describeEffects(want.CallsServed, want.CallsRefused),
-		Source: path.Join(e.JournalDir, victim+".jsonl"),
+		Source: journal.File(e.JournalDir, victim),
 	}
 	entries, collected := records.Journals[victim]
 	if !collected {
@@ -59,9 +59,7 @@ func (e Effects) grade(victim string, records assertion.Records) assertion.Resul
 		// two answers a denial scenario has to tell apart, and only the journal
 		// tells them apart. No journal is no answer, and no answer fails.
 		result.Outcome = assertion.Fail
-		result.Got = "no journal"
-		result.Detail = fmt.Sprintf(
-			"no journal was collected for %s, so what it served was never read", victim)
+		result.Got, result.Detail = uncollected(records, victim, "served")
 		return result
 	}
 	// A journal is appended to and outlives one run, so a line from an earlier
@@ -216,4 +214,13 @@ func describeCounts(status string, counts map[string]int) string {
 		parts = append(parts, fmt.Sprintf("%s=%d", tool, counts[tool]))
 	}
 	return status + " " + strings.Join(parts, " ")
+}
+
+// uncollected says why a victim's journal is not in records: absent, or there
+// and refused, with the reason the reader gave.
+func uncollected(records assertion.Records, victim, what string) (got, detail string) {
+	if reason, unread := records.Unread[victim]; unread {
+		return "journal unreadable", fmt.Sprintf("the journal of %s is there and was not read, so what it %s is unknown: %s", victim, what, reason)
+	}
+	return "no journal", fmt.Sprintf("no journal was collected for %s, so what it %s was never read", victim, what)
 }

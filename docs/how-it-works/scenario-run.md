@@ -90,16 +90,19 @@ and the parts of `LAB_WORKSPACE` (the clone, or
 
 | service | from the run directory | from `LAB_WORKSPACE`, read-only |
 |---|---|---|
-| the victims | `journals/` | |
-| `approver` | `journals/` | `config/approver/` |
-| `pdp-double` | `journals/`, `pki/`, where it writes its CA | `config/pdp/` |
+| each victim | `journals/<victim>/` | |
+| `approver` | `journals/approver/` | `config/approver/` |
+| `pdp-double` | `journals/pdp-double/`, `pki/`, where it writes its CA | `config/pdp/` |
 | `scripted-agent` | `agent/` | `trajectories/` |
 | `collector` | `collector/`; `collector-tls/` read-only | |
 | `enforcer` | `gateway/`, `pki/` and `export-ca/`, all read-only | |
 | `verifier` | `verifier/` | |
 | `trace-verifier` | `verifier/` read-only | `config/contracts/` |
 
-Compose refuses a missing workspace directory rather than create it.
+Compose refuses a missing workspace directory rather than create it. A journal
+writer's directory is mounted into that writer alone, so neither a victim nor
+the approver, which runs the enforcer's `control`, can rewrite a journal
+another service is graded on (`compose/journals_test.go`).
 
 ## One decided call
 
@@ -220,8 +223,8 @@ could not read its source is `indeterminate`, which fails the run.
 | `plane/version`, `plane/image`, `plane/drained` | the running enforcer is the pin, and its trail was handed over whole | `plane.log` |
 | `health/*` | `expect.health` counters | `healthz.json` |
 | `decisions/step-<n>`, `trails/opened` | each step's trail, paired by order and tool | `evidence.jsonl` |
-| `effects/<server>` | every journal line of the run is named, and a booted victim the scenario does not name served nothing | `journals/<server>.jsonl` |
-| `effects/<server>/committed` | each served call's [effect](../lab-files.md#a-journal-line), in order, member for member; graded when stated or when a line carries one | `journals/<server>.jsonl` |
+| `effects/<server>` | every journal line of the run is named, and a booted victim the scenario does not name served nothing; a journal directory holding anything but the journal is not read and fails as `journal unreadable`, apart from a missing journal's `no journal` | `journals/<server>/<server>.jsonl` |
+| `effects/<server>/committed` | each served call's [effect](../lab-files.md#a-journal-line), in order, member for member; graded when stated or when a line carries one | `journals/<server>/<server>.jsonl` |
 | `evidence/*` | chain order, the policy digest, captured content, one run id, the mode on every event, the executed digest and a successful result on every completion | `evidence.jsonl` |
 
 The topology checks, in detail:
@@ -253,7 +256,7 @@ The files themselves are listed in the quickstart's
 
 | what | where | protection | kept until |
 |---|---|---|---|
-| the run's files | `reports/<run id>/` | the directory is the runner's, mode 0755; each part a service writes into (`journals/`, `agent/`, `collector/`, `pki/`, a verifier scenario's `verifier/`) is mode 01777, world-writable and sticky; the journals and the agent's files are written mode 0644 by uid 65532, so the runner reads them as an ordinary user on a Linux host; the runner writes each of its own files once, as a new file, never through a link, and refuses to run as uid 65532 | you remove it: nothing in the lab prunes `reports/` |
+| the run's files | `reports/<run id>/` | the directory and its `journals/` are the runner's, mode 0755; each part a service writes into (one `journals/<server>/` per journal writer, `agent/`, `collector/`, `pki/`, a verifier scenario's `verifier/`) is mode 01777, world-writable and sticky, and no writer's journal directory is mounted into another service; the journals and the agent's files are written mode 0644 by uid 65532, so the runner reads them as an ordinary user on a Linux host; the runner writes each of its own files once, as a new file, never through a link, and refuses to run as uid 65532 | you remove it: nothing in the lab prunes `reports/` |
 | the enforcer's configuration and signed bundle | `reports/<run id>/gateway/` | public, mode 0644, mounted read-only into the enforcer | as above |
 | the run CA's certificate | `reports/<run id>/export-ca/ca.pem` | public, mode 0644; its directory is mounted read-only into the enforcer alone, which trusts it for the collector | as above |
 | the collector's TLS key | `reports/<run id>/collector-tls/key.pem` | mode 0644, since the collector reads it as its own uid; its directory is mounted into the collector alone | removed once the run's services are down; kept with `-keep` or by a killed run |

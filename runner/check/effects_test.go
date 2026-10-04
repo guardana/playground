@@ -123,7 +123,7 @@ func TestEffectsSourceNamesTheJournalItRead(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 	// Sorted by victim, so two runs over one set of records report in one order.
-	want := []string{journalDir + "/victim-fs.jsonl", journalDir + "/victim-web.jsonl"}
+	want := []string{journalDir + "/victim-fs/victim-fs.jsonl", journalDir + "/victim-web/victim-web.jsonl"}
 	for i, result := range results {
 		if result.Source != want[i] {
 			t.Errorf("result %d source is %q, want %q", i, result.Source, want[i])
