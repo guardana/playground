@@ -156,3 +156,70 @@ func TestTheListOutsideGitNamesALink(t *testing.T) {
 		t.Errorf("the copy listed %q: %v", out, err)
 	}
 }
+
+// make up chmods the directories it makes 1777; one that is a link, left by
+// an older layout that every service could write, would make its target
+// world-writable, so a link anywhere on the way is refused.
+func TestMakeUpRefusesALinkInTheManualRun(t *testing.T) {
+	for _, link := range []string{"reports", filepath.Join("reports", "manual", "journals", "victim-db")} {
+		t.Run(link, func(t *testing.T) { refusesLinkAt(t, link) })
+	}
+}
+
+func refusesLinkAt(t *testing.T, link string) {
+	t.Helper()
+	dir, target := makefileCopy(t), t.TempDir()
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, link)), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(dir, link)); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := makeUp(dir)
+	after, statErr := os.Stat(target)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	entries, _ := os.ReadDir(target)
+	if err == nil || !strings.Contains(out, "is a link") || after.Mode() != before.Mode() || len(entries) != 0 {
+		t.Fatalf("a link was followed (%v, was %v; %d entries made) or not refused: %v\n%s",
+			after.Mode(), before.Mode(), len(entries), err, out)
+	}
+}
+
+func TestMakeUpMakesAFreshManualRun(t *testing.T) {
+	dir := makefileCopy(t)
+	if out, err := makeUp(dir); err != nil {
+		t.Fatalf("a fresh manual run was refused: %v\n%s", err, out)
+	}
+	info, err := os.Stat(filepath.Join(dir, "reports", "manual", "journals", "victim-db"))
+	if err != nil || info.Mode()&os.ModeSticky == 0 {
+		t.Fatalf("victim-db's journal directory is %v (%v), want sticky", info, err)
+	}
+}
+
+// makefileCopy is a directory holding the Makefile alone.
+func makefileCopy(t *testing.T) string {
+	t.Helper()
+	makefile, err := os.ReadFile(filepath.Join(repoRoot, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Makefile"), makefile, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// makeUp runs make up with compose replaced by true, so nothing is brought up.
+func makeUp(dir string) (string, error) {
+	command := exec.Command("make", "up", "COMPOSE=true")
+	command.Dir = dir
+	out, err := command.CombinedOutput()
+	return string(out), err
+}

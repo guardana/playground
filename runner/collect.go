@@ -82,6 +82,7 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		Scenario: spec.ID,
 		Boot:     boot,
 		Journals: make(map[string][]journal.Entry, len(spec.Expect.Effects)),
+		Unread:   map[string]string{},
 	}
 	var events []evidence.Event
 	var err error
@@ -101,9 +102,12 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 	records.Evidence = events
 
 	for _, victim := range slices.Sorted(maps.Keys(spec.Expect.Effects)) {
-		entries, err := journal.ReadFile(filepath.Join(runDir, "journals", victim+".jsonl"))
+		entries, err := journal.ReadServer(filepath.Join(runDir, "journals"), victim)
 		if err != nil {
 			l.note("reading %s's journal: %v", victim, err)
+			if !errors.Is(err, fs.ErrNotExist) {
+				records.Unread[victim] = err.Error()
+			}
 			continue
 		}
 		records.Journals[victim] = entries
@@ -114,17 +118,19 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 // What a run directory holds and who writes into it.
 //
 // The directory is one run's own scratch output: the evidence trail the
-// collector exported, one journal per victim, the boot and probe records, and the
-// two reports. Nothing in it is secret — the fixtures are synthetic and the
-// canary tokens are planted to be found — and reports/ is not tracked.
+// collector exported, one journal per writer in a directory of its own, the
+// boot and probe records, and the two reports. Nothing in it is secret — the
+// fixtures are synthetic and the canary tokens are planted to be found — and
+// reports/ is not tracked.
 //
 // The runner writes the run directory itself; compose bind-mounts only its
 // subdirectories, and the services write there as nonroot, uid 65532, which on
-// Linux is the uid on the mount. So the run directory is the runner's at 0755,
-// and each directory a service writes into is world-writable and sticky: any
-// service can add its record, and another local user can neither remove nor
-// replace one. The services share one uid, so the bit does not keep them from
-// each other's files.
+// Linux is the uid on the mount. So the run directory and journals/ are the
+// runner's at 0755, and each directory a service writes into is world-writable
+// and sticky: the service can add its record, and another local user can neither
+// remove nor replace one. The services share one uid, so the bit does not keep
+// them from each other's files; a journal directory mounted into its writer
+// alone does.
 const (
 	reportsMode = 0o755
 	runDirMode  = 0o755
@@ -143,8 +149,18 @@ func makeRunDir(reports, runDir string) error {
 	if err := makeDir(runDir, runDirMode); err != nil {
 		return err
 	}
-	for _, owned := range []string{"journals", "agent"} {
-		if err := makeShared(filepath.Join(runDir, owned)); err != nil {
+	if err := makeShared(filepath.Join(runDir, "agent")); err != nil {
+		return err
+	}
+	journals := filepath.Join(runDir, "journals")
+	if err := makeDir(journals, runDirMode); err != nil {
+		return err
+	}
+	// Every writer's directory, whatever the scenario boots: the run directory
+	// is made before the scenario is read, and compose refuses a missing source.
+	writers := append(labspec.Victims(), labspec.PDPDoubleJournal, labspec.ApproverJournal)
+	for _, writer := range writers {
+		if err := makeShared(filepath.Join(journals, writer)); err != nil {
 			return err
 		}
 	}

@@ -113,7 +113,7 @@ func workingVerifier(f *fakeCompose) func(string, string, []string) (Split, erro
 			return Split{}, fmt.Errorf("bind source path does not exist: %w", err)
 		}
 		for _, victim := range []string{"victim-fs", "victim-crm"} {
-			writeFile(filepath.Join(runDir, "journals", victim+".jsonl"), "")
+			writeFile(filepath.Join(runDir, "journals", victim, victim+".jsonl"), "")
 		}
 		if entrypoint == "python" && slices.Contains(args, routeScript) {
 			return Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}, nil
@@ -275,7 +275,7 @@ func TestEveryVictimInTheProfileIsGradedAsServingNothing(t *testing.T) {
 			working := compose.split
 			compose.split = func(service, entrypoint string, args []string) (Split, error) {
 				split, err := working(service, entrypoint, args)
-				crm := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], "journals", "victim-crm.jsonl")
+				crm := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], "journals", "victim-crm", "victim-crm.jsonl")
 				if journal == "" {
 					_ = os.Remove(crm)
 				} else {

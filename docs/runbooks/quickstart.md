@@ -95,7 +95,7 @@ the file it read. The files sit beside the report:
 |---|---|
 | `evidence.jsonl` | the enforcer's trail, decoded from the collector's export |
 | `collector/` | the collector's export itself |
-| `journals/<server>.jsonl` | what each victim, and each double, did with every call it received |
+| `journals/<server>/<server>.jsonl` | what each victim, and each double, did with every call it received |
 | `healthz.json` | the enforcer's `/healthz` answer after the replay |
 | `probes.log`, `boot.json` | the topology probes and what came up |
 | `plane.log` | the enforcer's version, image and drain |

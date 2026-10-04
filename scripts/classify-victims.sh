@@ -41,12 +41,17 @@ cleanup() {
 	rm -rf "$work"
 }
 trap cleanup EXIT
-mkdir -p "$work/reports/classify/journals" "$work/gateway/spool"
-chmod 755 "$work/reports" "$work/reports/classify"
-chmod 1777 "$work/reports/classify/journals"
-chmod 700 "$work/gateway/spool"
-
 victims=(victim-crm victim-db victim-fs victim-shell victim-mail victim-web victim-pay)
+
+# Compose refuses a journal source that is not there: one directory per victim.
+journals="$work/reports/classify/journals"
+mkdir -p "$journals" "$work/gateway/spool"
+chmod 755 "$work/reports" "$work/reports/classify" "$journals"
+for victim in "${victims[@]}"; do
+	mkdir "$journals/$victim"
+	chmod 1777 "$journals/$victim"
+done
+chmod 700 "$work/gateway/spool"
 for victim in "${victims[@]}"; do
 	(cd "$root" && go test "./victims/${victim#victim-}/" -run TestTheListingIsTheOneClassified -count=1 -args -update >/dev/null) ||
 		refuse "could not snapshot $victim's listing"

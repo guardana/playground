@@ -105,7 +105,7 @@ func TestCommittedSaysWhatItCompared(t *testing.T) {
 	if got := "committed pay.charge=[none]"; result.Got != got {
 		t.Errorf("got = %q, want %q", result.Got, got)
 	}
-	if result.Source != journalDir+"/victim-pay.jsonl" {
+	if result.Source != journalDir+"/victim-pay/victim-pay.jsonl" {
 		t.Errorf("source = %q", result.Source)
 	}
 }

@@ -85,6 +85,26 @@ func TestGuardsRejectWhatTheyClaimTo(t *testing.T) {
 	}
 }
 
+// A link in the tree would point a checkout's path anywhere; the hygiene
+// guard refuses one, planted as a file git would list.
+func TestHygieneRefusesALink(t *testing.T) {
+	link := filepath.Join(repoRoot, "probe-link")
+	if _, err := os.Lstat(link); err == nil {
+		t.Fatalf("%s already exists; refusing to overwrite", link)
+	}
+	if err := os.Symlink("README.md", link); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Remove(link); err != nil {
+			t.Errorf("planted link left behind: %v", err)
+		}
+	}()
+	if err := runGuard("check-hygiene.sh"); err == nil {
+		t.Error("check-hygiene.sh accepted a link")
+	}
+}
+
 // A guard that refuses text a stranger's repository legitimately holds is
 // switched off by the first person it blocks, so each near miss must pass.
 // Each is split like the refused samples, so it is judged only when planted.

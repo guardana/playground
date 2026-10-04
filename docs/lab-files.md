@@ -184,7 +184,8 @@ each is checked when the files load:
 ### A journal line
 
 Each victim and double appends one JSON line per call it received to
-`journals/<server>.jsonl`, written by the server and never by the caller:
+`journals/<server>/<server>.jsonl`, in a directory no other service mounts,
+written by the server and never by the caller:
 `occurred_at`, `server` (stamped by the writer), `tool`, `run_id`, `status`
 (`served` or `refused`) and `detail`, which is for a person reading a failed
 run and is cut at 4 KiB with a marker.

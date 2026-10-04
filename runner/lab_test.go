@@ -76,6 +76,9 @@ type fakeCompose struct {
 	// as nothing in a working run does; empty writes none.
 	trail    string
 	journals map[string]string
+	// planted is written into the run directory beside the records, by path
+	// inside it, as a service that wrote more than its record would.
+	planted map[string]string
 	// split answers the verifier's runs; nil answers every one as not run.
 	split func(service, entrypoint string, args []string) (Split, error)
 
@@ -201,7 +204,10 @@ func (f *fakeCompose) writeRecords(args []string) {
 		writeFile(filepath.Join(directory, "agent", "trace.jsonl"), f.agentTrace)
 	}
 	for victim, body := range f.journals {
-		writeFile(filepath.Join(directory, "journals", victim+".jsonl"), stamp(body))
+		writeFile(filepath.Join(directory, "journals", victim, victim+".jsonl"), stamp(body))
+	}
+	for name, body := range f.planted {
+		writeFile(filepath.Join(directory, name), body)
 	}
 }
 

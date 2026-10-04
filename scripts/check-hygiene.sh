@@ -48,6 +48,11 @@ while IFS= read -r f; do
 	esac
 done < <(files)
 
+# A link points a checkout's path anywhere, reports/ outside the tree for one.
+while IFS= read -r f; do
+	if [ -L "$f" ]; then note "a link must not be tracked: $f"; fi
+done < <(files)
+
 # English only.
 while IFS= read -r hit; do
 	note "not English: $hit"

@@ -3,7 +3,6 @@ package check
 import (
 	"fmt"
 	"maps"
-	"path"
 	"slices"
 	"strings"
 
@@ -20,7 +19,7 @@ func (e Effects) committed(victim string, records assertion.Records) (assertion.
 	result := assertion.Result{
 		Check:  "effects/" + victim + "/committed",
 		Want:   describeCommitted(want),
-		Source: path.Join(e.JournalDir, victim+".jsonl"),
+		Source: journal.File(e.JournalDir, victim),
 	}
 	entries, collected := records.Journals[victim]
 	if !collected {
@@ -28,8 +27,7 @@ func (e Effects) committed(victim string, records assertion.Records) (assertion.
 			return result, false
 		}
 		result.Outcome = assertion.Fail
-		result.Got = "no journal"
-		result.Detail = fmt.Sprintf("no journal was collected for %s, so what it committed was never read", victim)
+		result.Got, result.Detail = uncollected(records, victim, "committed")
 		return result, true
 	}
 	mine, elsewhere := servedInRun(entries, records.RunID)
