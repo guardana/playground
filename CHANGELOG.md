@@ -11,6 +11,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fixes the ten standard-library advisories `make security` reports against
   1.27.1. golangci-lint 2.14.0 replaces 2.13.2, which cannot load the
   standard library Go 1.27.2 compiles.
+- The verifier is pinned at guardana-cli 1.0.0rc5, was 0.26.1, and its lock
+  takes typer 0.27.3. The runner reads report schema 18. `verify-01` to
+  `verify-04`, `trace-01` and `trace-02` keep their expectations, cited again
+  from the verifier's docs at that tag; `verify-04` stays red on the same
+  check. Against the victims, this version also runs
+  `guardana.mcp.task_identity`, and reports it and four authorization checks
+  that 0.26.1 left silent as unverified. A verifier or trace step may expect
+  exit code 8, which this version documents for an output it could not deliver.
 - `make bootstrap` installs every gate tool into `./bin` from its pinned,
   hashed release asset on Linux (glibc) and macOS, amd64 and arm64. It
   downloads and verifies each asset on every run, keeps a binary already in

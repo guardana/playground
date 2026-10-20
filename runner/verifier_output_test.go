@@ -14,12 +14,12 @@ import (
 
 const testVerifierImage = "lab-verifier"
 
-// pinVerifierImage pins the verifier at 0.26.1 and has the local image under
+// pinVerifierImage pins the verifier at 1.0.0rc5 and has the local image under
 // that tag carry label as its version; any other image is answered by what
 // the lab inspected before.
 func pinVerifierImage(t *testing.T, subject *lab, label string) {
 	t.Helper()
-	writeFile(filepath.Join(subject.root, versionFile), "VERIFIER_IMAGE="+testVerifierImage+"\nVERIFIER_VERSION=0.26.1\n")
+	writeFile(filepath.Join(subject.root, versionFile), "VERIFIER_IMAGE="+testVerifierImage+"\nVERIFIER_VERSION=1.0.0rc5\n")
 	other := subject.inspect
 	subject.inspect = func(ctx context.Context, name string, args ...string) (string, error) {
 		switch {
@@ -35,7 +35,7 @@ func pinVerifierImage(t *testing.T, subject *lab, label string) {
 }
 
 func TestAVerifierImageNotBuiltFromThePinIsRefused(t *testing.T) {
-	for name, label := range map[string]string{"another release": "0.26.0", "no such image": "", "no label": "<no value>"} {
+	for name, label := range map[string]string{"another release": "1.0.0rc4", "no such image": "", "no label": "<no value>"} {
 		for kind, build := range map[string]func(*testing.T) (lab, *fakeCompose, string){
 			"verifier": verifierUnderTest,
 			"trace":    func(t *testing.T) (lab, *fakeCompose, string) { return traceLab(t, thisRunsTrace, true) },
@@ -106,7 +106,7 @@ func TestAPathTheVerifierPlantedIsNotWrittenThrough(t *testing.T) {
 
 func TestTheTraceReportIsNotWrittenThroughAPlantedPath(t *testing.T) {
 	subject, compose, scenario := traceLab(t, thisRunsTrace, true)
-	pinVerifierImage(t, &subject, "0.26.1")
+	pinVerifierImage(t, &subject, "1.0.0rc5")
 	target, untouched := outsideFile(t)
 	working := compose.split
 	compose.split = func(service, entrypoint string, args []string) (Split, error) {

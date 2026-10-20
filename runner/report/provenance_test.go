@@ -23,8 +23,8 @@ func provenance() report.Provenance {
 				Label: "hand", Want: "hand", TreeWant: "4c1159f7c7142e0eafb56cdf1bca17b9dd5fe890",
 			},
 			{
-				Ref: "playground-verifier:0.26.1", ID: "sha256:55e5",
-				Label: "0.26.0", Want: "0.26.1",
+				Ref: "playground-verifier:1.0.0rc5", ID: "sha256:55e5",
+				Label: "1.0.0rc4", Want: "1.0.0rc5",
 			},
 			{Ref: "playground-other:1", Missing: "not built on this machine"},
 			{Ref: "playground-bare:2", ID: "sha256:77", Want: "2"},
@@ -48,7 +48,7 @@ func TestMarkdownNamesWhatProducedTheRun(t *testing.T) {
 			"tree label `4c1159f7c7142e0eafb56cdf1bca17b9dd5fe890` matches ENFORCER_TREE\n",
 		"`playground-enforcer:hand` is `sha256:99` on this machine, labelled `hand`, the label matches the pin; " +
 			"no tree label, does NOT match ENFORCER_TREE `4c1159f7c7142e0eafb56cdf1bca17b9dd5fe890`\n",
-		"`playground-verifier:0.26.1` is `sha256:55e5` on this machine, labelled `0.26.0`, does NOT match the pin `0.26.1`\n",
+		"`playground-verifier:1.0.0rc5` is `sha256:55e5` on this machine, labelled `1.0.0rc4`, does NOT match the pin `1.0.0rc5`\n",
 		"`playground-other:1`: not built on this machine",
 		"`playground-bare:2` is `sha256:77` on this machine, with no label, does NOT match the pin `2`\n",
 		"- Machine: darwin/arm64, 10 CPUs, docker 29.6.2 linux/arm64",
@@ -100,7 +100,7 @@ func TestJUnitCarriesTheProvenance(t *testing.T) {
 	for _, want := range []string{
 		`name="workspace" value="` + "`/work/policies`, 89abcdef0123456789abcdef0123456789abcdef" + `"`,
 		`name="pin.ENFORCER_COMMIT" value="e72ebe261af4ca9bb4b683ddedda81bfcc5de906"`,
-		`name="image.playground-verifier:0.26.1" value="sha256:55e5 labelled=0.26.0"`,
+		`name="image.playground-verifier:1.0.0rc5" value="sha256:55e5 labelled=1.0.0rc4"`,
 		`name="image.playground-enforcer:hand" value="sha256:99 labelled=hand tree="`,
 		`name="image.playground-other:1" value="not built on this machine"`,
 		`name="machine" value="darwin/arm64, 10 CPUs, docker 29.6.2 linux/arm64"`,

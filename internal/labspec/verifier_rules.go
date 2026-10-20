@@ -9,7 +9,7 @@ import (
 
 // maxVerifierExitCode is the highest code the verifier's exit-status contract
 // documents; a scenario expecting another expects something undocumented.
-const maxVerifierExitCode = 7
+const maxVerifierExitCode = 8
 
 // VerifierProfile is the compose profile that brings up the victims without the
 // gateway, the only one a verifier scenario runs in.

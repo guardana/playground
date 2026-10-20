@@ -12,11 +12,11 @@
 #     decision: docs/concepts/evidence-and-the-spool.md:32,70.
 # And from the verifier's at VERIFIER_VERSION:
 #   A shell effect the system refused is failed, which forbidden_sink does not
-#     count by default: docs/usage-contracts.md:120-130.
-#   Each assertion is the rule contract.<name>.<assertion-id>: docs/usage-contracts.md:64.
+#     count by default: docs/usage-contracts.md:116-126.
+#   Each assertion is the rule contract.<name>.<assertion-id>: docs/usage-contracts.md:57.
 #   A granted approval before an executed effect holds; a failed effect needs none:
-#     docs/usage-contracts.md:91-100.
-#   Exit 0 only when the contract applies and every invariant holds: docs/usage-contracts.md:131-140.
+#     docs/usage-contracts.md:87-96.
+#   Exit 0 only when the contract applies and every invariant holds: docs/usage-contracts.md:127-136.
 # Red when: it runs under trace-02's widened policy, which turns its decisions,
 #   its trails, its effects and its trace checks red.
 # Red when: its policy also allows shell.exec, which turns the command's

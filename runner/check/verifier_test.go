@@ -16,7 +16,7 @@ const (
 	fsURL = "http://victim-fs:8080/mcp"
 	// A drift report as the verifier prints it, cut to the fields a scenario
 	// reads and a few it does not.
-	driftReport = `{"schema_version": 6, "$schema": "https://guardana.dev/schemas/run/v6.schema.json",
+	driftReport = `{"schema_version": 18, "$schema": "https://guardana.dev/schemas/run/v18.schema.json",
  "run": {"target": {"type": "endpoint", "ref": "http://victim-fs:8080/mcp"},
   "result_summary": {"findings": 2, "unverified": 1, "rules_run": ["guardana.agent.mcp_server_manifest",
    "guardana.mcp.unauthenticated_access", "guardana.mcp.session_binding", "guardana.mcp.cache_scope",
@@ -180,11 +180,12 @@ func TestEachStatedExpectationCanFailOnItsOwn(t *testing.T) {
 func TestAMissingOrForeignRecordGradesNothingBesideIt(t *testing.T) {
 	foreign := strings.Replace(driftReport, `"ref": "http://victim-fs:8080/mcp"`, `"ref": "http://victim-crm:8080/mcp"`, 1)
 	for name, test := range map[string]struct{ pin, report string }{
-		"no report":             {fsPin, ""},
-		"a report of another":   {fsPin, foreign},
-		"a report not JSON":     {fsPin, "Error: no such option: --mcp-pin"},
-		"another report schema": {fsPin, strings.Replace(driftReport, `"schema_version": 6`, `"schema_version": 7`, 1)},
-		"no rule ran":           {fsPin, strings.Replace(driftReport, `"rules_run": [`, `"rules_run": [], "x": [`, 1)},
+		"no report":              {fsPin, ""},
+		"a report of another":    {fsPin, foreign},
+		"a report not JSON":      {fsPin, "Error: no such option: --mcp-pin"},
+		"an older report schema": {fsPin, strings.Replace(driftReport, `"schema_version": 18`, `"schema_version": 17`, 1)},
+		"a newer report schema":  {fsPin, strings.Replace(driftReport, `"schema_version": 18`, `"schema_version": 19`, 1)},
+		"no rule ran":            {fsPin, strings.Replace(driftReport, `"rules_run": [`, `"rules_run": [], "x": [`, 1)},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, test.pin, test.report))

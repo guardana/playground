@@ -1,10 +1,10 @@
-# Expectations from the verifier's documentation at guardana v0.26.1:
-#   docs/usage-probe.md:48      --write-mcp-pin approves the manifest and exits without reporting
-#   docs/usage-probe.md:72      the verifier never calls a tool, so the victim serves nothing
-#   docs/usage-probe.md:137-148 drift is detected against a pin written earlier
-#   docs/usage-probe.md:314-316 and docs/profiles.md:83 exit 1 on a finding at or above high
-#   docs/usage-probe.md:162     guardana.mcp.unauthenticated_access is low on a private address
-#   docs/usage-probe.md:165,171-174 session binding needs a credential to say anything
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:62      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:193-206 drift is detected against a pin written earlier
+#   docs/usage-probe.md:773-775 and docs/profiles.md:119 exit 1 on a finding at or above high
+#   docs/usage-probe.md:231     guardana.mcp.unauthenticated_access is low on a private address
+#   docs/usage-probe.md:234,246-249 session binding needs a credential to say anything
 # victims/fs/README.md names fs.read as the tool whose description changes.
 # This scenario is about the drift; the severity it is reported at is verify-04's.
 # Red when: the pin is taken after the drift.

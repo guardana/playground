@@ -107,7 +107,7 @@ func labelledDaemon(_ context.Context, name string, args ...string) (string, err
 		"playground-enforcer:c0ffee": {
 			"org.opencontainers.image.revision": "c0ffee", "org.opencontainers.image.version": "wrong", treeLabel: "7ree",
 		},
-		"playground-verifier:0.26.1": {"org.opencontainers.image.revision": "wrong", "org.opencontainers.image.version": "0.26.1"},
+		"playground-verifier:1.0.0rc5": {"org.opencontainers.image.revision": "wrong", "org.opencontainers.image.version": "1.0.0rc5"},
 	}
 	if name != "docker" || len(args) != 5 {
 		return "", fmt.Errorf("unexpected lookup %s %v", name, args)
@@ -123,7 +123,7 @@ func labelledDaemon(_ context.Context, name string, args ...string) (string, err
 func TestEachImageIsReadByItsOwnLabel(t *testing.T) {
 	pins := []report.Pin{
 		{Name: "ENFORCER_IMAGE", Value: "playground-enforcer"}, {Name: "ENFORCER_COMMIT", Value: "c0ffee"},
-		{Name: "VERIFIER_IMAGE", Value: "playground-verifier"}, {Name: "VERIFIER_VERSION", Value: "0.26.1"},
+		{Name: "VERIFIER_IMAGE", Value: "playground-verifier"}, {Name: "VERIFIER_VERSION", Value: "1.0.0rc5"},
 		{Name: "ENFORCER_TREE", Value: "7ree"},
 	}
 	found := images(context.Background(), labelledDaemon, pins)

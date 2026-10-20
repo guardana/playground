@@ -95,7 +95,7 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier-reach/no-default-route` | neither `/proc/net/route` nor `/proc/net/ipv6_route` in the verifier's container holds a usable default route | `probes.log` |
 | `verifier/step-<n>/ran` | never: it is the indeterminate of a step whose container did not start | the report |
 | `verifier/step-<n>/pin` | a `write_pin` step left a pin of schema 2 that approves the probed URL and at least one tool | `verifier/pin-<n>.json` |
-| `verifier/step-<n>/report` | any other step left a report of schema 6 about the probed URL, naming at least one rule that ran | `verifier/step-<n>.json` |
+| `verifier/step-<n>/report` | any other step left a report of schema 18 about the probed URL, naming at least one rule that ran | `verifier/step-<n>.json` |
 | `verifier/step-<n>/exit-code` | the exit code is the one stated; beside a missing record it is indeterminate, since a non-zero exit may be docker's | the pin or the report |
 | `verifier/step-<n>/finding/<rule>` | a verifier finding of that rule with the stated severity and summary text | the report |
 | `verifier/step-<n>/no-finding/<rule>` | the rule ran and left no verifier finding, waived one, unverified result or error | the report |
@@ -103,7 +103,7 @@ effects checks grade what the enforcer and the victims recorded.
 | `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>/<victim>.jsonl` |
 | `trace/*` | as the step checks of the same names, over a report whose target is this run's trace, `/lab-run/trace.jsonl#<run id>` | `verifier/trace-report.json` |
 
-Exit codes 0 to 7 mean what `docs/exit-codes.md` in the verifier's repository
+Exit codes 0 to 8 mean what `docs/exit-codes.md` in the verifier's repository
 at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 
 ## Why it works this way

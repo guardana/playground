@@ -9,7 +9,7 @@ import (
 
 func TestTheRunnerRefusesAnEnvironmentThatOverridesAPin(t *testing.T) {
 	root := t.TempDir()
-	writeFile(filepath.Join(root, versionFile), "# pins\nENFORCER_COMMIT=c0ffee\nVERIFIER_VERSION=0.26.1\n")
+	writeFile(filepath.Join(root, versionFile), "# pins\nENFORCER_COMMIT=c0ffee\nVERIFIER_VERSION=1.0.0rc5\n")
 	for _, c := range []struct {
 		name    string
 		environ []string

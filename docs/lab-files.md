@@ -434,7 +434,7 @@ expect:
 - `probe` runs `probe --mcp http://<server>:8080/mcp --format json`. `write_pin`
   approves the manifest (`--write-mcp-pin`); `pin_from: n` compares against the
   pin step n wrote, which has to be an earlier step on the same server.
-- `exit_code` is required, 0 to 7 as the verifier's exit-code table documents.
+- `exit_code` is required, 0 to 8 as the verifier's exit-code table documents.
   It is graded only beside the step's record: the pin for a `write_pin` step,
   the JSON report on standard output for any other. Standard error is kept in
   the run directory and never read.
