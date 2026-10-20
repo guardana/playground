@@ -31,7 +31,7 @@ expect:
   effects:
     victim-fs: { calls_served: {} }
 `
-	verifierReport = `{"schema_version": 6, "run": {"target": {"ref": "http://victim-fs:8080/mcp"},
+	verifierReport = `{"schema_version": 18, "run": {"target": {"ref": "http://victim-fs:8080/mcp"},
  "result_summary": {"rules_run": ["guardana.agent.mcp_server_manifest", "guardana.mcp.cache_scope"]}},
  "findings": [{"rule_id": "guardana.agent.mcp_server_manifest", "severity": "CRITICAL",
   "evidence": {"summary": "the declaration of 'fs.read' changed after it was approved (rug pull)"}}],
@@ -147,7 +147,7 @@ func verifierUnderTest(t *testing.T) (lab, *fakeCompose, string) {
 	subject, _ := labUnderTest(t, compose)
 	scenario := filepath.Join(subject.root, "scenarios/verify/verify-01.yaml")
 	writeFile(scenario, verifierScenarioFile)
-	pinVerifierImage(t, &subject, "0.26.1")
+	pinVerifierImage(t, &subject, "1.0.0rc5")
 	return subject, compose, scenario
 }
 

@@ -1,3 +1,3 @@
 # The verifier release the lab tests. versions.env names the same version;
 # a test in compose/ fails when the two disagree.
-guardana-cli==0.26.1
+guardana-cli==1.0.0rc5

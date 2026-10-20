@@ -43,12 +43,12 @@ func traceLab(t *testing.T, target func(runID string) string, found bool) (lab, 
 		if found {
 			findings = `[{"rule_id":"` + contractFinding + `","severity":"HIGH"}]`
 		}
-		report := `{"schema_version":6,"run":{"target":{"ref":"` + target(compose.env["LAB_RUN_ID"]) +
+		report := `{"schema_version":18,"run":{"target":{"ref":"` + target(compose.env["LAB_RUN_ID"]) +
 			`"},"result_summary":{"rules_run":["` + contractFinding + `"]}},"findings":` + findings +
 			`,"unverified":[],"waived":[],"errors":[]}`
 		return Split{ExitCode: 1, Stdout: report}, nil
 	}
-	pinVerifierImage(t, &subject, "0.26.1")
+	pinVerifierImage(t, &subject, "1.0.0rc5")
 	return subject, compose, scenario
 }
 

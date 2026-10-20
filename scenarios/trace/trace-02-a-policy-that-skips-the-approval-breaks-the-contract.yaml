@@ -13,10 +13,12 @@
 #     decision: docs/concepts/evidence-and-the-spool.md:32,70.
 # And from the verifier's at VERIFIER_VERSION:
 #   A shell effect the system refused is failed, which forbidden_sink does not
-#     count by default: docs/usage-contracts.md:120-130.
-#   not_requested before an executed effect is the absence of authority, a
-#     finding at the assertion's severity: docs/usage-contracts.md:91-100.
-#   An invariant that does not hold exits 1: docs/usage-contracts.md:131-140.
+#     count by default: docs/usage-contracts.md:116-126.
+#   not_requested before an executed effect is the absence of authority:
+#     docs/usage-contracts.md:87-96. Each assertion becomes a rule (line 57)
+#     and declares its own severity (the example, lines 24-54); no line says
+#     the finding takes it, so HIGH is the contract's severity: high, read as such.
+#   An invariant that does not hold exits 1: docs/usage-contracts.md:127-136.
 # Red when: its contract no longer covers crm.update_bank_account, which turns
 #   only its two trace checks red: the verifier exits 0 with no finding.
 schema_version: 1

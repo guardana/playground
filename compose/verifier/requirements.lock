@@ -5,7 +5,9 @@
 # Regenerate after changing requirements.in or VERIFIER_VERSION in versions.env:
 #   uv pip compile --generate-hashes --python-version 3.13 --python-platform linux \
 #     --no-header compose/verifier/requirements.in -o <body>
-# and keep this header above the body.
+# and keep this header above the body. A release candidate resolves under uv's
+# default pre-release mode because requirements.in names it exactly;
+# --prerelease=disallow refuses it.
 annotated-doc==0.0.5 \
     --hash=sha256:117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101 \
     --hash=sha256:c7e58ce09192557605d8bbd92836d7e1d520ac9580096042c0bfd197efacf1bb
@@ -14,24 +16,24 @@ defusedxml==0.7.1 \
     --hash=sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69 \
     --hash=sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61
     # via guardana-rules
-guardana-cli==0.26.1 \
-    --hash=sha256:8c71f2128db9b1075c22ae6b2ebd8a8baa9a9fe537a762a64a579a69e814cbd7 \
-    --hash=sha256:9e1c2554c3b37fae3c013156f8731eab654d2580384d8df39d791f33d693a4b9
+guardana-cli==1.0.0rc5 \
+    --hash=sha256:0ef94ab69cd244962af48a52031e3c1190e6e603458751574482d83a8bc73c58 \
+    --hash=sha256:4b5ca5164ea39ab61139146d8cf6e6f03686c3cdb4ed26136b1f3ebdf27179f1
     # via -r compose/verifier/requirements.in
-guardana-core==0.26.1 \
-    --hash=sha256:53befca882c6ccfcd4b34eddcd25202d9c71c6b40758f6afd9debf7ff22e2806 \
-    --hash=sha256:b74cd84f96357031ef3db3505bb3efb5931d05cc70c94f44164b43e5b467f464
+guardana-core==1.0.0rc5 \
+    --hash=sha256:a91c4f6310e4674566dfe636dfae03ce97b4435d5ee96bbb76d25e5f55cf12c0 \
+    --hash=sha256:c378a9127d854d8119f94c154b6bcf0f336d5e173e89f01c0c3b3c8642221f8a
     # via
     #   guardana-cli
     #   guardana-report
     #   guardana-rules
-guardana-report==0.26.1 \
-    --hash=sha256:3c9621667e36930caaae3dba04a8e855c8f0375be2e998ee8a0f57d4984639d9 \
-    --hash=sha256:7e61f3ab5a94bc013dd0c85b47163b7350eb9caa6094b6d553266a423f446f90
+guardana-report==1.0.0rc5 \
+    --hash=sha256:c71ace6c620085c6c2884d2f70d54c94edabb90d38504c4ae4f83d41eec1f908 \
+    --hash=sha256:d38ec442b6c650e8116c3dfdaac204a15ca6f4dc62c5af9725c6a0092ce2ca5b
     # via guardana-cli
-guardana-rules==0.26.1 \
-    --hash=sha256:58d69e457b62ed7cd467d2396cd73da4b437d043b667eebfb648a0bc7762fcc4 \
-    --hash=sha256:f76ea3afa22b5cf52b2afdd85d35f67c67975f8f145c8dc62122aa1be26f4030
+guardana-rules==1.0.0rc5 \
+    --hash=sha256:00f3a60cecd4f7ec41b1bbb63fbd2d88b18466689a7047794069892d49c0c240 \
+    --hash=sha256:dff0ea2fbb6504159627fe5d61d75710118f3f6511ff0c56debe64b2fe66a203
     # via guardana-cli
 markdown-it-py==4.2.0 \
     --hash=sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49 \
@@ -130,7 +132,7 @@ shellingham==1.5.4 \
     --hash=sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686 \
     --hash=sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de
     # via typer
-typer==0.27.2 \
-    --hash=sha256:269b7eb9d3c202ca84b4bc9618cb04ebb43d3d4d1e567e4c768607232c05f945 \
-    --hash=sha256:b3a5fc4342d5fc8fda8fc3010b1cf117e9249aab7fae800c2eff62fd3842d97d
+typer==0.27.3 \
+    --hash=sha256:d0396f770a560ab1b0a8504e13b5f254b728cedb05c61cf0359e944e50ce8901 \
+    --hash=sha256:e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff
     # via guardana-cli

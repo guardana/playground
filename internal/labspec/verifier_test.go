@@ -58,6 +58,18 @@ func TestAVerifierScenarioLoadsWithoutATrajectory(t *testing.T) {
 	}
 }
 
+// 8 is the highest code the verifier's exit-code table documents: an output
+// it could not deliver, with the verdict still printed.
+func TestTheHighestDocumentedExitCodeIsAnExpectation(t *testing.T) {
+	scenario, err := loadVerifier(t, strings.Replace(verifierScenario, "      exit_code: 1\n", "      exit_code: 8\n", 1))
+	if err != nil {
+		t.Fatalf("exit_code 8 was refused: %v", err)
+	}
+	if got := scenario.Expect.Verifier[2].ExitCode; got == nil || *got != 8 {
+		t.Errorf("exit_code = %v, want 8", got)
+	}
+}
+
 func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testing.T) {
 	for name, replace := range map[string][]string{
 		"an unknown key":            {"write_pin: true }", "write_pin: true, pin: yes }"},

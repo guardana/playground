@@ -26,12 +26,12 @@
 #     digest: docs/concepts/how-a-call-is-decided.md:191; no argument content is
 #     captured by default: docs/adr/0004-evidence-and-privacy-defaults.md:21.
 # And from the verifier's docs/usage-contracts.md at VERIFIER_VERSION:
-#   Each assertion is the rule contract.<name>.<assertion-id>: line 64.
+#   Each assertion is the rule contract.<name>.<assertion-id>: line 57.
 #   approval_required holds when the executed change carries a granted approval;
-#     the held attempt is a failed effect, which needs none: lines 91-101.
+#     the held attempt is a failed effect, which needs none: lines 87-97.
 #   forbidden_sink counts executed and attempted effects only, so a mail the
-#     enforcer blocked is not a finding: lines 120-129.
-#   Exit 0 only when the contract applies and every invariant holds: lines 136-138.
+#     enforcer blocked is not a finding: lines 116-125.
+#   Exit 0 only when the contract applies and every invariant holds: lines 132-134.
 schema_version: 1
 id: payouts-01-a-payout-change-waits-for-the-duty-lead
 title: A payout account change runs once, after the duty lead approved it, and the record is never mailed out

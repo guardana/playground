@@ -1,10 +1,10 @@
-# Expectations from the verifier's documentation at guardana v0.26.1:
-#   docs/usage-probe.md:48      --write-mcp-pin approves the manifest and exits without reporting
-#   docs/usage-probe.md:72      the verifier never calls a tool, so the victim serves nothing
-#   docs/usage-probe.md:137-148 drift is detected against a pin written earlier
-#   docs/generated/rule-catalog.md:19 guardana.agent.mcp_server_manifest is HIGH, and no page
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:62      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:193-206 drift is detected against a pin written earlier
+#   docs/generated/rule-catalog.md:23 guardana.agent.mcp_server_manifest is HIGH, and no page
 #                               documents another severity for drift
-#   docs/usage-probe.md:314-316 and docs/profiles.md:13 exit 1 on a finding at or above high
+#   docs/usage-probe.md:773-775 and docs/profiles.md:14 exit 1 on a finding at or above high
 # The verifier at this pin reports the drift CRITICAL, so this scenario is red on
 # step-2/finding/guardana.agent.mcp_server_manifest until the verifier or its catalogue changes.
 schema_version: 1

@@ -14,7 +14,7 @@ import (
 // name the same fields for other things, so it is not read under this one's
 // rules.
 const (
-	verifierReportSchema = 6
+	verifierReportSchema = 18
 	verifierPinSchema    = 2
 	// maxVerifierFile bounds one report or pin read into memory.
 	maxVerifierFile = 8 << 20
