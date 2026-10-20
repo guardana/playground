@@ -176,7 +176,7 @@ func TestTheGateRunsNoBinaryBootstrapDidNotRecord(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "ran")
 	manifest := ""
 	for tool, says := range map[string]string{
-		"golangci-lint": "golangci-lint has version 2.13.2", "actionlint": "1.7.12", "gitleaks": "8.30.1",
+		"golangci-lint": "golangci-lint has version 2.14.0", "actionlint": "1.7.12", "gitleaks": "8.30.1",
 		"osv-scanner": "osv-scanner version: 2.5.1", "zizmor": "zizmor 1.30.1",
 	} {
 		body := "#!/bin/sh\ntouch '" + marker + "'\necho '" + says + "'\n"
