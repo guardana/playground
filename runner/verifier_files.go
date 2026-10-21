@@ -119,6 +119,9 @@ func probeArgs(url string, probe labspec.ProbeStep) []string {
 	if probe.Profile != "" {
 		args = append(args, "--profile", path.Join(verifierMount, inputsDir, profileInput))
 	}
+	if probe.Credential {
+		args = append(args, "--mcp-token-env", mcpTokenVariable)
+	}
 	return args
 }
 

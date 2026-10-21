@@ -117,7 +117,9 @@ type VerifierReach struct {
 	Servers []Probe
 	Outside Probe
 	Routes  Probe
-	Source  string
+	// Proxy is whether the verifier's environment names a proxy.
+	Proxy  Probe
+	Source string
 }
 
 // ID names the check in a report.
@@ -130,7 +132,7 @@ func (v VerifierReach) Run(_ context.Context, _ assertion.Records) ([]assertion.
 		results = append(results, gradeReach("verifier-reach/"+server.Target, server, true, v.Source))
 	}
 	results = append(results, gradeReach("verifier-reach/no-route-out", v.Outside, false, v.Source))
-	return append(results, v.gradeRoutes()), nil
+	return append(results, v.gradeRoutes(), v.gradeProxy()), nil
 }
 
 func (v VerifierReach) gradeRoutes() assertion.Result {
@@ -147,6 +149,24 @@ func (v VerifierReach) gradeRoutes() assertion.Result {
 		result.Outcome, result.Got = assertion.Fail, "a default route"
 	default:
 		result.Outcome, result.Got = assertion.Pass, "no default route"
+	}
+	return result
+}
+
+func (v VerifierReach) gradeProxy() assertion.Result {
+	result := assertion.Result{
+		Check:  "verifier-reach/no-proxy",
+		Want:   "no *_proxy variable in the verifier's environment",
+		Source: v.Source,
+		Detail: spoken(v.Proxy.Detail),
+	}
+	switch {
+	case !v.Proxy.Ran:
+		result.Outcome, result.Got = assertion.Indeterminate, "the environment was not read"
+	case v.Proxy.Reached:
+		result.Outcome, result.Got = assertion.Fail, "a proxy is set"
+	default:
+		result.Outcome, result.Got = assertion.Pass, "none set"
 	}
 	return result
 }

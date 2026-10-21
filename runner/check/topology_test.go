@@ -173,13 +173,14 @@ func TestTheVerifierReachesWhatItProbesAndNothingOutside(t *testing.T) {
 			"verifier-reach/no-default-route", assertion.Indeterminate},
 	} {
 		t.Run(name, func(t *testing.T) {
-			results, err := check.VerifierReach{Servers: []check.Probe{test.server}, Outside: test.outside, Routes: test.routes}.
+			noProxy := check.Probe{Target: "a proxy", Ran: true, Detail: "none"}
+			results, err := check.VerifierReach{Servers: []check.Probe{test.server}, Outside: test.outside, Routes: test.routes, Proxy: noProxy}.
 				Run(context.Background(), assertion.Records{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(results) != 3 {
-				t.Fatalf("%d results, want 3", len(results))
+			if len(results) != 4 {
+				t.Fatalf("%d results, want 4", len(results))
 			}
 			for _, result := range results {
 				want := assertion.Pass
@@ -189,6 +190,44 @@ func TestTheVerifierReachesWhatItProbesAndNothingOutside(t *testing.T) {
 				if result.Outcome != want {
 					t.Errorf("%s = %s, want %s", result.Check, result.Outcome, want)
 				}
+			}
+		})
+	}
+}
+
+// A proxy in the verifier's environment carries its requests, so the targets
+// it probes are no longer local and every discovery address it is handed is
+// judged as a remote one.
+func TestTheVerifierRunsWithNoProxyInItsEnvironment(t *testing.T) {
+	reach := check.VerifierReach{
+		Outside: check.Probe{Target: "192.0.2.1:443", Ran: true},
+		Routes:  check.Probe{Target: "a default route", Ran: true},
+	}
+	for name, test := range map[string]struct {
+		proxy   check.Probe
+		outcome assertion.Outcome
+	}{
+		"none":     {check.Probe{Target: "a proxy", Ran: true, Detail: "none"}, assertion.Pass},
+		"one set":  {check.Probe{Target: "a proxy", Ran: true, Reached: true, Detail: "HTTPS_PROXY"}, assertion.Fail},
+		"not read": {check.Probe{Target: "a proxy", Detail: "the container did not start"}, assertion.Indeterminate},
+	} {
+		t.Run(name, func(t *testing.T) {
+			reach.Proxy = test.proxy
+			results, err := reach.Run(context.Background(), assertion.Records{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, result := range results {
+				if result.Check == "verifier-reach/no-proxy" {
+					found = true
+					if result.Outcome != test.outcome {
+						t.Errorf("verifier-reach/no-proxy = %s, want %s", result.Outcome, test.outcome)
+					}
+				}
+			}
+			if !found {
+				t.Error("no verifier-reach/no-proxy result")
 			}
 		})
 	}

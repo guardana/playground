@@ -137,22 +137,31 @@ func (f *fakeCompose) WithEnv(env map[string]string) Compose {
 	return fakeEnv{fakeCompose: f, env: env}
 }
 
+func (f *fakeCompose) WithRunEnv(names ...string) Compose {
+	return fakeEnv{fakeCompose: f, env: f.env, runEnv: names}
+}
+
 // fakeEnv is the fake as a WithEnv returned it: the same fake, its calls made
 // with these variables.
 type fakeEnv struct {
 	*fakeCompose
-	env map[string]string
+	env    map[string]string
+	runEnv []string
 }
 
 func (v fakeEnv) WithEnv(env map[string]string) Compose {
 	added := maps.Clone(v.env)
 	maps.Copy(added, env)
-	return fakeEnv{fakeCompose: v.fakeCompose, env: added}
+	return fakeEnv{fakeCompose: v.fakeCompose, env: added, runEnv: v.runEnv}
+}
+
+func (v fakeEnv) WithRunEnv(names ...string) Compose {
+	return fakeEnv{fakeCompose: v.fakeCompose, env: v.env, runEnv: append(slices.Clone(v.runEnv), names...)}
 }
 
 func (v fakeEnv) RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error) {
 	v.callEnv = v.env
-	v.splits = append(v.splits, splitCall{service: service, profiles: profiles, env: v.env, args: args})
+	v.splits = append(v.splits, splitCall{service: service, profiles: profiles, env: v.env, runEnv: v.runEnv, args: args})
 	return v.fakeCompose.RunSplit(ctx, profiles, service, entrypoint, args)
 }
 

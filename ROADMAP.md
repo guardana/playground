@@ -76,7 +76,8 @@ Add victims where they create a new observable failure. The first is built:
 retried after its answer was lost (`gaps-03`), all experimental. A charge that
 commits after its timeout or cancellation (`DEST-05`) is planned. Next, in
 order: a code host and package registry for coding agents, a tenant-partitioned
-retrieval store, then infrastructure, calendar and authenticated MCP cases.
+retrieval store, then infrastructure and calendar cases. Authenticated MCP
+servers are in (`verify-08` to `verify-10`, experimental).
 Cover poisoned content, tool descriptions and schemas, secret-bearing
 arguments, repeated calls and denial routed around. Every case gets a deterministic trajectory, an expected
 verdict, victim-side evidence and a mutation that makes its check fail.

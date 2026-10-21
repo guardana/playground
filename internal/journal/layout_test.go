@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/guardana/playground/internal/journal"
 )
@@ -58,5 +59,44 @@ func TestReadServerRefusesADirectoryHoldingAnythingElse(t *testing.T) {
 				t.Errorf("the refusal %q does not name %s", err, intruder)
 			}
 		})
+	}
+}
+
+// The runner reads both kinds from the same file, and the directory check
+// holds for each: an auth line read from beside an intruder is no record.
+func TestReadServerSplitsTheKindsOfOneJournal(t *testing.T) {
+	dir := ownDirectory(t, "victim-vault")
+	writeOneOfEach(t, journal.File(dir, "victim-vault"))
+
+	calls, err := journal.ReadServer(dir, "victim-vault")
+	if err != nil || len(calls) != 1 || calls[0].Tool != "vault.read" {
+		t.Errorf("calls = %+v, %v; want vault.read alone", calls, err)
+	}
+	auth, err := journal.ReadServerAuth(dir, "victim-vault")
+	if err != nil || len(auth) != 1 || auth[0].Credential != "other" || auth[0].Session != "unknown" || auth[0].Status != 401 {
+		t.Errorf("auth lines = %+v, %v; want one other/unknown/401", auth, err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "victim-vault", "other.jsonl"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if auth, err := journal.ReadServerAuth(dir, "victim-vault"); err == nil {
+		t.Errorf("read %+v from a directory holding another file", auth)
+	}
+}
+
+func writeOneOfEach(t *testing.T, path string) {
+	t.Helper()
+	w, err := journal.Open(path, "victim-vault")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 10, 21, 9, 0, 0, 0, time.UTC)
+	if err := errors.Join(
+		w.RecordAuth(journal.Auth{OccurredAt: at, Credential: journal.CredentialOther, Session: journal.SessionUnknown, Status: 401}),
+		w.Record(journal.Entry{OccurredAt: at, Tool: "vault.read", Status: journal.Served}),
+		w.Close(),
+	); err != nil {
+		t.Fatal(err)
 	}
 }

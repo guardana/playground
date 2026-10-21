@@ -29,7 +29,7 @@ const (
 // victim served. There is no enforcer in the run, so no decision, trail or
 // evidence check applies.
 func (l lab) gradeVerifier(
-	ctx context.Context, compose Compose, spec labspec.Scenario, boot assertion.Boot, runID, runDir string,
+	ctx context.Context, compose Compose, spec labspec.Scenario, boot assertion.Boot, runID, runDir, token string,
 ) assertion.Report {
 	dir := filepath.Join(runDir, verifierDir)
 	// Made before any verifier container starts: compose binds directories in
@@ -39,15 +39,20 @@ func (l lab) gradeVerifier(
 		l.note("making the verifier's directories: %v", made)
 	}
 	reach := l.verifierReach(ctx, compose.WithEnv(map[string]string{stepVariable: reachDir}), spec, runDir)
-	runs := l.runVerifier(ctx, compose, spec, dir, made)
+	runs := l.runVerifier(ctx, compose, spec, dir, made, token)
 	served := everyVictimServesNothing(spec, boot)
 	records, _ := l.collect(served, boot, runID, runDir)
-	return assertion.Run(ctx, records,
+	checks := []assertion.Check{
 		check.Boot{Source: filepath.Join(runDir, "boot.json")},
 		reach,
 		check.Verifier{Scenario: spec, Runs: runs},
 		check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")},
-	)
+		check.TokenKeptOut{RunDir: runDir, Token: token},
+	}
+	if spec.AuthDouble != "" {
+		checks = append(checks, check.AuthDouble{JournalDir: filepath.Join(runDir, "journals"), Persona: spec.AuthDouble})
+	}
+	return assertion.Run(ctx, records, checks...)
 }
 
 // everyVictimServesNothing adds every victim the profile booted to the
@@ -83,12 +88,12 @@ func makeDirs(paths ...string) error {
 // nothing outlives the run. A step whose inputs were not handed over does not
 // run: what it would print could not be told from the lab's own failure.
 func (l lab) runVerifier(
-	ctx context.Context, compose Compose, spec labspec.Scenario, dir string, made error,
+	ctx context.Context, compose Compose, spec labspec.Scenario, dir string, made error, token string,
 ) []check.VerifierRun {
 	runs := make([]check.VerifierRun, 0, len(spec.Verifier))
 	for i, step := range spec.Verifier {
 		run := newVerifierRun(i+1, *step.Probe, dir)
-		l.runStep(ctx, compose, spec.Profile, dir, made, runs, &run)
+		l.runStep(ctx, compose, spec.Profile, dir, made, runs, token, &run)
 		runs = append(runs, run)
 	}
 	return runs
@@ -96,11 +101,18 @@ func (l lab) runVerifier(
 
 func (l lab) runStep(
 	ctx context.Context, compose Compose, profiles []string, dir string, made error, earlier []check.VerifierRun,
-	run *check.VerifierRun,
+	token string, run *check.VerifierRun,
 ) {
 	if made != nil {
 		run.Detail = "the verifier's directory could not be made: " + made.Error()
 		return
+	}
+	if run.Probe.Credential {
+		if token == "" {
+			run.Detail = "the run has no token to hand a credential step"
+			return
+		}
+		compose = compose.WithRunEnv(mcpTokenVariable)
 	}
 	if err := handOver(l.workspace, dir, run.Step, run.Probe, earlier); err != nil {
 		run.Detail = "the step's inputs could not be handed over: " + err.Error()

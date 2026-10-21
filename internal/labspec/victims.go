@@ -9,3 +9,19 @@ func Victims() []string {
 		"victim-crm", "victim-db", "victim-fs", "victim-shell", "victim-mail", "victim-web", "victim-pay",
 	}
 }
+
+// VerifierVictims names the tool servers that require the run's bearer token.
+// They boot in the verifier's profile alone: the enforcer lists every upstream's
+// tools without a token, so no trajectory reaches them.
+func VerifierVictims() []string {
+	return []string{"victim-vault", "victim-vault-anytoken", "victim-vault-sessionauth"}
+}
+
+// AuthDoubleJournal is the journal the authorization-server double writes.
+const AuthDoubleJournal = "auth-double"
+
+// JournalWriters names every service that writes a journal, each into its own
+// directory of the run.
+func JournalWriters() []string {
+	return append(append(Victims(), VerifierVictims()...), PDPDoubleJournal, ApproverJournal, AuthDoubleJournal)
+}

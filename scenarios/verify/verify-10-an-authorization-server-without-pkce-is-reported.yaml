@@ -1,0 +1,30 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:103-106 the verifier never calls a tool, and fetches the discovery
+#                               documents without a credential
+#   docs/usage-probe.md:232     the authorization server a protected server names has to
+#                               advertise PKCE; HIGH in docs/generated/rule-catalog.md:27
+#   docs/usage-probe.md:235,237 scopes and the iss parameter are read from the same documents,
+#                               which still carry both
+#   docs/usage-probe.md:773-775 a finding at or above high exits 1
+# config/auth/no-pkce.json is config/auth/honest.json without code_challenge_methods_supported.
+# Red when: the double serves honest.json, which advertises S256.
+schema_version: 1
+id: verify-10-an-authorization-server-without-pkce-is-reported
+title: An authorization server that advertises no PKCE is reported
+maps_to: { failure_catalog: [MCP-05] }
+profile: [verifier]
+auth_double: no-pkce
+verifier:
+  - probe: { server: victim-vault, credential: true }
+expect:
+  verifier:
+    1:
+      exit_code: 1
+      gate: fail
+      findings_include: [{ rule_id: guardana.mcp.authorization_discovery, severity: HIGH }]
+      findings_exclude: [guardana.mcp.issuer_identification, guardana.mcp.scope_breadth]
+      errors: []
+  effects:
+    victim-vault:
+      calls_served: {}
+      auth_include: [{ credential: run, status: 200 }]

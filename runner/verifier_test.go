@@ -106,6 +106,7 @@ type splitCall struct {
 	service  string
 	profiles []string
 	env      map[string]string
+	runEnv   []string
 	args     []string
 }
 
@@ -181,6 +182,9 @@ func exists(path string) bool {
 }
 
 func reachAnswer(args []string) Split {
+	if slices.Contains(args, proxyScript) {
+		return Split{Stdout: "probe unreachable " + proxyTarget + ": none in the environment\n"}
+	}
 	if slices.Contains(args, routeScript) {
 		return Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}
 	}
@@ -277,8 +281,13 @@ func TestAVerifierRunGradesEveryVictimItBooted(t *testing.T) {
 	}
 }
 
-func TestAVerifierRunIsNotGreenWhenItsRecordsAreNot(t *testing.T) {
-	for name, test := range map[string]struct {
+// recordSpoils each turn one record of a working verifier run red, and name
+// the check that has to say so.
+func recordSpoils() map[string]struct {
+	spoil func(Split, string, []string) Split
+	says  string
+} {
+	return map[string]struct {
 		spoil func(Split, string, []string) Split
 		says  string
 	}{
@@ -300,13 +309,23 @@ func TestAVerifierRunIsNotGreenWhenItsRecordsAreNot(t *testing.T) {
 			}
 			return s
 		}, "verifier-reach/no-default-route"},
+		"a proxy in the verifier's environment": {func(s Split, entrypoint string, args []string) Split {
+			if entrypoint == "python" && slices.Contains(args, proxyScript) {
+				s.Stdout = "probe reached " + proxyTarget + ": HTTPS_PROXY\n"
+			}
+			return s
+		}, "verifier-reach/no-proxy"},
 		"a drift not found": {func(s Split, _ string, args []string) Split {
 			if slices.Contains(args, "--mcp-pin") {
 				s.ExitCode, s.Stdout = 0, strings.Replace(s.Stdout, "'fs.read' changed", "nothing changed", 1)
 			}
 			return s
 		}, "verifier/step-2/finding/guardana.agent.mcp_server_manifest"},
-	} {
+	}
+}
+
+func TestAVerifierRunIsNotGreenWhenItsRecordsAreNot(t *testing.T) {
+	for name, test := range recordSpoils() {
 		t.Run(name, func(t *testing.T) {
 			subject, compose, scenario := verifierUnderTest(t)
 			working := compose.split

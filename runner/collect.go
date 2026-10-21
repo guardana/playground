@@ -82,6 +82,7 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		Scenario: spec.ID,
 		Boot:     boot,
 		Journals: make(map[string][]journal.Entry, len(spec.Expect.Effects)),
+		Auth:     map[string][]journal.Auth{},
 		Unread:   map[string]string{},
 	}
 	var events []evidence.Event
@@ -111,6 +112,15 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 			continue
 		}
 		records.Journals[victim] = entries
+		if len(spec.Expect.Effects[victim].AuthInclude) == 0 {
+			continue
+		}
+		decisions, err := journal.ReadServerAuth(filepath.Join(runDir, "journals"), victim)
+		if err != nil {
+			records.Unread[victim] = err.Error()
+			continue
+		}
+		records.Auth[victim] = decisions
 	}
 	return records, unreadable
 }
@@ -157,10 +167,14 @@ func makeRunDir(reports, runDir string) error {
 	if err := makeDir(journals, runDirMode); err != nil {
 		return err
 	}
+	// The double's persona directory, read-only to it and empty unless the
+	// scenario names a persona: compose refuses a missing source.
+	if err := makeDir(filepath.Join(runDir, personaDir), runDirMode); err != nil {
+		return err
+	}
 	// Every writer's directory, whatever the scenario boots: the run directory
 	// is made before the scenario is read, and compose refuses a missing source.
-	writers := append(labspec.Victims(), labspec.PDPDoubleJournal, labspec.ApproverJournal)
-	for _, writer := range writers {
+	for _, writer := range labspec.JournalWriters() {
 		if err := makeShared(filepath.Join(journals, writer)); err != nil {
 			return err
 		}

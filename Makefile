@@ -147,14 +147,14 @@ classify-victims:
 # -keep` leaves one up. By hand, the services write under reports/manual, each
 # journal writer into journals/<writer>/ alone; internal/labcheck holds
 # JOURNAL_WRITERS to labspec.
-JOURNAL_WRITERS = victim-crm victim-db victim-fs victim-shell victim-mail victim-web victim-pay pdp-double approver
+JOURNAL_WRITERS = victim-crm victim-db victim-fs victim-shell victim-mail victim-web victim-pay victim-vault victim-vault-anytoken victim-vault-sessionauth pdp-double approver auth-double
 MANUAL_JOURNALS = $(addprefix reports/manual/journals/,$(JOURNAL_WRITERS))
 up:
-	for d in reports reports/manual reports/manual/agent reports/manual/journals $(MANUAL_JOURNALS); do \
+	for d in reports reports/manual reports/manual/agent reports/manual/auth reports/manual/journals $(MANUAL_JOURNALS); do \
 		if [ -L "$$d" ]; then echo "make up: $$d is a link; remove reports/manual and run again" >&2; exit 1; fi; \
 	done
-	mkdir -p reports/manual/agent $(MANUAL_JOURNALS)
-	chmod 755 reports/manual reports/manual/journals
+	mkdir -p reports/manual/agent reports/manual/auth $(MANUAL_JOURNALS)
+	chmod 755 reports/manual reports/manual/auth reports/manual/journals
 	chmod 1777 reports/manual/agent $(MANUAL_JOURNALS)
 	$(COMPOSE) $(foreach profile,$(PROFILE),--profile $(profile)) up -d --build
 

@@ -56,7 +56,9 @@ type lab struct {
 	keep    bool
 	clock   func() time.Time
 	suffix  func() string
-	log     io.Writer
+	// token mints a verifier run's bearer token; nil mints 32 random bytes.
+	token func() (string, error)
+	log   io.Writer
 	// describe reads what produced the run for the report header; nil records
 	// that nothing was read.
 	describe func(context.Context) report.Provenance
@@ -109,6 +111,25 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 	return graded, writeReports(runDir, graded, rows, provenance)
 }
 
+// prepare builds the run's environment: the enforcer's signed bundle and its
+// doubles' scripts for a run it decides, the token and the double's persona for
+// a verifier run. The token is returned so the run can look for it after.
+func (l lab) prepare(ctx context.Context, spec labspec.Scenario, runID, runDir string) (map[string]string, string, error) {
+	env := l.environment(runID, runDir)
+	if spec.UsesEnforcer() {
+		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
+			return nil, "", err
+		}
+		env["LAB_PDP_SCRIPT"] = spec.Gateway.PDPScript
+		env["LAB_APPROVER_SCRIPT"] = spec.Gateway.ApproverScript
+	}
+	if err := l.handPersona(spec, runDir); err != nil {
+		return nil, "", err
+	}
+	token, err := l.verifierEnv(spec, env)
+	return env, token, err
+}
+
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
@@ -117,13 +138,9 @@ func (l lab) runScenario(
 			return imageRefused(spec.ID, runID, err, l.clock()), nil
 		}
 	}
-	env := l.environment(runID, runDir)
-	if spec.UsesEnforcer() {
-		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
-			return unprepared(spec.ID, runID, err, l.clock()), nil
-		}
-		env["LAB_PDP_SCRIPT"] = spec.Gateway.PDPScript
-		env["LAB_APPROVER_SCRIPT"] = spec.Gateway.ApproverScript
+	env, token, err := l.prepare(ctx, spec, runID, runDir)
+	if err != nil {
+		return unprepared(spec.ID, runID, err, l.clock()), nil
 	}
 	compose := l.compose.WithEnv(env)
 	if !l.keep {
@@ -150,7 +167,7 @@ func (l lab) runScenario(
 	var graded assertion.Report
 	var rows []check.DecisionRow
 	if spec.IsVerifier() {
-		graded = l.gradeVerifier(ctx, compose, spec, boot, runID, runDir)
+		graded = l.gradeVerifier(ctx, compose, spec, boot, runID, runDir, token)
 	} else {
 		graded, rows = l.gradeTrajectory(ctx, compose, spec, trajectory, boot, runID, runDir)
 	}

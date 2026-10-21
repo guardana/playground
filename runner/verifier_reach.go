@@ -32,6 +32,19 @@ except OSError as e:
         sys.exit(2)
     print("probe unreachable", target + ":", e)
 `
+	// proxyTarget is what proxyScript names in the probe markers.
+	proxyTarget = "a proxy"
+	// proxyScript reads the verifier's own environment: reached when any
+	// *_proxy variable is set, which would carry its requests and make the
+	// servers it probes no longer local to it. no_proxy names exceptions, not a
+	// proxy.
+	proxyScript = `import os
+found = sorted(k for k, v in os.environ.items() if k.lower().endswith("_proxy") and k.lower() != "no_proxy" and v)
+if found:
+    print("probe reached a proxy:", ", ".join(found))
+else:
+    print("probe unreachable a proxy: none in the environment")
+`
 	// routeTarget is what routeScript names in the probe markers.
 	routeTarget = "a default route"
 	// routeScript reads the verifier's own routing tables: reached when a
@@ -83,6 +96,8 @@ func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Sc
 	record("outside", reach.Outside)
 	reach.Routes = l.python(ctx, compose, spec.Profile, routeTarget, routeScript)
 	record("routes", reach.Routes)
+	reach.Proxy = l.python(ctx, compose, spec.Profile, proxyTarget, proxyScript)
+	record("proxy", reach.Proxy)
 	if err := writeBytes(reach.Source, []byte(recorded.String())); err != nil {
 		l.note("writing the probe record: %v", err)
 	}
