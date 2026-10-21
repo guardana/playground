@@ -279,10 +279,11 @@ services:
       LAB_SERVER_NAME: scripted-agent
 
   # The verifier, run by the runner once per step with `docker compose run`.
-  # It probes victims on tool-net and sees one host path: the run's verifier/
-  # directory, where it writes its pins. The journals it is graded from stay
-  # out of its reach. With no LAB_RUN_HOST_DIR the source does not exist and
-  # the mount is refused, so a hand-run never mounts reports/.
+  # It probes victims on tool-net and sees one host path, read-only: the in/
+  # directory of the step LAB_VERIFIER_DIR names, holding what the runner
+  # handed that step. What it prints is the record, kept by the runner where no
+  # container writes. With LAB_RUN_HOST_DIR or LAB_VERIFIER_DIR unset the source
+  # does not exist and the mount is refused, so a hand-run never mounts reports/.
   verifier:
     image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
     # Built by `make verifier-image` alone, and never pulled: a registry image
@@ -294,9 +295,29 @@ services:
     networks: [tool-net]
     profiles: [verifier]
     volumes:
+      - &verifier-step-inputs
+        type: bind
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier/${LAB_VERIFIER_DIR:-LAB_VERIFIER_DIR-is-unset}/in
+        target: /lab-run/in
+        read_only: true
+        bind:
+          create_host_path: false
+
+  # The verifier for a step that approves a manifest: the same container with
+  # its step's out/ writable, the one place the pin it writes can land. Its own
+  # profile keeps it out of the services a run brings up; the runner names it.
+  verifier-pin:
+    image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
+    pull_policy: never
+    <<: *hardened
+    user: "65532:65532"
+    networks: [tool-net]
+    profiles: [verifier-pin]
+    volumes:
+      - *verifier-step-inputs
       - type: bind
-        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier
-        target: /lab-run
+        source: ${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier/${LAB_VERIFIER_DIR:-LAB_VERIFIER_DIR-is-unset}/out
+        target: /lab-run/out
         bind:
           create_host_path: false
 

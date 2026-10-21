@@ -55,6 +55,8 @@ const (
 	runDir = "${LAB_RUN_HOST_DIR:-../reports/manual}"
 	// workspace is the clone unless the runner names LAB_WORKSPACE.
 	workspace = "${LAB_WORKSPACE:-..}"
+	// verifierStep is the directory of the verifier step the runner names.
+	verifierStep = "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier/${LAB_VERIFIER_DIR:-LAB_VERIFIER_DIR-is-unset}"
 )
 
 // Each service writes into the part of the run it owns and sees no other: a
@@ -68,6 +70,8 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"collector": {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector-tls"},
 		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
+		"verifier":        {verifierStep + "/in"},
+		"verifier-pin":    {verifierStep + "/in", verifierStep + "/out"},
 		"toxiproxy-tools": {"./toxiproxy/proxies.json"},
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki",
@@ -83,7 +87,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		}
 		expected, pinned := want[name]
 		if !pinned {
-			if len(got) > 0 && name != "verifier" && name != "attacker-web" {
+			if len(got) > 0 && name != "attacker-web" {
 				t.Errorf("%s mounts %v and this test pins nothing for it", name, got)
 			}
 			continue

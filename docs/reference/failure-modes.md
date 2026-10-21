@@ -96,6 +96,7 @@ run.
 | `EVID-01` | an action runs and no record of it is kept | gate, grader | `evidence-01`, `evidence-02`, `tool-02` |
 | `EVID-02` | the record says authorized bytes ran when none were authorized | gate | `mode-01` |
 | `EVID-03` | records are lost between the decision and the store they go to | gate, grader | `chaos-03` |
+| `EVID-04` | a check that reached no verdict passes a gate that demands one | grader | `verify-07` |
 
 ## Availability
 
@@ -112,7 +113,7 @@ run.
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
 | `DRIFT-01` | a tool's definition changes after it was approved | gate, grader | `chaos-04`, `verify-01`, `verify-04` |
-| `DRIFT-02` | a stable tool is reported drifted, or an unpinned one clean | grader | `verify-02`, `verify-03` |
+| `DRIFT-02` | a stable tool is reported drifted, or an unpinned one clean | grader | `verify-02`, `verify-03`, `verify-05`, `verify-06` |
 
 ## Runaway behaviour
 

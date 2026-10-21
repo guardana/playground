@@ -18,6 +18,13 @@ const VerifierProfile = "verifier"
 // Severities are spelled as the verifier's JSON report spells them.
 var Severities = []string{"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
 
+// Gates are the verdicts the verifier's report records for its own run.
+var Gates = []string{"pass", "fail", "indeterminate"}
+
+// indeterminateExit is the verifier's exit code for a run it could not decide,
+// which has as many causes as the report has channels.
+const indeterminateExit = 2
+
 // serverName is a compose service name. The runner builds the probed URL from
 // it, so anything else would put a scenario's text into a URL.
 var serverName = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
@@ -74,22 +81,30 @@ func (s Scenario) validateVerifierStep(number int) error {
 		return fmt.Errorf("%w: verifier[%d] names no command", ErrInvalid, number)
 	case !serverName.MatchString(probe.Server):
 		return fmt.Errorf("%w: %s.server is %q, want a compose service name", ErrInvalid, field, probe.Server)
-	case probe.WritePin && probe.PinFrom != 0:
-		return fmt.Errorf("%w: %s both writes a pin and compares against one", ErrInvalid, field)
+	case countSet(probe.WritePin, probe.PinFrom != 0, probe.PinOf != 0) > 1:
+		return fmt.Errorf("%w: %s states more than one of write_pin, pin_from and pin_of", ErrInvalid, field)
+	case probe.Profile != "" && !directlyUnder(probe.Profile, ProfileDir, ".yaml"):
+		// Only the profile file is handed over, so a file it sits beside
+		// would not be there.
+		return fmt.Errorf("%w: %s.profile is %q, want a .yaml file directly in %s", ErrInvalid, field, probe.Profile, ProfileDir)
 	}
-	if probe.PinFrom != 0 {
-		if err := s.validatePinFrom(number, *probe); err != nil {
-			return err
-		}
+	if err := s.validatePinSource(number, *probe); err != nil {
+		return err
 	}
 	return s.Expect.Verifier[number].validate(number, probe.WritePin)
 }
 
-// validatePinFrom holds a comparison to a pin an earlier step wrote for the
-// same server: a pin of another server is a comparison against a manifest
-// nobody approved for this one.
-func (s Scenario) validatePinFrom(number int, probe ProbeStep) error {
-	from := probe.PinFrom
+// validatePinSource holds pin_from to a pin an earlier step wrote for the same
+// server, and pin_of to one written for another: comparing against a manifest
+// nobody approved for this server is a case only when the scenario says so.
+func (s Scenario) validatePinSource(number int, probe ProbeStep) error {
+	from, same := probe.PinFrom, true
+	if probe.PinOf != 0 {
+		from, same = probe.PinOf, false
+	}
+	if from == 0 {
+		return nil
+	}
 	if from < 1 || from >= number {
 		return fmt.Errorf("%w: verifier[%d] reads the pin of step %d, which has not run before it", ErrInvalid, number, from)
 	}
@@ -97,11 +112,30 @@ func (s Scenario) validatePinFrom(number int, probe ProbeStep) error {
 	switch {
 	case source == nil || !source.WritePin:
 		return fmt.Errorf("%w: verifier[%d] reads the pin of step %d, which writes none", ErrInvalid, number, from)
-	case source.Server != probe.Server:
-		return fmt.Errorf("%w: verifier[%d] probes %s against the pin step %d wrote for %s",
+	case same && source.Server != probe.Server:
+		return fmt.Errorf("%w: verifier[%d] probes %s against the pin step %d wrote for %s; pin_of says that is meant",
 			ErrInvalid, number, probe.Server, from, source.Server)
+	case !same && source.Server == probe.Server:
+		return fmt.Errorf("%w: verifier[%d] states pin_of for the pin step %d wrote for the same %s; that is pin_from",
+			ErrInvalid, number, from, probe.Server)
 	}
 	return nil
+}
+
+func countSet(flags ...bool) int {
+	set := 0
+	for _, flag := range flags {
+		if flag {
+			set++
+		}
+	}
+	return set
+}
+
+// directlyUnder is a file with this suffix in directory itself, never below
+// it: the runner hands the verifier the file alone.
+func directlyUnder(path, directory, suffix string) bool {
+	return underWith(path, directory, suffix) && !strings.Contains(strings.TrimPrefix(path, directory), "/")
 }
 
 func (v VerifierExpectation) validate(number int, writesPin bool) error {
@@ -111,10 +145,57 @@ func (v VerifierExpectation) validate(number int, writesPin bool) error {
 		return fmt.Errorf("%w: %s states no exit_code", ErrInvalid, field)
 	case *v.ExitCode < 0 || *v.ExitCode > maxVerifierExitCode:
 		return fmt.Errorf("%w: %s.exit_code is %d, want 0 to %d", ErrInvalid, field, *v.ExitCode, maxVerifierExitCode)
-	case writesPin && (len(v.FindingsInclude) > 0 || len(v.FindingsExclude) > 0 || len(v.UnverifiedInclude) > 0):
+	case writesPin && v.readsReport():
 		return fmt.Errorf("%w: %s writes a pin, which exits without a report to read findings from", ErrInvalid, field)
 	}
-	return v.validateRules(field)
+	if err := v.validateRules(field); err != nil {
+		return err
+	}
+	return v.validateVerdict(field)
+}
+
+func (v VerifierExpectation) readsReport() bool {
+	return len(v.FindingsInclude) > 0 || len(v.FindingsExclude) > 0 || len(v.UnverifiedInclude) > 0 ||
+		v.Gate != "" || v.Shortfall != nil || v.Errors != nil
+}
+
+// validateVerdict refuses a verdict nobody can read and an exit 2 that does
+// not say why: the verifier exits 2 for a gap, an error or an unanswered check
+// alike, and the lab failing to hand a file over is one of them. The gaps and
+// the errors are both stated, because an unverified rule alone is no cause:
+// every probe without a token leaves one.
+func (v VerifierExpectation) validateVerdict(field string) error {
+	if v.Gate != "" {
+		if err := oneOf(field+".gate", v.Gate, Gates...); err != nil {
+			return err
+		}
+	}
+	for i, gap := range deref(v.Shortfall) {
+		if err := required(fmt.Sprintf("%s.shortfall[%d].kind", field, i), gap.Kind); err != nil {
+			return err
+		}
+	}
+	for i, source := range deref(v.Errors) {
+		if err := required(fmt.Sprintf("%s.errors[%d]", field, i), source); err != nil {
+			return err
+		}
+	}
+	if *v.ExitCode != indeterminateExit {
+		return nil
+	}
+	causes := len(deref(v.Shortfall)) + len(deref(v.Errors)) + len(v.UnverifiedInclude)
+	if v.Gate == "" || v.Shortfall == nil || v.Errors == nil || causes == 0 {
+		return fmt.Errorf("%w: %s expects exit %d without saying why: state gate, shortfall and errors, and a cause in them or in unverified_include",
+			ErrInvalid, field, indeterminateExit)
+	}
+	return nil
+}
+
+func deref[T any](list *[]T) []T {
+	if list == nil {
+		return nil
+	}
+	return *list
 }
 
 func (v VerifierExpectation) validateRules(field string) error {

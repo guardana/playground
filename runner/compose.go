@@ -51,9 +51,10 @@ type Compose interface {
 	// runs, whatever tag it was started from.
 	ContainerImage(ctx context.Context, profiles []string, service string) (string, error)
 	Down(ctx context.Context, profiles []string) error
-	// WithEnv returns a Compose that adds these variables to every invocation.
-	// The run identifier is one of them, and it changes per run, so it is not
-	// something the topology can be built with once.
+	// WithEnv returns a Compose that adds these variables to every invocation,
+	// on top of those an earlier WithEnv added. The run identifier is one of
+	// them, and it changes per run, so it is not something the topology can be
+	// built with once.
 	WithEnv(env map[string]string) Compose
 }
 
@@ -82,7 +83,10 @@ type dockerCompose struct {
 }
 
 func (d dockerCompose) WithEnv(env map[string]string) Compose {
-	added := slices.Clone(os.Environ())
+	added := slices.Clone(d.env)
+	if added == nil {
+		added = os.Environ()
+	}
 	for _, name := range slices.Sorted(maps.Keys(env)) {
 		added = append(added, name+"="+env[name])
 	}

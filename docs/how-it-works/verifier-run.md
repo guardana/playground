@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**]
+covers: [runner/verifier.go, runner/verifier_files.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**]
 ---
 
 # How a verifier scenario runs
@@ -32,7 +32,8 @@ sequenceDiagram
   runner->>verifier: docker compose run, dial each probed server
   runner->>verifier: dial 192.0.2.1 port 443, read the routing tables
   loop each step, in order
-    runner->>verifier: docker compose run, probe --mcp http://victim-fs:8080/mcp --format json, with --write-mcp-pin or --mcp-pin /lab-run/pin-n.json
+    Note over runner: makes verifier/step-n/in, copies the step's profile and pin into it
+    runner->>verifier: docker compose run, probe --mcp http://victim-fs:8080/mcp --format json, with --mcp-pin and --profile from /lab-run/in, or --write-mcp-pin into /lab-run/out
     verifier->>victim: server/discover, initialize where expected, tools/list
     verifier->>victim: unauthenticated GETs of the two discovery documents
     victim-->>verifier: the tools as described now
@@ -49,13 +50,17 @@ Every step, and every reach dial, is a new container from the image
 refuses a local one whose `org.opencontainers.image.version` is not
 `VERIFIER_VERSION`, before anything boots.
 
-The verifier sees one host directory, the run's `verifier/`, mounted at
-`/lab-run`, where a `write_pin` step writes `pin-<n>.json` and a later step
-reads it back with `--mcp-pin`. The victims' journals stay out of its reach.
-The runner keeps what a step printed, and the trace report below, only at a
-path that does not exist yet, so a file the verifier left under that name fails
-the step instead of being graded. It reads every pin and report as a regular
-file of at most 8 MiB, never through a link.
+Each step sees one directory of the run, `verifier/step-<n>/`. Its `in/` is
+bound read-only at `/lab-run/in` and holds what the runner handed the step: the
+scenario's profile as `profile.yaml` and the pin an earlier step wrote as
+`pin.json`, each copied as a regular file of at most 1 MiB, never through a
+link. A `write_pin` step runs as the `verifier-pin` service, which also binds
+the step's `out/` writable at `/lab-run/out`, where the pin lands. A step whose
+inputs could not be handed over does not run, and neither does one handed the
+pin of a step that did not exit 0. What a step prints is kept in
+`verifier/` beside the step directories, which no container mounts, at a path
+that does not exist yet. The victims' journals stay out of reach. The runner
+reads every pin and report as a regular file of at most 8 MiB.
 
 ## The agent's trace
 
@@ -94,12 +99,15 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier-reach/no-route-out` | the dial to `192.0.2.1:443` ends in no route or an unknown name; a connection fails it, any other error is indeterminate | `probes.log` |
 | `verifier-reach/no-default-route` | neither `/proc/net/route` nor `/proc/net/ipv6_route` in the verifier's container holds a usable default route | `probes.log` |
 | `verifier/step-<n>/ran` | never: it is the indeterminate of a step whose container did not start | the report |
-| `verifier/step-<n>/pin` | a `write_pin` step left a pin of schema 2 that approves the probed URL and at least one tool | `verifier/pin-<n>.json` |
+| `verifier/step-<n>/pin` | a `write_pin` step left a pin of schema 2 that approves the probed URL and at least one tool | `verifier/step-<n>/out/pin.json` |
 | `verifier/step-<n>/report` | any other step left a report of schema 18 about the probed URL, naming at least one rule that ran | `verifier/step-<n>.json` |
 | `verifier/step-<n>/exit-code` | the exit code is the one stated; beside a missing record it is indeterminate, since a non-zero exit may be docker's | the pin or the report |
 | `verifier/step-<n>/finding/<rule>` | a verifier finding of that rule with the stated severity and summary text | the report |
 | `verifier/step-<n>/no-finding/<rule>` | the rule ran and left no verifier finding, waived one, unverified result or error | the report |
 | `verifier/step-<n>/unverified/<rule>` | the rule is reported unverified | the report |
+| `verifier/step-<n>/gate` | the report's own verdict, `run.result_summary.gate`, is the one stated; a report without it fails | the report |
+| `verifier/step-<n>/shortfall` | `run.coverage.shortfall` holds exactly the stated gaps, one each, by kind and, where stated, name; a report without it fails | the report |
+| `verifier/step-<n>/errors` | the report's `errors` name exactly the stated rules; a report without the list fails | the report |
 | `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>/<victim>.jsonl` |
 | `trace/*` | as the step checks of the same names, over a report whose target is this run's trace, `/lab-run/trace.jsonl#<run id>` | `verifier/trace-report.json` |
 
@@ -117,11 +125,25 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 - **`no-finding` means the rule ran and concluded**, not that its verifier
   finding is absent (`runner/check/verifier_report.go`). A rule that did not run, could
   not tell, or was waived has established nothing.
+- **A step's inputs reach it read-only, in a directory of its own**
+  (`runner/verifier_files.go`, `compose/compose.yaml`). The verifier writes only
+  a pin step's `out/`, so it cannot change what a later step is handed or a
+  report the runner grades.
+- **An exit 2 says why** (`internal/labspec/verifier_rules.go`). The verifier
+  exits 2 for a coverage gap, a pin it cannot use among them, for a rule that
+  could not run, and under `fail_on_inconclusive` for a check that reached no
+  verdict. A scenario states the gate, every gap and every error, and a
+  control step through the same handover tells the verifier's verdict from the
+  lab's own failure.
 - **The victims' journals grade the verifier's own promise** to call no tool
   (`runner/verifier.go`, `everyVictimServesNothing`).
 - **The verifier's network is proved sealed on every run**
   (`runner/verifier_reach.go`): a router past the network answers "no
-  route" too, so the verifier's own routing tables are read as well.
+  route" too, so the verifier's own routing tables are read as well. The
+  probes run in `verifier`; `verifier-pin` is held to the same network and
+  hardening by `compose/verifier_test.go`, and the teardown names its
+  profile, so a pin step that outlived its deadline does not stay on
+  `tool-net`.
 
 ## Where the code lives
 

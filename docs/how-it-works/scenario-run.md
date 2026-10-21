@@ -67,7 +67,7 @@ Sources: `compose/compose.yaml`, `runner/env.go`, `runner/enforcer.go`, `victims
 | network | who sits on it | why |
 |---|---|---|
 | `agent-net` | `scripted-agent`, `enforcer` | the agent reaches the enforcer and nothing else |
-| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier` (profile `verifier`), `enforcer` | the attack pages and the canary tokens stay behind it |
+| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier` (profile `verifier`), `verifier-pin` (its own profile, which only the runner names), `enforcer` | the attack pages and the canary tokens stay behind it |
 | `evidence-net` | `collector`, `enforcer` | a victim that could post to the collector could forge the trail |
 | `pdp-net` | `pdp-double`, `enforcer` | the double answers the enforcer alone |
 | `approver-net` | `approver` | a service with no network would land on compose's default one, which has a route out; the approver needs only the `approvals` volume it shares with the enforcer |
@@ -96,7 +96,8 @@ and the parts of `LAB_WORKSPACE` (the clone, or
 | `scripted-agent` | `agent/` | `trajectories/` |
 | `collector` | `collector/`; `collector-tls/` read-only | |
 | `enforcer` | `gateway/`, `pki/` and `export-ca/`, all read-only | |
-| `verifier` | `verifier/` | |
+| `verifier` | its step's `verifier/step-<n>/in/`, read-only | |
+| `verifier-pin` | the same, and that step's `out/` | |
 | `trace-verifier` | `verifier/` read-only | `config/contracts/` |
 
 Compose refuses a missing workspace directory rather than create it. A journal
@@ -256,7 +257,7 @@ The files themselves are listed in the quickstart's
 
 | what | where | protection | kept until |
 |---|---|---|---|
-| the run's files | `reports/<run id>/` | the directory and its `journals/` are the runner's, mode 0755; each part a service writes into (one `journals/<server>/` per journal writer, `agent/`, `collector/`, `pki/`, a verifier scenario's `verifier/`) is mode 01777, world-writable and sticky, and no writer's journal directory is mounted into another service; the journals and the agent's files are written mode 0644 by uid 65532 (under rootless Docker a subordinate uid of the runner's user), so the runner reads them as an ordinary user on a Linux host; every service that mounts part of a run has a numeric non-root `user:` in compose, and the one-shot containers that sign and make keys run as the user whose files the runner owns, the runner's own ids or, under rootless Docker, root; the runner writes each of its own files once, as a new file, never through a link, and refuses to run as uid 65532 | you remove it: nothing in the lab prunes `reports/` |
+| the run's files | `reports/<run id>/` | the directory and its `journals/` are the runner's, mode 0755; each part a service writes into (one `journals/<server>/` per journal writer, `agent/`, `collector/`, `pki/`, a `write_pin` step's `verifier/step-<n>/out/`) is mode 01777, world-writable and sticky, and no writer's journal directory is mounted into another service; the journals and the agent's files are written mode 0644 by uid 65532 (under rootless Docker a subordinate uid of the runner's user), so the runner reads them as an ordinary user on a Linux host; every service that mounts part of a run has a numeric non-root `user:` in compose, and the one-shot containers that sign and make keys run as the user whose files the runner owns, the runner's own ids or, under rootless Docker, root; the runner writes each of its own files once, as a new file, never through a link, and refuses to run as uid 65532 | you remove it: nothing in the lab prunes `reports/` |
 | the enforcer's configuration and signed bundle | `reports/<run id>/gateway/` | public, mode 0644, mounted read-only into the enforcer | as above |
 | the run CA's certificate | `reports/<run id>/export-ca/ca.pem` | public, mode 0644; its directory is mounted read-only into the enforcer alone, which trusts it for the collector | as above |
 | the collector's TLS key | `reports/<run id>/collector-tls/key.pem` | mode 0644, since the collector reads it as its own uid; its directory is mounted into the collector alone | removed once the run's services are down; kept with `-keep` or by a killed run |

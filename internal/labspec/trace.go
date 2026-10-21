@@ -33,7 +33,7 @@ func (s Scenario) validateTrace() error {
 		return fmt.Errorf("%w: expect.trace is set and the scenario names no trace", ErrInvalid)
 	case s.Expect.Trace == nil:
 		return fmt.Errorf("%w: trace is set and expect.trace says nothing about the verdict", ErrInvalid)
-	case !underWith(s.Trace.Contract, ContractDir, ".yaml") || strings.Contains(strings.TrimPrefix(s.Trace.Contract, ContractDir), "/"):
+	case !directlyUnder(s.Trace.Contract, ContractDir, ".yaml"):
 		// The runner hands the verifier the base name under the contracts
 		// mount, so a file in a subdirectory would be graded as another one.
 		return fmt.Errorf("%w: trace.contract is %q, want a .yaml file directly in %s", ErrInvalid, s.Trace.Contract, ContractDir)
@@ -60,7 +60,10 @@ func (v VerifierExpectation) validateTrace() error {
 	case !named:
 		return fmt.Errorf("%w: %s names no %s rule in findings_include or findings_exclude", ErrInvalid, field, contractRulePrefix)
 	}
-	return v.validateRules(field)
+	if err := v.validateRules(field); err != nil {
+		return err
+	}
+	return v.validateVerdict(field)
 }
 
 // contractRulePrefix starts the rule id of every contract assertion.

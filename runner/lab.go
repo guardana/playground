@@ -127,7 +127,7 @@ func (l lab) runScenario(
 	}
 	compose := l.compose.WithEnv(env)
 	if !l.keep {
-		defer l.takeDown(ctx, compose, spec.Profile, runDir)
+		defer l.takeDown(ctx, compose, downProfiles(spec), runDir)
 	}
 	inProfile, err := compose.Services(ctx, spec.Profile)
 	switch {

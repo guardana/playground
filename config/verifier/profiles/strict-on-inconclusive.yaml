@@ -1,0 +1,6 @@
+# The default gate, and a check that ran without reaching a verdict counts
+# against the run.
+schema_version: 1
+name: strict-on-inconclusive
+fail_on:
+  fail_on_inconclusive: true

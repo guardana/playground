@@ -433,7 +433,13 @@ expect:
 
 - `probe` runs `probe --mcp http://<server>:8080/mcp --format json`. `write_pin`
   approves the manifest (`--write-mcp-pin`); `pin_from: n` compares against the
-  pin step n wrote, which has to be an earlier step on the same server.
+  pin step n wrote, which has to be an earlier step on the same server;
+  `pin_of: n` compares against the pin an earlier step wrote for another
+  server, which the verifier documents it cannot use. A step states at most one
+  of the three. `profile` names a verifier profile directly in
+  `config/verifier/profiles/`, handed to that step alone (`--profile`); a file
+  the profile names in turn is not handed over, and every step runs with
+  `--plugins builtins`, which wins over the profile's `plugins`.
 - `exit_code` is required, 0 to 8 as the verifier's exit-code table documents.
   It is graded only beside the step's record: the pin for a `write_pin` step,
   the JSON report on standard output for any other. Standard error is kept in
@@ -446,6 +452,16 @@ expect:
   fails it, and it cannot also be named in `findings_include` or
   `unverified_include`. `unverified_include` names a rule reported as
   unverified. A `write_pin` step states only `exit_code`.
+- `gate` is the verdict the report records for its own run: `pass`, `fail` or
+  `indeterminate`. `shortfall` is the exact list of coverage gaps it records,
+  each `{kind, name}` with `name` optional, and `errors` the exact list of
+  rules that could not run, by source. `[]` says there are none; a key left
+  out asserts nothing. A step expecting exit 2 states `gate`, `shortfall` and
+  `errors`, and names a cause in one of them or in `unverified_include`. The
+  verifier exits 2 for a coverage gap, among them a pin it cannot use, for a
+  rule that could not run, and under `fail_on_inconclusive` for a check that
+  reached no verdict; an unverified rule alone explains nothing, because every
+  probe without a token leaves one.
 - `effects` names every probed server and stays exhaustive: the verifier
   documents that it never calls a tool, and the victim's journal says whether
   that held. The verifier reaches every victim on `tool-net`, so the runner

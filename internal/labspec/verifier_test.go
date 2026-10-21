@@ -70,6 +70,94 @@ func TestTheHighestDocumentedExitCodeIsAnExpectation(t *testing.T) {
 	}
 }
 
+const indeterminateScenario = `schema_version: 1
+id: verify-01-drift
+title: a pin written for one server is handed to another
+profile: [verifier]
+verifier:
+  - probe: { server: victim-fs, write_pin: true }
+  - probe: { server: victim-crm, pin_of: 1, profile: config/verifier/profiles/strict.yaml }
+  - probe: { server: victim-fs, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 2
+      gate: indeterminate
+      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]
+      errors: []
+    3: { exit_code: 1, gate: fail, shortfall: [] }
+  effects:
+    victim-fs: { calls_served: {} }
+    victim-crm: { calls_served: {} }
+`
+
+func TestAPinOfAnotherServerAndAnExactCauseLoad(t *testing.T) {
+	scenario, err := loadVerifier(t, indeterminateScenario)
+	if err != nil {
+		t.Fatalf("LoadScenario: %v", err)
+	}
+	probe := scenario.Verifier[1].Probe
+	if probe.PinOf != 1 || probe.PinFrom != 0 || probe.Profile != "config/verifier/profiles/strict.yaml" {
+		t.Errorf("step 2 = %+v", probe)
+	}
+	wantExactCause(t, scenario.Expect.Verifier[2], scenario.Expect.Verifier[3])
+}
+
+func wantExactCause(t *testing.T, second, third labspec.VerifierExpectation) {
+	t.Helper()
+	if second.Gate != "indeterminate" || second.Shortfall == nil || len(*second.Shortfall) != 1 ||
+		(*second.Shortfall)[0] != (labspec.ShortfallExpectation{Kind: "demanded_check", Name: "guardana.agent.mcp_server_manifest"}) {
+		t.Errorf("expect.verifier[2] = %+v", second)
+	}
+	if second.Errors == nil || len(*second.Errors) != 0 {
+		t.Errorf("errors: [] was not read as an exact empty list: %v", second.Errors)
+	}
+	if third.Shortfall == nil || len(*third.Shortfall) != 0 || third.Errors != nil {
+		t.Errorf("expect.verifier[3] = %+v; shortfall: [] is none, an absent errors asserts nothing", third)
+	}
+}
+
+func TestAPinOrAVerdictThatCannotBeGradedIsRefused(t *testing.T) {
+	for name, replace := range map[string][]string{
+		"a pin of the same server":     {"{ server: victim-crm, pin_of: 1,", "{ server: victim-fs, pin_of: 1,"},
+		"a pin of a later step":        {"pin_of: 1,", "pin_of: 3,"},
+		"a pin of a step writing none": {"pin_of: 1,", "pin_of: 2,"},
+		"two pins":                     {"pin_of: 1,", "pin_of: 1, pin_from: 1,"},
+		"a pin of another written":     {"{ server: victim-fs, write_pin: true }", "{ server: victim-fs, write_pin: true, pin_of: 1 }"},
+		"a profile elsewhere":          {"config/verifier/profiles/strict.yaml", "config/contracts/strict.yaml"},
+		"a profile in a subdirectory":  {"config/verifier/profiles/strict.yaml", "config/verifier/profiles/x/strict.yaml"},
+		"a profile climbing out":       {"config/verifier/profiles/strict.yaml", "config/verifier/profiles/../../x.yaml"},
+		"a profile not yaml":           {"config/verifier/profiles/strict.yaml", "config/verifier/profiles/strict.json"},
+		"an unknown gate":              {"gate: indeterminate", "gate: inconclusive"},
+		"a gate for a pin step":        {"    1: { exit_code: 0 }", "    1: { exit_code: 0, gate: pass }"},
+		"a shortfall for a pin step":   {"    1: { exit_code: 0 }", "    1: { exit_code: 0, shortfall: [] }"},
+		"errors for a pin step":        {"    1: { exit_code: 0 }", "    1: { exit_code: 0, errors: [] }"},
+		"a shortfall of no kind":       {"{ kind: demanded_check, name:", "{ kind: '', name:"},
+		"an error of no source":        {"      errors: []\n", "      errors: ['']\n"},
+		"exit 2 without a gate":        {"      gate: indeterminate\n", ""},
+		"exit 2 without a cause": {"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n",
+			"      shortfall: []\n"},
+		"exit 2 without its shortfall stated": {"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n", ""},
+		"exit 2 without its errors stated":    {"      errors: []\n", ""},
+		// Every probe without a token leaves session_binding unverified, so
+		// it explains an exit 2 only beside a stated shortfall and errors.
+		"exit 2 put down to an unverified rule alone": {
+			"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n      errors: []\n",
+			"      unverified_include: [guardana.mcp.session_binding]\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			body := strings.NewReplacer(replace...).Replace(indeterminateScenario)
+			if body == indeterminateScenario {
+				t.Fatal("the replacement changed nothing")
+			}
+			if _, err := loadVerifier(t, body); !errors.Is(err, labspec.ErrInvalid) {
+				t.Errorf("err = %v, want ErrInvalid", err)
+			}
+		})
+	}
+}
+
 func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testing.T) {
 	for name, replace := range map[string][]string{
 		"an unknown key":            {"write_pin: true }", "write_pin: true, pin: yes }"},
