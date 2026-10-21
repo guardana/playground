@@ -7,10 +7,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Go 1.27.2 builds the lab and its images (`go.mod`, `GO_BUILD_IMAGE`). It
-  fixes the ten standard-library advisories `make security` reports against
-  1.27.1. golangci-lint 2.14.0 replaces 2.13.2, which cannot load the
-  standard library Go 1.27.2 compiles.
+- Go 1.27.3 builds the lab and its images (`go.mod`, `GO_BUILD_IMAGE`). It
+  fixes the eleven standard-library advisories `make security` reports
+  against 1.27.1. golangci-lint 2.14.0 replaces 2.13.2, which cannot load the
+  standard library Go 1.27.2 and later compile.
 - The verifier is pinned at guardana-cli 1.0.0rc5, was 0.26.1, and its lock
   takes typer 0.27.3. The runner reads report schema 18. `verify-01` to
   `verify-04`, `trace-01` and `trace-02` keep their expectations, cited again
