@@ -1,0 +1,76 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:60      --mcp-token-env names the variable holding the bearer token
+#   docs/usage-probe.md:103-106 the verifier never calls a tool, and fetches the discovery
+#                               documents without a credential
+#   docs/usage-probe.md:193-206 a manifest compared with its own pin has not drifted
+#   docs/usage-probe.md:224-239 what each authorization check establishes; :241-244 a server
+#                               that answers an anonymous caller leaves four of them unanswered,
+#                               and this one refuses it
+#   docs/usage-probe.md:246-249 with the token, session binding can be tested
+#   docs/usage-probe.md:251-259 a server that accepts a token it could not have issued is a
+#                               finding, CRITICAL in docs/generated/rule-catalog.md:35
+#   docs/usage-probe.md:234     a session id that authenticates a request on its own is a finding;
+#                               its severity is not asserted here
+#   docs/threat-model.md:108-110 private discovery addresses are followed for a local server
+#   docs/index.md:25-26 and docs/profiles.md:121 under fail_on_inconclusive a pass is a run with
+#                               no finding at or above high and no unanswered check
+# victims/vault/README.md, victims/vault-anytoken/README.md and victims/vault-sessionauth/README.md
+# name each victim's lie. config/auth/honest.json is the authorization server's metadata.
+# Steps 3 and 4 each keep the other's check clean, so a finding is told from a token that never
+# arrived; the victims' own journals say what each request carried.
+# Red when: step 2 is not handed the token, which leaves the manifest unread and the run
+#   indeterminate.
+schema_version: 1
+id: verify-08-an-authenticated-server-is-judged-on-its-authorization
+title: An authenticated server is judged on its authorization, and each lie is told apart
+maps_to: { failure_catalog: [MCP-02, MCP-03] }
+profile: [verifier]
+auth_double: honest
+verifier:
+  - probe: { server: victim-vault, credential: true, write_pin: true }
+  - probe: { server: victim-vault, credential: true, pin_from: 1, profile: config/verifier/profiles/strict-on-inconclusive.yaml }
+  - probe: { server: victim-vault-anytoken, credential: true }
+  - probe: { server: victim-vault-sessionauth, credential: true }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 0
+      gate: pass
+      findings_exclude:
+        - guardana.agent.mcp_server_manifest
+        - guardana.mcp.unauthenticated_access
+        - guardana.mcp.authorization_discovery
+        - guardana.mcp.token_audience
+        - guardana.mcp.session_binding
+        - guardana.mcp.scope_breadth
+        - guardana.mcp.discovery_target
+        - guardana.mcp.issuer_identification
+        - guardana.mcp.task_identity
+      shortfall: []
+      errors: []
+    3:
+      exit_code: 1
+      gate: fail
+      findings_include: [{ rule_id: guardana.mcp.token_audience, severity: CRITICAL }]
+      findings_exclude: [guardana.mcp.session_binding]
+      errors: []
+    4:
+      exit_code: 1
+      gate: fail
+      findings_include: [{ rule_id: guardana.mcp.session_binding }]
+      findings_exclude: [guardana.mcp.token_audience]
+      errors: []
+  effects:
+    victim-vault:
+      calls_served: {}
+      auth_include:
+        - { credential: run, status: 200 }
+        - { credential: other, status: 401 }
+        - { credential: none, status: 401 }
+    victim-vault-anytoken:
+      calls_served: {}
+      auth_include: [{ credential: other, status: 200 }]
+    victim-vault-sessionauth:
+      calls_served: {}
+      auth_include: [{ credential: none, session: known, status: 200 }]

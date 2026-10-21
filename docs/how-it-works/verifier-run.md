@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier.go, runner/verifier_files.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**]
+covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**]
 ---
 
 # How a verifier scenario runs
@@ -62,6 +62,15 @@ pin of a step that did not exit 0. What a step prints is kept in
 that does not exist yet. The victims' journals stay out of reach. The runner
 reads every pin and report as a regular file of at most 8 MiB.
 
+Each verifier run mints a token of 32 random bytes and puts it in compose's
+environment as `LAB_MCP_TOKEN`, where the token-gated victims read it at boot.
+A step with `credential` gets the variable by name (`-e LAB_MCP_TOKEN`) and
+`--mcp-token-env LAB_MCP_TOKEN`, so the value is on no command line. Those
+victims require it on `/mcp`, publish their protected-resource metadata naming
+`auth-double`, and journal every authentication decision; `auth-double` serves
+the scenario's persona and journals each request it gets, with whether it
+carried a credential or a session and never their values.
+
 ## The agent's trace
 
 A scenario with `trace:` runs through the enforcer as usual. After the replay,
@@ -98,6 +107,7 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier-reach/<server>` | the verifier's network connects to each probed server | `probes.log` |
 | `verifier-reach/no-route-out` | the dial to `192.0.2.1:443` ends in no route or an unknown name; a connection fails it, any other error is indeterminate | `probes.log` |
 | `verifier-reach/no-default-route` | neither `/proc/net/route` nor `/proc/net/ipv6_route` in the verifier's container holds a usable default route | `probes.log` |
+| `verifier-reach/no-proxy` | no `*_proxy` variable is set in the verifier's environment | `probes.log` |
 | `verifier/step-<n>/ran` | never: it is the indeterminate of a step whose container did not start | the report |
 | `verifier/step-<n>/pin` | a `write_pin` step left a pin of schema 2 that approves the probed URL and at least one tool | `verifier/step-<n>/out/pin.json` |
 | `verifier/step-<n>/report` | any other step left a report of schema 18 about the probed URL, naming at least one rule that ran | `verifier/step-<n>.json` |
@@ -109,6 +119,9 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier/step-<n>/shortfall` | `run.coverage.shortfall` holds exactly the stated gaps, one each, by kind and, where stated, name; a report without it fails | the report |
 | `verifier/step-<n>/errors` | the report's `errors` name exactly the stated rules; a report without the list fails | the report |
 | `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>/<victim>.jsonl` |
+| `effects/<victim>/auth` | every decision in `auth_include` is among the auth lines the victim journalled in this run | `journals/<victim>/<victim>.jsonl` |
+| `auth-double/unauthenticated` | with `auth_double` set, the double served the named persona to at least one metadata request in this run, and no request carried a credential, a session, a query string or a credential-like header name; none fetched is indeterminate | `journals/auth-double/auth-double.jsonl` |
+| `verifier/token-kept-out` | no file under the run directory when the checks run holds the run's token in its name or its bytes; a file it could not read is indeterminate. The reports are written after it | every file under the run directory |
 | `trace/*` | as the step checks of the same names, over a report whose target is this run's trace, `/lab-run/trace.jsonl#<run id>` | `verifier/trace-report.json` |
 
 Exit codes 0 to 8 mean what `docs/exit-codes.md` in the verifier's repository
@@ -135,6 +148,13 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
   verdict. A scenario states the gate, every gap and every error, and a
   control step through the same handover tells the verifier's verdict from the
   lab's own failure.
+- **The token travels by name and is looked for afterwards**
+  (`runner/token.go`, `runner/check/token.go`). A copy of it in a report, a
+  journal or what a container printed fails the run, whoever wrote it.
+- **Whether the token reached a victim is read from the victim**
+  (`runner/check/effects_auth.go`): its own auth lines say what each request
+  of the run carried. The victim cannot tell one step from another, so a step
+  that never sent the token is caught by its exit code and gate, not here.
 - **The victims' journals grade the verifier's own promise** to call no tool
   (`runner/verifier.go`, `everyVictimServesNothing`).
 - **The verifier's network is proved sealed on every run**

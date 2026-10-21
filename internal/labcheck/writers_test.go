@@ -24,7 +24,7 @@ func TestTheMakefileMakesADirectoryForEveryJournalWriter(t *testing.T) {
 		t.Fatalf("Makefile: %d JOURNAL_WRITERS lines, want 1", len(found))
 	}
 	got := slices.Sorted(slices.Values(strings.Fields(string(found[0][1]))))
-	want := slices.Sorted(slices.Values(append(labspec.Victims(), labspec.PDPDoubleJournal, labspec.ApproverJournal)))
+	want := slices.Sorted(slices.Values(labspec.JournalWriters()))
 	if !slices.Equal(got, want) {
 		t.Errorf("Makefile JOURNAL_WRITERS names %v, want %v", got, want)
 	}

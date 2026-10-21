@@ -8,19 +8,17 @@
 //
 // One line per call, appended, never rewritten. The server stamps its own name
 // on every line, so a caller cannot file a call under someone else's journal.
+// A token-gated server also appends one auth line per request to its MCP
+// endpoint (Auth), in the same file; an auth line is never a call.
 package journal
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/guardana/playground/internal/runfile"
 )
 
 // Status says what the server did with a call it received.
@@ -135,11 +133,15 @@ func (w *Writer) Record(entry Entry) error {
 	if err != nil {
 		return err
 	}
-	line = append(line, '\n')
+	return w.append(line)
+}
 
+// append writes one marshalled line under the lock.
+func (w *Writer) append(line []byte) error {
+	line = append(line, '\n')
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	_, err = w.file.Write(line)
+	_, err := w.file.Write(line)
 	return err
 }
 
@@ -166,46 +168,6 @@ func (w *Writer) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return errors.Join(w.file.Sync(), w.file.Close())
-}
-
-// ReadFile reads one server's journal. A journal that does not exist is an
-// error and never an empty one: a server that never started would otherwise
-// look exactly like a server that served nothing, and those are the two answers
-// a denial scenario has to tell apart. The journal sits where its server can
-// write, so a link, a FIFO or a file past MaxFileBytes there is refused.
-func ReadFile(path string) ([]Entry, error) {
-	body, err := runfile.ReadRegular(path, MaxFileBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var entries []Entry
-	scanner := bufio.NewScanner(bytes.NewReader(body))
-	scanner.Buffer(make([]byte, 0, 64<<10), MaxLineBytes)
-	line := 1
-	for ; scanner.Scan(); line++ {
-		var entry Entry
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
-			return nil, fmt.Errorf("%s line %d: %w", path, line, err)
-		}
-		// An effect written as {} would decode to an empty map and read as
-		// none at all; the writer never emits one.
-		if entry.Effect != nil {
-			if err := entry.Effect.Validate(); err != nil {
-				return nil, fmt.Errorf("%s line %d: %w", path, line, err)
-			}
-		}
-		entries = append(entries, entry)
-	}
-	if err := scanner.Err(); err != nil {
-		if errors.Is(err, bufio.ErrTooLong) {
-			// Named, because the caller's next move is to open that line, and
-			// "token too long" says neither which line nor how long is too long.
-			return nil, fmt.Errorf("%s line %d: %w: limit %d bytes", path, line, ErrLineTooLong, MaxLineBytes)
-		}
-		return nil, fmt.Errorf("%s line %d: %w", path, line, err)
-	}
-	return entries, nil
 }
 
 // CountsByTool counts the calls a server served, by tool.

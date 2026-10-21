@@ -7,6 +7,21 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Three victims require the run's bearer token, each with one lie its README
+  names: `victim-vault` (an annotation, as every victim), `victim-vault-anytoken`
+  (accepts any bearer token) and `victim-vault-sessionauth` (a session id stands
+  in for the token). They boot in the verifier's profile alone. `auth-double`
+  serves the authorization-server metadata a scenario picks from
+  `config/auth/` (`auth_double: <persona>`), and 404 without one.
+- `probe.credential: true` hands a step the run's token, minted per verifier
+  run and passed by the variable's name only. `expect.effects.<victim>.auth_include`
+  grades what each request to a token-gated victim carried from the victim's own
+  journal. Every verifier run also checks that no file of the run holds the
+  token, that the verifier's environment names no proxy, and, with a persona,
+  that the double was asked for its metadata with no credential.
+- `verify-08` to `verify-10`: the verifier's MCP authorization checks against
+  an honest token-gated server and against each lie, a probe without the token,
+  and an authorization server that advertises no PKCE (`MCP-05`).
 - A verifier step can name a profile (`profile`, a file in
   `config/verifier/profiles/`) and compare a server against the pin another
   step wrote for a different server (`pin_of`). A step, and `expect.trace`, can
@@ -17,6 +32,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The victim journal format is versioned. A victim that requires a bearer
+  token appends an auth line for each request to its `/mcp`: whether it
+  carried the run's token, another credential or none, whether its session id
+  was one the server issued, the status answered and the JSON-RPC method,
+  never a value. Auth lines are never counted as calls, and a journal without
+  them reads as before. A reader from before this change refuses a journal
+  that holds one. `victims/mcpserve` lets a victim wrap its MCP handler and
+  serve further routes (`RunRouted`).
 - Each verifier step sees only its own directory of the run: what the runner
   hands it, read-only, and for a `write_pin` step a writable `out/`, through
   the new `verifier-pin` service. A step's report and output are kept where no

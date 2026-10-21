@@ -21,23 +21,27 @@ import (
 // added in one place and forgotten in another fails here rather than as a
 // scenario that quietly never reaches it.
 func TestEveryCopyOfTheVictimListAgrees(t *testing.T) {
-	want := slices.Sorted(slices.Values(labspec.Victims()))
+	reachable := slices.Sorted(slices.Values(labspec.Victims()))
+	every := slices.Sorted(slices.Values(append(labspec.Victims(), labspec.VerifierVictims()...)))
 	services, toxiproxyWaits, enforcerWaits := composeVictims(t)
 	// Each of these names a victim once; a second entry, such as a second
-	// proxy for one victim, is a disagreement and is not compacted away.
-	for place, got := range map[string][]string{
-		"compose/compose.yaml services":                   services,
-		"compose/compose.yaml toxiproxy-tools depends_on": toxiproxyWaits,
-		"compose/compose.yaml enforcer depends_on":        enforcerWaits,
-		"compose/toxiproxy/proxies.json":                  proxyNames(t),
-		"scripts/classify-victims.sh":                     scriptVictims(t),
-		"victims/*/main.go":                               victimDirs(t),
-		"config/gateway/tools/*.json":                     snapshotNames(t),
+	// proxy for one victim, is a disagreement and is not compacted away. The
+	// token-gated victims boot and build like any other, and nothing routes,
+	// proxies or classifies them, because no trajectory reaches them.
+	for place, test := range map[string]struct{ got, want []string }{
+		"compose/compose.yaml services":                   {services, every},
+		"victims/*/main.go":                               {victimDirs(t), every},
+		"compose/compose.yaml toxiproxy-tools depends_on": {toxiproxyWaits, reachable},
+		"compose/compose.yaml enforcer depends_on":        {enforcerWaits, reachable},
+		"compose/toxiproxy/proxies.json":                  {proxyNames(t), reachable},
+		"scripts/classify-victims.sh":                     {scriptVictims(t), reachable},
+		"config/gateway/tools/*.json":                     {snapshotNames(t), reachable},
 	} {
-		if got = slices.Sorted(slices.Values(got)); !slices.Equal(got, want) {
-			t.Errorf("%s names %v, want %v", place, got, want)
+		if got := slices.Sorted(slices.Values(test.got)); !slices.Equal(got, test.want) {
+			t.Errorf("%s names %v, want %v", place, got, test.want)
 		}
 	}
+	want := reachable
 	// The classification and the fingerprints hold one line per tool.
 	for place, got := range map[string][]string{
 		"config/gateway/classification.yaml": classifiedUpstreams(t),

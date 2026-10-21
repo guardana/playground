@@ -67,6 +67,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"scripted-agent": {runDir + "/agent", workspace + "/trajectories"},
 		"pdp-double":     {runDir + "/journals/pdp-double", workspace + "/config/pdp", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki"},
 		"approver":       {runDir + "/journals/approver", workspace + "/config/approver", "approvals"},
+		"auth-double":    {runDir + "/journals/auth-double", runDir + "/auth"},
 		"collector": {"./otel/collector.yaml", "${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/collector-tls"},
 		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
@@ -77,7 +78,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/export-ca", "spool", "approvals", "holds"},
 	}
-	for _, victim := range labspec.Victims() {
+	for _, victim := range append(labspec.Victims(), labspec.VerifierVictims()...) {
 		want[victim] = []string{runDir + "/journals/" + victim}
 	}
 	for name, service := range readMounts(t).Services {

@@ -28,7 +28,7 @@ func TestServeOnAnswersHealthAndStopsWithTheContext(t *testing.T) {
 
 	stopped := make(chan error, 1)
 	go func() {
-		stopped <- serveOn(ctx, listener, mcp.NewServer(&mcp.Implementation{Name: "probe", Version: "0"}, nil))
+		stopped <- serveOn(ctx, listener, mcp.NewServer(&mcp.Implementation{Name: "probe", Version: "0"}, nil), Routing{})
 	}()
 
 	if code := health(t, listener.Addr().String()); code != http.StatusOK {
@@ -113,6 +113,77 @@ func TestRunOpensTheJournalAndClosesIt(t *testing.T) {
 	if err := recorder.Served("probe.run", "after the stop"); err == nil {
 		t.Error("the journal was still open after Run returned")
 	}
+}
+
+// RunRouted is the wiring a token-gated victim uses: the routing build returns
+// is what the listener serves.
+func TestRunRoutedServesTheVictimsRouting(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LAB_LISTEN", address)
+	t.Setenv("LAB_SERVER_NAME", "victim-probe")
+	t.Setenv("LAB_RUN_ID", "run-1")
+	t.Setenv("LAB_REPORTS_DIR", t.TempDir())
+
+	ctx, stop := context.WithCancel(t.Context())
+	defer stop()
+	stopped := make(chan error, 1)
+	go func() {
+		stopped <- RunRouted(ctx, func(recorder *Recorder) (*mcp.Server, Routing, error) {
+			return NewServer("victim-probe", recorder), Routing{Routes: map[string]http.Handler{
+				"GET /.well-known/oauth-protected-resource": http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusAccepted)
+				}),
+			}}, nil
+		})
+	}()
+
+	waitListening(t, address)
+	if code := health(t, address); code != http.StatusOK {
+		t.Fatalf("/healthz answered %d", code)
+	}
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
+		"http://"+address+"/.well-known/oauth-protected-resource", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusAccepted {
+		t.Errorf("the victim's route answered %d, want its own 202", response.StatusCode)
+	}
+	// A connection the client dialled ahead and never used holds up Shutdown
+	// for its whole grace.
+	http.DefaultClient.CloseIdleConnections()
+	stop()
+	if err := <-stopped; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// waitListening waits for Run to open the listener it was told to.
+func waitListening(t *testing.T, address string) {
+	t.Helper()
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+address+"/healthz", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response, err := http.DefaultClient.Do(request); err == nil {
+			_ = response.Body.Close()
+			return
+		}
+	}
+	t.Fatalf("nothing listened on %s", address)
 }
 
 func readJournal(t *testing.T, path string) []journal.Entry {

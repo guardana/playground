@@ -31,8 +31,11 @@ type Scenario struct {
 	Trace           *Trace         `json:"trace,omitempty"`
 	Chaos           []Fault        `json:"chaos,omitempty"`
 	Gap             *Gap           `json:"gap,omitempty"`
-	Expect          Expect         `json:"expect"`
-	Tolerance       Tolerance      `json:"tolerance,omitempty"`
+	// AuthDouble names the persona the authorization-server double serves in a
+	// verifier scenario, a file in AuthPersonaDir.
+	AuthDouble string    `json:"auth_double,omitempty"`
+	Expect     Expect    `json:"expect"`
+	Tolerance  Tolerance `json:"tolerance,omitempty"`
 }
 
 // MapsTo records which catalogued failure this scenario is an instance of, so a
@@ -99,6 +102,7 @@ type EffectExpectation struct {
 	CallsServed  map[string]int              `json:"calls_served"`
 	CallsRefused map[string]int              `json:"calls_refused,omitempty"`
 	Committed    map[string][]journal.Effect `json:"committed,omitempty"`
+	AuthInclude  []AuthExpectation           `json:"auth_include,omitempty"`
 }
 
 // EvidenceExpectation is what the trail itself has to show, separately from
@@ -133,7 +137,7 @@ func (s Scenario) validate(fileName string) error {
 	if len(s.Profile) == 0 {
 		return fmt.Errorf("%w: profile is empty", ErrInvalid)
 	}
-	if err := first(s.validateEffectCounts(), s.validateCommitted(), s.validateHealth()); err != nil {
+	if err := first(s.validateEffectCounts(), s.validateCommitted(), s.validateHealth(), s.validateAuth()); err != nil {
 		return err
 	}
 	if s.IsVerifier() {

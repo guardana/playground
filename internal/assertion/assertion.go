@@ -100,6 +100,9 @@ type Records struct {
 	// Journals is what each victim tool server recorded, keyed by the name
 	// compose gives the server.
 	Journals map[string][]journal.Entry
+	// Auth is the authentication decisions each token-gated victim recorded,
+	// keyed like Journals.
+	Auth map[string][]journal.Auth
 	// Unread says why a journal that is there could not be read, keyed like
 	// Journals; a missing journal is in neither.
 	Unread map[string]string

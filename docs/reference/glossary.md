@@ -31,7 +31,7 @@ record) are defined in `docs/concepts/glossary.md` in its repository at
 | victim | a tool server the agent's calls reach, one per directory under `victims/` except the shared `mcpserve`; [status](../status.md) lists them | `victims/` |
 | lie | the deliberately wrong annotation or description a victim carries, named in its README; never fixed, since it is what shows an annotation is a hint and never an authorization | `victims/*/README.md` |
 | canary | a synthetic token planted in a victim's fixture, such as `CANARY-CRM-<id>-<hex>`, so a leak is visible in a journal or a trail; it leads nowhere | `victims/crm/`, `victims/fs/`, `victims/pay/` |
-| double | a scripted stand-in for a party the enforcer talks to: `pdp-double` for the external decision point, `approver` for the person who answers a held call. Each journals what it was asked and did | `services/` |
+| double | a scripted stand-in for a party the enforcer or the verifier talks to: `pdp-double` for the external decision point, `approver` for the person who answers a held call, `auth-double` for the authorization server a token-gated victim names, serving the persona a scenario picks from `config/auth/`. Each journals what it was asked and did | `services/` |
 | trajectory | the calls the scripted agent replays, the same on every run | `trajectories/<id>.yaml` |
 | scenario | what a run is expected to leave on record: a verdict per step, the victims' effects, properties of the evidence | `scenarios/<class>/<id>.yaml` |
 | classification | each tool's effect, resource, `trust_zone` and `returns` as the operator states them, pinned to the fingerprints the enforcer's `doctor` printed; what decides a call's effect class, never the tool's annotation | `config/gateway/` |

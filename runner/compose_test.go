@@ -20,12 +20,21 @@ func TestComposeArgsCarryTheFileTheEnvFileAndEveryProfile(t *testing.T) {
 // A split run builds nothing, so the verifier image the runner checked is the
 // one that runs.
 func TestASplitRunNamesItsEntrypointBeforeTheService(t *testing.T) {
-	got := strings.Join(runSplitArgs("verifier", "python", []string{"-c", "x"}), " ")
+	got := strings.Join(runSplitArgs("verifier", "python", []string{"-c", "x"}, nil), " ")
 	if want := "run --rm --no-TTY --entrypoint python verifier -c x"; got != want {
 		t.Errorf("argv is %q, want %q", got, want)
 	}
-	got = strings.Join(runSplitArgs("verifier", "", []string{"probe"}), " ")
+	got = strings.Join(runSplitArgs("verifier", "", []string{"probe"}, nil), " ")
 	if want := "run --rm --no-TTY verifier probe"; got != want {
+		t.Errorf("argv is %q, want %q", got, want)
+	}
+}
+
+// A variable reaches the container by its name alone: compose takes the value
+// from its own environment, so a token never appears on the command line.
+func TestARunHandsAVariableOverByNameBeforeTheService(t *testing.T) {
+	got := strings.Join(runSplitArgs("verifier", "", []string{"probe"}, []string{"LAB_MCP_TOKEN"}), " ")
+	if want := "run --rm --no-TTY -e LAB_MCP_TOKEN verifier probe"; got != want {
 		t.Errorf("argv is %q, want %q", got, want)
 	}
 }

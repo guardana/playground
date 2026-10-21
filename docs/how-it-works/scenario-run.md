@@ -67,7 +67,7 @@ Sources: `compose/compose.yaml`, `runner/env.go`, `runner/enforcer.go`, `victims
 | network | who sits on it | why |
 |---|---|---|
 | `agent-net` | `scripted-agent`, `enforcer` | the agent reaches the enforcer and nothing else |
-| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier` (profile `verifier`), `verifier-pin` (its own profile, which only the runner names), `enforcer` | the attack pages and the canary tokens stay behind it |
+| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier`, the token-gated victims and `auth-double` (profile `verifier`), `verifier-pin` (its own profile, which only the runner names), `enforcer` | the attack pages and the canary tokens stay behind it |
 | `evidence-net` | `collector`, `enforcer` | a victim that could post to the collector could forge the trail |
 | `pdp-net` | `pdp-double`, `enforcer` | the double answers the enforcer alone |
 | `approver-net` | `approver` | a service with no network would land on compose's default one, which has a route out; the approver needs only the `approvals` volume it shares with the enforcer |
@@ -98,6 +98,7 @@ and the parts of `LAB_WORKSPACE` (the clone, or
 | `enforcer` | `gateway/`, `pki/` and `export-ca/`, all read-only | |
 | `verifier` | its step's `verifier/step-<n>/in/`, read-only | |
 | `verifier-pin` | the same, and that step's `out/` | |
+| `auth-double` | `journals/auth-double/` | `config/auth/` |
 | `trace-verifier` | `verifier/` read-only | `config/contracts/` |
 
 Compose refuses a missing workspace directory rather than create it. A journal
@@ -261,7 +262,7 @@ The files themselves are listed in the quickstart's
 | the enforcer's configuration and signed bundle | `reports/<run id>/gateway/` | public, mode 0644, mounted read-only into the enforcer | as above |
 | the run CA's certificate | `reports/<run id>/export-ca/ca.pem` | public, mode 0644; its directory is mounted read-only into the enforcer alone, which trusts it for the collector | as above |
 | the collector's TLS key | `reports/<run id>/collector-tls/key.pem` | mode 0644, since the collector reads it as its own uid; its directory is mounted into the collector alone | removed once the run's services are down; kept with `-keep` or by a killed run |
-| containers, networks, the `spool`, `approvals` and `holds` volumes | compose project `lab-<suffix>` | the internal networks above | `down --volumes` at the end of the run; kept with `-keep` or by a killed run |
+| containers, networks, the `spool`, `approvals` and `holds` volumes | compose project `lab-<suffix>` | the internal networks above; a kept verifier run's token-gated victims still hold the run's token in their environment | `down --volumes` at the end of the run; kept with `-keep` or by a killed run |
 | images | the local Docker image store | built from pins | reused by the next run; the lab removes none |
 | the lab key | outside the clone, where `make lab-key` put it | a run refuses a key inside the clone, the reports or a workspace, and mounts it read-only into the signing container alone, which has no network | until you remove it |
 

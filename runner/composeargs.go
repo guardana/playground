@@ -15,8 +15,13 @@ func runOnceArgs(service string, args []string) []string {
 	return append([]string{"run", "--rm", "--no-TTY", service}, args...)
 }
 
-func runSplitArgs(service, entrypoint string, args []string) []string {
+// runSplitArgs names each variable of runEnv with -e and no value: compose
+// copies it from its own environment, so a value never reaches a command line.
+func runSplitArgs(service, entrypoint string, args, runEnv []string) []string {
 	run := []string{"run", "--rm", "--no-TTY"}
+	for _, name := range runEnv {
+		run = append(run, "-e", name)
+	}
 	if entrypoint != "" {
 		run = append(run, "--entrypoint", entrypoint)
 	}

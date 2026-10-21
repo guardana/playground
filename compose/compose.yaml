@@ -1,7 +1,7 @@
 # The lab's world: the victim tool servers, a page that attacks them, a mail
 # sink, the enforcer, the agent, the verifier, the collector the enforcer's
-# trail lands on, the decision point double, the approver and the proxy chaos
-# scenarios put in front of a victim.
+# trail lands on, the decision point and authorization server doubles, the
+# approver and the proxy chaos scenarios put in front of a victim.
 #
 # Six networks, all internal: agent-net holds the agent and the enforcer;
 # tool-net the enforcer, the victims and what they reach; evidence-net the
@@ -61,6 +61,19 @@ x-victim: &victim
     timeout: 3s
     retries: 15
     start_period: 2s
+
+# A victim that requires the run's bearer token. It boots with the verifier
+# alone: the enforcer lists every upstream's tools at startup without a token,
+# and a gated upstream would refuse it in every core run.
+x-gated-victim: &gated-victim
+  <<: *victim
+  profiles: [verifier]
+
+x-gated-env: &gated-env
+  <<: *server-env
+  # Empty when the runner sets none, so what a missing token meets is the
+  # victim's own refusal to start.
+  LAB_MCP_TOKEN: ${LAB_MCP_TOKEN:-}
 
 services:
   victim-crm:
@@ -203,6 +216,65 @@ services:
     volumes:
       - type: bind
         source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-pay
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
+
+  # The vaults require the run's bearer token, each with one lie about it
+  # (victims/vault*/README.md), for the verifier's MCP authorization checks.
+  victim-vault:
+    image: ${LAB_IMAGE_PREFIX}-victim-vault
+    <<: *gated-victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/vault
+    environment:
+      <<: *gated-env
+      LAB_SERVER_NAME: victim-vault
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-vault
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
+
+  victim-vault-anytoken:
+    image: ${LAB_IMAGE_PREFIX}-victim-vault-anytoken
+    <<: *gated-victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/vault-anytoken
+    environment:
+      <<: *gated-env
+      LAB_SERVER_NAME: victim-vault-anytoken
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-vault-anytoken
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
+
+  victim-vault-sessionauth:
+    image: ${LAB_IMAGE_PREFIX}-victim-vault-sessionauth
+    <<: *gated-victim
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./victims/vault-sessionauth
+    environment:
+      <<: *gated-env
+      LAB_SERVER_NAME: victim-vault-sessionauth
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/victim-vault-sessionauth
         target: /reports/${LAB_RUN_ID:-manual}/journals
         bind:
           create_host_path: false
@@ -513,6 +585,46 @@ services:
           create_host_path: false
     healthcheck:
       test: ["CMD", "/healthprobe", "-ca", "/pki/ca.pem", "https://pdp-double:8443/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # The authorization server double (services/auth-double) the verifier's MCP
+  # probe fetches metadata from, at http://auth-double:8080. It serves the
+  # persona LAB_AUTH_PERSONA names from the run's auth/, where the runner copied
+  # it from config/auth/, and without one answers 404, so a run that names none
+  # still boots.
+  auth-double:
+    image: ${LAB_IMAGE_PREFIX}-auth-double
+    <<: *hardened
+    user: "65532:65532"
+    build:
+      context: ..
+      dockerfile: compose/Dockerfile.go-service
+      args:
+        <<: *build-args
+        TARGET: ./services/auth-double
+    command: ["-personas=/personas"]
+    networks: [tool-net]
+    profiles: [verifier]
+    environment:
+      <<: *lab-env
+      LAB_AUTH_PERSONA: ${LAB_AUTH_PERSONA:-}
+    volumes:
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/journals/auth-double
+        target: /reports/${LAB_RUN_ID:-manual}/journals
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LAB_RUN_HOST_DIR:-../reports/manual}/auth
+        target: /personas
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "/healthprobe", "http://127.0.0.1:8080/healthz"]
       interval: 2s
       timeout: 3s
       retries: 15

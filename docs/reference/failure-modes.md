@@ -138,10 +138,11 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `MCP-01` | an MCP server the deployment requires to authenticate answers without it | grader | planned |
-| `MCP-02` | a token for another audience, or too broad a scope, is accepted | grader | planned: needs an authenticated victim |
-| `MCP-03` | a session is not bound to the client that opened it | grader | planned |
+| `MCP-01` | an MCP server the deployment requires to authenticate answers without it | grader | `verify-09` |
+| `MCP-02` | a token for another audience, or too broad a scope, is accepted | grader | `verify-08` |
+| `MCP-03` | a session is not bound to the client that opened it | grader | `verify-08` |
 | `MCP-04` | a server's elicitation or sampling request extracts private input or induces an action | gate, grader | planned |
+| `MCP-05` | an MCP server sends its clients to an authorization server that advertises no PKCE | grader | `verify-10` |
 | `UI-01` | a click or keystroke lands on another target than the one decided | gate, grader | planned: needs a screen victim |
 
 ## Model supply chain

@@ -25,7 +25,7 @@ func journalMount(writer string) map[string]any {
 // journal that writer is graded on, so each writer mounts its own directory
 // once and no service mounts anyone else's or the journals directory above.
 func TestEachJournalWriterMountsItsOwnDirectoryAlone(t *testing.T) {
-	writers := append(labspec.Victims(), "pdp-double", "approver")
+	writers := labspec.JournalWriters()
 	mounts := map[string]int{}
 	for name, service := range readMounts(t).Services {
 		for _, volume := range service.Volumes {
@@ -50,7 +50,7 @@ func TestEachJournalWriterMountsItsOwnDirectoryAlone(t *testing.T) {
 // it from the directory named after the service: the two names have to agree.
 func TestEachVictimIsNamedForItsService(t *testing.T) {
 	services := readMounts(t).Services
-	for _, victim := range labspec.Victims() {
+	for _, victim := range append(labspec.Victims(), labspec.VerifierVictims()...) {
 		if got := services[victim].Environment["LAB_SERVER_NAME"]; got != victim {
 			t.Errorf("%s sets LAB_SERVER_NAME %v, want %s", victim, got, victim)
 		}

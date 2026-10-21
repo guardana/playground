@@ -1,0 +1,40 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:231     a server that refuses a tool listing to a caller with no
+#                               credential is not unauthenticated
+#   docs/usage-probe.md:329     a 4xx to a request carrying no token is an error of the rule
+#                               that sent it, and of every later reader of the same answer: exit 2
+#   docs/usage-probe.md:93,185-206 and :238 the manifest check and the cache check read the
+#                               tool listing, which the victim refuses without the token
+#   docs/usage-probe.md:246-249 without the token, session binding is unanswered
+#   docs/index.md:27            an error leaves the run indeterminate
+# Step 2 is handed the token and passes, so step 1's errors are the missing token.
+# Red when: step 1 is handed the token, which turns it into step 2.
+schema_version: 1
+id: verify-09-a-probe-without-the-token-is-indeterminate
+title: A probe of an authenticated server without its token is indeterminate, never clean
+maps_to: { failure_catalog: [MCP-01] }
+profile: [verifier]
+auth_double: honest
+verifier:
+  - probe: { server: victim-vault }
+  - probe: { server: victim-vault, credential: true }
+expect:
+  verifier:
+    1:
+      exit_code: 2
+      gate: indeterminate
+      findings_exclude: [guardana.mcp.unauthenticated_access]
+      unverified_include: [guardana.mcp.session_binding]
+      shortfall: []
+      errors: [guardana.agent.mcp_server_manifest, guardana.mcp.cache_scope]
+    2:
+      exit_code: 0
+      gate: pass
+      findings_exclude: [guardana.mcp.unauthenticated_access, guardana.mcp.session_binding]
+      shortfall: []
+      errors: []
+  effects:
+    victim-vault:
+      calls_served: {}
+      auth_include: [{ credential: none, status: 401 }, { credential: run, status: 200 }]

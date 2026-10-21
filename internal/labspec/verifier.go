@@ -20,6 +20,9 @@ type ProbeStep struct {
 	PinFrom  int    `json:"pin_from,omitempty"`
 	PinOf    int    `json:"pin_of,omitempty"`
 	Profile  string `json:"profile,omitempty"`
+	// Credential hands the step the run's bearer token, by the name of the
+	// variable holding it and never by value.
+	Credential bool `json:"credential,omitempty"`
 }
 
 // VerifierExpectation is what one verifier step has to leave: the exit status,

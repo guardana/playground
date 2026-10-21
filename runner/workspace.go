@@ -135,8 +135,14 @@ func namedFiles(spec labspec.Scenario) []namedFile {
 			files = append(files, namedFile{field, step.Probe.Profile, labspec.ProfileDir})
 		}
 	}
+	if spec.AuthDouble != "" {
+		files = append(files, namedFile{"auth_double", personaFile(spec.AuthDouble), labspec.AuthPersonaDir})
+	}
 	return files
 }
+
+// personaFile is where a persona the scenario names is read from.
+func personaFile(persona string) string { return labspec.AuthPersonaDir + persona + ".json" }
 
 // scriptFile is a double's script, which a scenario names by its file name.
 func scriptFile(field, name, dir string) namedFile {
@@ -190,7 +196,7 @@ func (w workspace) holds(named namedFile) error {
 func mountedDirs() []string {
 	return []string{
 		"trajectories", labspec.ContractDir, "config/pdp", "config/approver", labspec.PolicyDir, labspec.GatewayConfigDir,
-		labspec.ProfileDir,
+		labspec.ProfileDir, labspec.AuthPersonaDir,
 	}
 }
 

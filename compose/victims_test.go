@@ -25,7 +25,7 @@ func TestEveryVictimIsHardenedOnToolNetAlone(t *testing.T) {
 	if err := yaml.Unmarshal(body, &parsed); err != nil {
 		t.Fatalf("compose.yaml: %v", err)
 	}
-	for _, name := range labspec.Victims() {
+	for _, name := range append(labspec.Victims(), labspec.VerifierVictims()...) {
 		victim, declared := parsed.Services[name]
 		if !declared {
 			t.Errorf("compose.yaml declares no %s", name)

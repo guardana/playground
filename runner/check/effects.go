@@ -42,6 +42,9 @@ func (e Effects) Run(_ context.Context, records assertion.Records) ([]assertion.
 		if committed, graded := e.committed(victim, records); graded {
 			results = append(results, committed)
 		}
+		if auth, graded := e.auth(victim, records); graded {
+			results = append(results, auth)
+		}
 	}
 	return results, nil
 }

@@ -198,6 +198,19 @@ value a string of at most 256 bytes, a boolean, or an integer within
 change is made, so a line may name a change that did not happen, never the
 reverse. Lines without `effect` read as before.
 
+A victim that requires a bearer token also appends one auth line per request
+to its `/mcp`, in the same file. It records what the request carried and never
+a value: `credential` (`none`, `run` for exactly the run's token, or `other`),
+`session` (`none`, `known` for an id this server issued, or `unknown`), the
+HTTP `status` it answered as a number, `method` when the body held a readable
+JSON-RPC method, and `occurred_at`, `server` and `run_id` as on a call line.
+It starts with `"version":2,"kind":"auth"`; a line with neither is a call line,
+so journals written before auth lines read as before. An auth line is never a
+call: calls served, refused and effects count call lines only. The reader
+refuses a newer version, an unknown kind, or an auth line holding any other
+field or value; a reader older than auth lines refuses the file, because
+`status` is a number where a call line's is a word.
+
 ### What decides the run
 
 The pinned enforcer decides every trajectory scenario. `gateway` names what it
@@ -439,7 +452,19 @@ expect:
   of the three. `profile` names a verifier profile directly in
   `config/verifier/profiles/`, handed to that step alone (`--profile`); a file
   the profile names in turn is not handed over, and every step runs with
-  `--plugins builtins`, which wins over the profile's `plugins`.
+  `--plugins builtins`, which wins over the profile's `plugins`. `credential:
+  true` hands the step the run's bearer token, as `--mcp-token-env
+  LAB_MCP_TOKEN`: the runner mints 32 random bytes per verifier run and passes
+  them by the variable's name only; the token-gated victims read the same
+  variable at boot. A step without it probes as a caller with no credential.
+- `auth_double` names a persona, `config/auth/<persona>.json`: the
+  authorization-server metadata the double serves for the run. Without one the
+  double answers 404.
+- In `expect.effects`, a token-gated victim (`victim-vault`,
+  `victim-vault-anytoken`, `victim-vault-sessionauth`) may state
+  `auth_include`: decisions `{credential: none | run | other, session: none |
+  known | unknown, status}`, `session` and `status` optional, each of which has
+  to be among the auth lines that victim journalled in this run.
 - `exit_code` is required, 0 to 8 as the verifier's exit-code table documents.
   It is graded only beside the step's record: the pin for a `write_pin` step,
   the JSON report on standard output for any other. Standard error is kept in
@@ -601,11 +626,13 @@ format (`schema_version: 1`) with every path relative to the workspace root:
     <dir>/config/contracts/
     <dir>/config/pdp/
     <dir>/config/approver/
+    <dir>/config/verifier/profiles/
+    <dir>/config/auth/
 
 With it set, `make scenario ID=<id>` and `-all` look for scenarios only there,
 and a path given to `-scenario` has to be inside it (a relative one is read from
 it). The runner reads the trajectory, the policy and the gateway part from the
-workspace, and compose mounts its `trajectories/`, `config/contracts/`,
+workspace, copies a verifier step's profile and a persona into the run, and compose mounts its `trajectories/`, `config/contracts/`,
 `config/pdp/` and `config/approver/` read-only in place of the lab's; a
 directory a profile mounts has to exist, since compose refuses a missing one
 rather than create it. `versions.env`, the classification and fingerprints, the

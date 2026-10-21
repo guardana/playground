@@ -75,7 +75,8 @@ func everyNamedFile() labspec.Scenario {
 			Config: "config/gateway/scenarios/g.yaml", Policy: "config/policies/p.json",
 			PDPScript: "d.yaml", ApproverScript: "a.yaml",
 		},
-		Trace: &labspec.Trace{Contract: "config/contracts/c.yaml", AISystem: "lab"},
+		Trace:      &labspec.Trace{Contract: "config/contracts/c.yaml", AISystem: "lab"},
+		AuthDouble: "h",
 		Verifier: []labspec.VerifierStep{
 			{Probe: &labspec.ProbeStep{Server: "victim-fs"}},
 			{Probe: &labspec.ProbeStep{Server: "victim-fs", Profile: "config/verifier/profiles/v.yaml"}},
@@ -91,6 +92,7 @@ var namedPaths = map[string]string{
 	"gateway.approver_script":   "config/approver/a.yaml",
 	"trace.contract":            "config/contracts/c.yaml",
 	"verifier[2].probe.profile": "config/verifier/profiles/v.yaml",
+	"auth_double":               "config/auth/h.json",
 }
 
 func workspaceHolding(t *testing.T, except string) workspace {
@@ -157,7 +159,7 @@ func TestANamedDirectoryIsNotAFile(t *testing.T) {
 func TestAWorkspaceDirectoryThatIsALinkIsRefused(t *testing.T) {
 	for _, dir := range []string{
 		"trajectories", "config", "config/contracts", "config/pdp", "config/approver",
-		"config/policies", "config/gateway/scenarios",
+		"config/policies", "config/gateway/scenarios", "config/verifier/profiles", "config/auth",
 	} {
 		t.Run(dir, func(t *testing.T) {
 			space := workspaceHolding(t, "")

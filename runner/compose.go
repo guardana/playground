@@ -56,6 +56,9 @@ type Compose interface {
 	// them, and it changes per run, so it is not something the topology can be
 	// built with once.
 	WithEnv(env map[string]string) Compose
+	// WithRunEnv returns a Compose whose RunSplit hands the container these
+	// variables of its own environment, by name.
+	WithRunEnv(names ...string) Compose
 }
 
 // Execution is what one container did.
@@ -79,7 +82,9 @@ type dockerCompose struct {
 	// env is added to the runner's own environment for every invocation, which
 	// is how compose interpolates ${LAB_RUN_ID} and the rest.
 	env []string
-	log io.Writer
+	// runEnv names the variables a RunSplit hands its container.
+	runEnv []string
+	log    io.Writer
 }
 
 func (d dockerCompose) WithEnv(env map[string]string) Compose {
@@ -91,6 +96,11 @@ func (d dockerCompose) WithEnv(env map[string]string) Compose {
 		added = append(added, name+"="+env[name])
 	}
 	d.env = added
+	return d
+}
+
+func (d dockerCompose) WithRunEnv(names ...string) Compose {
+	d.runEnv = append(slices.Clone(d.runEnv), names...)
 	return d
 }
 
@@ -148,7 +158,7 @@ func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service s
 func (d dockerCompose) RunSplit(
 	ctx context.Context, profiles []string, service, entrypoint string, args []string,
 ) (Split, error) {
-	return d.split(d.command(ctx, profiles, runSplitArgs(service, entrypoint, args)...))
+	return d.split(d.command(ctx, profiles, runSplitArgs(service, entrypoint, args, d.runEnv)...))
 }
 
 func (d dockerCompose) Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error) {
