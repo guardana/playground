@@ -1,0 +1,40 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:62      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victims serve nothing
+#   docs/usage-probe.md:203-206 and docs/exit-codes.md:192 a pin approved for another server is
+#                               demanded coverage the run lacks: a demanded_check shortfall,
+#                               indeterminate, exit 2, whatever fail_on says
+#   docs/usage-run.md:319,325-330 the gate the run records, and its shortfall by kind
+#   docs/index.md:27            a rule that raised is indeterminate too, so step 2 states none did
+#   docs/usage-probe.md:193-206 and docs/index.md:25 step 3, the pin on its own server after the
+#                               drift: a finding, fail, exit 1, and no shortfall
+# victims/fs/README.md names fs.read as the tool whose description changes.
+# Step 3 is handed the same pin the same way, so a pin the lab failed to hand
+# over turns step 3 red instead of passing step 2 for the wrong reason.
+# Red when: step 2 is handed no pin, which leaves victim-crm's run a pass with no shortfall.
+schema_version: 1
+id: verify-05-a-pin-for-another-server-leaves-the-run-indeterminate
+title: A pin approved for another server leaves the probe indeterminate
+maps_to: { failure_catalog: [DRIFT-02], owasp_asi: [ASI04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-fs, write_pin: true }
+  - probe: { server: victim-crm, pin_of: 1 }
+  - probe: { server: victim-fs, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 2
+      gate: indeterminate
+      shortfall: [{ kind: demanded_check }]
+      errors: []
+    3:
+      exit_code: 1
+      gate: fail
+      findings_include:
+        - { rule_id: guardana.agent.mcp_server_manifest, summary_contains: fs.read }
+      shortfall: []
+  effects:
+    victim-fs: { calls_served: {} }
+    victim-crm: { calls_served: {} }

@@ -21,7 +21,8 @@ const (
 )
 
 // verifierReport is the part of the verifier's `--format json` report a
-// scenario is graded from.
+// scenario is graded from. Gate, Shortfall and Errors are pointers because a
+// report that leaves them out has not said "none".
 type verifierReport struct {
 	SchemaVersion int `json:"schema_version"`
 	Run           struct {
@@ -30,12 +31,23 @@ type verifierReport struct {
 		} `json:"target"`
 		ResultSummary struct {
 			RulesRun []string `json:"rules_run"`
+			Gate     *string  `json:"gate"`
 		} `json:"result_summary"`
+		Coverage struct {
+			Shortfall *[]verifierShortfall `json:"shortfall"`
+		} `json:"coverage"`
 	} `json:"run"`
 	Findings   []verifierFinding `json:"findings"`
 	Unverified []verifierFinding `json:"unverified"`
 	Waived     []verifierFinding `json:"waived"`
-	Errors     []verifierError   `json:"errors"`
+	Errors     *[]verifierError  `json:"errors"`
+}
+
+// verifierShortfall is coverage the run needed and did not get, by kind and
+// what it concerned.
+type verifierShortfall struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 }
 
 // verifierError is a check that could not run; Source is the rule id, entry
@@ -136,7 +148,7 @@ func (r verifierReport) concludedClean(rule string) (bool, string) {
 		return false, "the rule reported a finding, and it was waived"
 	case slices.Contains(ruleIDs(r.Unverified), rule):
 		return false, "the rule ran and could not reach a verdict"
-	case slices.ContainsFunc(r.Errors, func(e verifierError) bool { return e.Source == rule }):
+	case slices.ContainsFunc(deref(r.Errors), func(e verifierError) bool { return e.Source == rule }):
 		return false, "the rule raised an error"
 	}
 	return true, "the rule ran and reported nothing"

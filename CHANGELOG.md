@@ -5,8 +5,24 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- A verifier step can name a profile (`profile`, a file in
+  `config/verifier/profiles/`) and compare a server against the pin another
+  step wrote for a different server (`pin_of`). A step, and `expect.trace`, can
+  assert the verdict the verifier recorded for its run (`gate`) and its exact
+  causes (`shortfall`, `errors`). A step expecting exit 2 has to state the
+  verdict, the gaps and the errors, and name a cause, or the scenario does not
+  load.
+
 ### Changed
 
+- Each verifier step sees only its own directory of the run: what the runner
+  hands it, read-only, and for a `write_pin` step a writable `out/`, through
+  the new `verifier-pin` service. A step's report and output are kept where no
+  container writes, so a later step can no longer replace an earlier one's
+  report. A pin is now at `verifier/step-<n>/out/pin.json`. Every probe runs
+  with `--plugins builtins`, so a profile cannot widen plugin trust.
 - Go 1.27.3 builds the lab and its images (`go.mod`, `GO_BUILD_IMAGE`). It
   fixes the eleven standard-library advisories `make security` reports
   against 1.27.1. golangci-lint 2.14.0 replaces 2.13.2, which cannot load the

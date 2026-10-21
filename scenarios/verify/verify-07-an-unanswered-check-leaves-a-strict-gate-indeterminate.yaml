@@ -1,0 +1,37 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:246-249 session binding needs a credential to say anything, so
+#                               guardana.mcp.session_binding is unverified without one
+#   docs/index.md:26 and docs/profiles.md:348-349 with fail_on_inconclusive on, an unverified
+#                               check leaves the run indeterminate, exit 2; with it off it is
+#                               listed and does not gate
+#   docs/profiles.md:121 says such a check "also fails the gate"; the table at index.md:26
+#                               gives the gate and the exit code, and is what is asserted
+#   docs/usage-run.md:319,325-330 the gate the run records, and that it lacked no coverage
+#   docs/usage-probe.md:231 and docs/index.md:25 step 2: the low finding does not gate, exit 0
+# Step 2 is the same probe without the profile.
+# Red when: the profile leaves fail_on_inconclusive off, which turns step 1 into step 2.
+schema_version: 1
+id: verify-07-an-unanswered-check-leaves-a-strict-gate-indeterminate
+title: An unanswered check leaves a probe under a strict profile indeterminate
+maps_to: { failure_catalog: [EVID-04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-crm, profile: config/verifier/profiles/strict-on-inconclusive.yaml }
+  - probe: { server: victim-crm }
+expect:
+  verifier:
+    1:
+      exit_code: 2
+      gate: indeterminate
+      unverified_include: [guardana.mcp.session_binding]
+      shortfall: []
+      errors: []
+    2:
+      exit_code: 0
+      gate: pass
+      unverified_include: [guardana.mcp.session_binding]
+      shortfall: []
+      errors: []
+  effects:
+    victim-crm: { calls_served: {} }

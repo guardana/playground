@@ -101,36 +101,94 @@ func (f *fakeCompose) RunSplit(ctx context.Context, _ []string, service, entrypo
 	return f.split(service, entrypoint, args)
 }
 
+// splitCall is one RunSplit as compose would have run it.
+type splitCall struct {
+	service  string
+	profiles []string
+	env      map[string]string
+	args     []string
+}
+
+// verifierBinds are the host directories compose binds into a verifier
+// service for the call the fake answers, by the target they are bound at. A
+// source that is not a directory is refused, as compose refuses it.
+func verifierBinds(f *fakeCompose, service string) (map[string]string, error) {
+	step := f.callEnv["LAB_VERIFIER_DIR"]
+	if step == "" {
+		step = "LAB_VERIFIER_DIR-is-unset"
+	}
+	under := filepath.Join(f.env["LAB_RUN_HOST_DIR"], "verifier", step)
+	binds := map[string]string{"/lab-run/in": filepath.Join(under, "in")}
+	if service == "verifier-pin" {
+		binds["/lab-run/out"] = filepath.Join(under, "out")
+	}
+	for _, source := range binds {
+		if info, err := os.Stat(source); err != nil || !info.IsDir() {
+			return nil, fmt.Errorf("bind source path does not exist: %s", source)
+		}
+	}
+	return binds, nil
+}
+
+// onHost is the host path of a container path under one of the binds.
+func onHost(binds map[string]string, inContainer string) (string, bool) {
+	for target, source := range binds {
+		if rest, found := strings.CutPrefix(inContainer, target+"/"); found {
+			return filepath.Join(source, rest), true
+		}
+	}
+	return "", false
+}
+
 // workingVerifier answers as the verifier, the victims and the sealed network
 // do: every victim's journal is written, the pin lands in the directory compose
-// mounts, and the report is printed on standard output. Like compose, it
-// refuses to start the verifier when the directory it mounts is not there.
+// binds writable, and the report is printed on standard output. Like compose,
+// it refuses to start the verifier when a directory it binds is not there, and
+// like the verifier it exits 3 on a pin it cannot read.
 func workingVerifier(f *fakeCompose) func(string, string, []string) (Split, error) {
-	return func(_, entrypoint string, args []string) (Split, error) {
-		runDir := f.env["LAB_RUN_HOST_DIR"]
-		mounted := filepath.Join(runDir, verifierDir)
-		if _, err := os.Stat(mounted); err != nil {
-			return Split{}, fmt.Errorf("bind source path does not exist: %w", err)
+	return func(service, entrypoint string, args []string) (Split, error) {
+		binds, err := verifierBinds(f, service)
+		if err != nil {
+			return Split{}, err
 		}
+		runDir := f.env["LAB_RUN_HOST_DIR"]
 		for _, victim := range []string{"victim-fs", "victim-crm"} {
 			writeFile(filepath.Join(runDir, "journals", victim, victim+".jsonl"), "")
 		}
-		if entrypoint == "python" && slices.Contains(args, routeScript) {
-			return Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}, nil
-		}
 		if entrypoint == "python" {
-			target := args[len(args)-1]
-			if target == outsideAddress {
-				return Split{Stdout: "probe unreachable " + target + ": [Errno 101] Network is unreachable\n"}, nil
-			}
-			return Split{Stdout: "probe reached " + target + "\n"}, nil
+			return reachAnswer(args), nil
 		}
 		if i := slices.Index(args, "--write-mcp-pin"); i >= 0 {
-			writeFile(filepath.Join(mounted, strings.TrimPrefix(args[i+1], verifierMount)), verifierPin)
+			at, writable := onHost(binds, args[i+1])
+			if !writable || !strings.HasPrefix(args[i+1], "/lab-run/out/") {
+				return Split{ExitCode: 3, Stderr: "Read-only file system: " + args[i+1]}, nil
+			}
+			writeFile(at, verifierPin)
 			return Split{Stdout: "Wrote 1 approved tool description(s)\n"}, nil
+		}
+		if i := slices.Index(args, "--mcp-pin"); i >= 0 {
+			if at, bound := onHost(binds, args[i+1]); !bound || !exists(at) {
+				return Split{ExitCode: 3, Stderr: "cannot read the pin " + args[i+1]}, nil
+			}
 		}
 		return Split{ExitCode: 1, Stdout: verifierReport, Stderr: "compose: Container verifier Creating\n"}, nil
 	}
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func reachAnswer(args []string) Split {
+	if slices.Contains(args, routeScript) {
+		return Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}
+	}
+	target := args[len(args)-1]
+	if target == outsideAddress {
+		return Split{Stdout: "probe unreachable " + target + ": [Errno 101] Network is unreachable\n"}
+	}
+	return Split{Stdout: "probe reached " + target + "\n"}
 }
 
 func verifierUnderTest(t *testing.T) (lab, *fakeCompose, string) {
@@ -166,18 +224,10 @@ func TestAVerifierScenarioRunsWithNoAgentAndNoGateway(t *testing.T) {
 	if slices.Contains(compose.broughtUp, "verifier") {
 		t.Error("the one-shot verifier was brought up with the victims")
 	}
-	var probes []string
-	for _, ran := range compose.ran {
-		if ran[0] != verifierService {
-			t.Errorf("ran %v, want only the verifier", ran)
-		}
-		if ran[1] == "" {
-			probes = append(probes, strings.Join(ran[2:], " "))
-		}
-	}
+	probes := verifierProbes(t, compose)
 	want := []string{
-		"probe --mcp http://victim-fs:8080/mcp --format json --write-mcp-pin /lab-run/pin-1.json",
-		"probe --mcp http://victim-fs:8080/mcp --format json --mcp-pin /lab-run/pin-1.json",
+		"verifier-pin probe --mcp http://victim-fs:8080/mcp --format json --plugins builtins --write-mcp-pin /lab-run/out/pin.json",
+		"verifier probe --mcp http://victim-fs:8080/mcp --format json --plugins builtins --mcp-pin /lab-run/in/pin.json",
 	}
 	if !slices.Equal(probes, want) {
 		t.Errorf("probes = %q,\nwant %q", probes, want)
@@ -186,11 +236,27 @@ func TestAVerifierScenarioRunsWithNoAgentAndNoGateway(t *testing.T) {
 	if got := compose.env["LAB_RUN_HOST_DIR"]; got != runDir {
 		t.Errorf("LAB_RUN_HOST_DIR = %q, want %q", got, runDir)
 	}
-	for _, file := range []string{"step-1.stdout", "step-1.stderr", "pin-1.json", "step-2.json", "step-2.stderr"} {
-		if _, err := os.Stat(filepath.Join(runDir, verifierDir, file)); err != nil {
-			t.Errorf("%s was not kept: %v", file, err)
+	for _, file := range []string{"step-1.stdout", "step-1.stderr", "step-1/out/pin.json", "step-2/in/pin.json", "step-2.json", "step-2.stderr"} {
+		if !exists(filepath.Join(runDir, verifierDir, file)) {
+			t.Errorf("%s was not kept", file)
 		}
 	}
+}
+
+// verifierProbes lists each probe the runner ran as "<service> <args>", and
+// fails on any service other than the verifier's two.
+func verifierProbes(t *testing.T, compose *fakeCompose) []string {
+	t.Helper()
+	var probes []string
+	for _, ran := range compose.ran {
+		if ran[0] != "verifier" && ran[0] != "verifier-pin" {
+			t.Errorf("ran %v, want only the verifier", ran)
+		}
+		if ran[1] == "" {
+			probes = append(probes, ran[0]+" "+strings.Join(ran[2:], " "))
+		}
+	}
+	return probes
 }
 
 // Every victim the profile booted is graded, and nothing that is not a victim.

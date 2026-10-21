@@ -76,16 +76,21 @@ func everyNamedFile() labspec.Scenario {
 			PDPScript: "d.yaml", ApproverScript: "a.yaml",
 		},
 		Trace: &labspec.Trace{Contract: "config/contracts/c.yaml", AISystem: "lab"},
+		Verifier: []labspec.VerifierStep{
+			{Probe: &labspec.ProbeStep{Server: "victim-fs"}},
+			{Probe: &labspec.ProbeStep{Server: "victim-fs", Profile: "config/verifier/profiles/v.yaml"}},
+		},
 	}
 }
 
 var namedPaths = map[string]string{
-	"trajectory":              "trajectories/t.yaml",
-	"gateway.config":          "config/gateway/scenarios/g.yaml",
-	"gateway.policy":          "config/policies/p.json",
-	"gateway.pdp_script":      "config/pdp/d.yaml",
-	"gateway.approver_script": "config/approver/a.yaml",
-	"trace.contract":          "config/contracts/c.yaml",
+	"trajectory":                "trajectories/t.yaml",
+	"gateway.config":            "config/gateway/scenarios/g.yaml",
+	"gateway.policy":            "config/policies/p.json",
+	"gateway.pdp_script":        "config/pdp/d.yaml",
+	"gateway.approver_script":   "config/approver/a.yaml",
+	"trace.contract":            "config/contracts/c.yaml",
+	"verifier[2].probe.profile": "config/verifier/profiles/v.yaml",
 }
 
 func workspaceHolding(t *testing.T, except string) workspace {

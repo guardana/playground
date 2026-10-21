@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -80,12 +81,17 @@ type fakeCompose struct {
 	// inside it, as a service that wrote more than its record would.
 	planted map[string]string
 	// split answers the verifier's runs; nil answers every one as not run.
-	split func(service, entrypoint string, args []string) (Split, error)
+	// callEnv holds the variables of the call it answers, splits every call.
+	split   func(service, entrypoint string, args []string) (Split, error)
+	callEnv map[string]string
+	splits  []splitCall
 
 	broughtUp []string
 	wentDown  bool
-	ran       [][]string
-	env       map[string]string
+	// downProfiles are the profiles the teardown named.
+	downProfiles []string
+	ran          [][]string
+	env          map[string]string
 	// undated names the docker calls that arrived with no deadline, and
 	// downErr is what the teardown's own context said when it was called.
 	undated []string
@@ -123,9 +129,31 @@ func (f *fakeCompose) called(ctx context.Context, call string) error {
 	return ctx.Err()
 }
 
+// WithEnv keeps the run's variables in env and answers with a view that
+// carries them, so a variable a later WithEnv adds reaches only the calls made
+// through that later view, as it does with docker compose.
 func (f *fakeCompose) WithEnv(env map[string]string) Compose {
 	f.env = env
-	return f
+	return fakeEnv{fakeCompose: f, env: env}
+}
+
+// fakeEnv is the fake as a WithEnv returned it: the same fake, its calls made
+// with these variables.
+type fakeEnv struct {
+	*fakeCompose
+	env map[string]string
+}
+
+func (v fakeEnv) WithEnv(env map[string]string) Compose {
+	added := maps.Clone(v.env)
+	maps.Copy(added, env)
+	return fakeEnv{fakeCompose: v.fakeCompose, env: added}
+}
+
+func (v fakeEnv) RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error) {
+	v.callEnv = v.env
+	v.splits = append(v.splits, splitCall{service: service, profiles: profiles, env: v.env, args: args})
+	return v.fakeCompose.RunSplit(ctx, profiles, service, entrypoint, args)
 }
 
 func (f *fakeCompose) Services(ctx context.Context, _ []string) ([]string, error) {
@@ -159,7 +187,8 @@ func (f *fakeCompose) Status(ctx context.Context, _, _ []string) ([]assertion.Se
 	return f.status, nil
 }
 
-func (f *fakeCompose) Down(ctx context.Context, _ []string) error {
+func (f *fakeCompose) Down(ctx context.Context, profiles []string) error {
+	f.downProfiles = slices.Clone(profiles)
 	f.downErr = f.called(ctx, "down")
 	f.wentDown = true
 	return f.downErr

@@ -71,24 +71,21 @@ func outsideFile(t *testing.T) (string, func() bool) {
 	}
 }
 
-// The probing verifier writes into the directory its step reports land in: a
-// link it leaves there must not carry the runner's write out of the run, and a
-// report it forged there must not be graded as the step's.
+// The pin step writes into a directory the runner reads its pin back from: a
+// link it leaves there in place of the pin must not hand the next step a file
+// of the host's, nor be written through.
 func TestAPathTheVerifierPlantedIsNotWrittenThrough(t *testing.T) {
 	subject, compose, scenario := verifierUnderTest(t)
 	target, untouched := outsideFile(t)
 	working := compose.split
 	compose.split = func(service, entrypoint string, args []string) (Split, error) {
 		split, err := working(service, entrypoint, args)
-		mounted := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], verifierDir)
-		switch {
-		case slices.Contains(args, "--write-mcp-pin"):
-			writeFile(filepath.Join(mounted, "step-2.json"), verifierReport)
-			if err := os.Symlink(target, filepath.Join(mounted, "step-2.stderr")); err != nil {
+		if slices.Contains(args, "--write-mcp-pin") {
+			out := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], verifierDir, "step-1", "out")
+			_ = os.Remove(filepath.Join(out, "pin.json"))
+			if err := os.Symlink(target, filepath.Join(out, "pin.json")); err != nil {
 				t.Fatal(err)
 			}
-		case slices.Contains(args, "--mcp-pin"):
-			split.Stdout = strings.Replace(split.Stdout, "'fs.read' changed", "nothing changed", 1)
 		}
 		return split, err
 	}
@@ -99,8 +96,12 @@ func TestAPathTheVerifierPlantedIsNotWrittenThrough(t *testing.T) {
 	if !untouched() {
 		t.Error("the runner wrote through a link the verifier planted")
 	}
-	if ran := results(graded)["verifier/step-2/ran"]; ran.Outcome != assertion.Indeterminate || graded.Outcome() == assertion.Pass {
-		t.Errorf("a report the verifier forged was graded: step-2/ran %s, run %s", ran.Outcome, graded.Outcome())
+	handed := filepath.Join(subject.reports, graded.RunID, verifierDir, "step-2", "in", "pin.json")
+	if _, err := os.Lstat(handed); err == nil {
+		t.Error("the file a planted link names was handed to the next step")
+	}
+	if ran, recorded := results(graded)["verifier/step-2/ran"]; !recorded || ran.Outcome == assertion.Pass || graded.Outcome() == assertion.Pass {
+		t.Errorf("a step whose pin was a planted link ran: step-2/ran %s, run %s", ran.Outcome, graded.Outcome())
 	}
 }
 

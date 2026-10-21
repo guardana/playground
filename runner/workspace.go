@@ -129,6 +129,12 @@ func namedFiles(spec labspec.Scenario) []namedFile {
 	if spec.Trace != nil {
 		files = append(files, namedFile{"trace.contract", spec.Trace.Contract, labspec.ContractDir})
 	}
+	for i, step := range spec.Verifier {
+		if step.Probe != nil && step.Probe.Profile != "" {
+			field := fmt.Sprintf("verifier[%d].probe.profile", i+1)
+			files = append(files, namedFile{field, step.Probe.Profile, labspec.ProfileDir})
+		}
+	}
 	return files
 }
 
@@ -179,10 +185,12 @@ func (w workspace) holds(named namedFile) error {
 }
 
 // mountedDirs are the workspace directories a container or the signer binds
-// by the path as written, so Docker follows a link anywhere along it.
+// by the path as written, so Docker follows a link anywhere along it, and the
+// one the runner copies verifier profiles out of into a container's reach.
 func mountedDirs() []string {
 	return []string{
 		"trajectories", labspec.ContractDir, "config/pdp", "config/approver", labspec.PolicyDir, labspec.GatewayConfigDir,
+		labspec.ProfileDir,
 	}
 }
 

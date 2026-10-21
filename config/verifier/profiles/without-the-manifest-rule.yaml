@@ -1,0 +1,7 @@
+# The default gate with the MCP manifest rule left out: a pin handed to a run
+# under this profile is a pin nothing compares.
+schema_version: 1
+name: without-the-manifest-rule
+rules:
+  include: ["*"]
+  exclude: ["guardana.agent.mcp_server_manifest"]

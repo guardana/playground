@@ -1,0 +1,39 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-probe.md:62      --write-mcp-pin approves the manifest and exits without reporting
+#   docs/usage-probe.md:103     the verifier never calls a tool, so the victim serves nothing
+#   docs/usage-probe.md:207-209 and docs/exit-codes.md:192 a pin given while the profile leaves
+#                               the manifest rule out is a pin nothing checks: the same
+#                               shortfall, indeterminate, exit 2, whatever fail_on says
+#   docs/profiles.md:46-48      rules.exclude drops a rule the include selected
+#   docs/usage-run.md:319,325-330 the gate the run records, and its shortfall by kind
+#   docs/index.md:27            a rule that raised is indeterminate too, so step 2 states none did
+#   docs/usage-probe.md:193-206, :231 and docs/index.md:25-26 step 3, the same pin under the
+#                               default profile: no drift, a low finding and unverified checks
+#                               that do not gate, pass, exit 0
+# victim-crm lies in its annotations, not in its descriptions: its manifest does not change.
+# Step 3 is handed the same pin the same way, without the profile.
+# Red when: the profile keeps the manifest rule, which turns step 2 into step 3.
+schema_version: 1
+id: verify-06-a-pin-the-profile-leaves-out-leaves-the-run-indeterminate
+title: A pin the profile leaves unchecked leaves the probe indeterminate
+maps_to: { failure_catalog: [DRIFT-02], owasp_asi: [ASI04] }
+profile: [verifier]
+verifier:
+  - probe: { server: victim-crm, write_pin: true }
+  - probe: { server: victim-crm, pin_from: 1, profile: config/verifier/profiles/without-the-manifest-rule.yaml }
+  - probe: { server: victim-crm, pin_from: 1 }
+expect:
+  verifier:
+    1: { exit_code: 0 }
+    2:
+      exit_code: 2
+      gate: indeterminate
+      shortfall: [{ kind: demanded_check }]
+      errors: []
+    3:
+      exit_code: 0
+      gate: pass
+      findings_exclude: [guardana.agent.mcp_server_manifest]
+      shortfall: []
+  effects:
+    victim-crm: { calls_served: {} }
