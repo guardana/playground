@@ -42,12 +42,13 @@ func (l lab) gradeVerifier(
 	runs := l.runVerifier(ctx, compose, spec, dir, made, token)
 	served := everyVictimServesNothing(spec, boot)
 	records, _ := l.collect(served, boot, runID, runDir)
-	checks := []assertion.Check{
-		check.Boot{Source: filepath.Join(runDir, "boot.json")},
-		reach,
-		check.Verifier{Scenario: spec, Runs: runs},
-		check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")},
-		check.TokenKeptOut{RunDir: runDir, Token: token},
+	checks := []assertion.Check{reach, check.Verifier{Scenario: spec, Runs: runs}, check.TokenKeptOut{RunDir: runDir, Token: token}}
+	if !spec.IsScan() {
+		// A scan's profile boots no service and reaches no victim, so nothing
+		// came up and nothing could have been served.
+		checks = append(checks,
+			check.Boot{Source: filepath.Join(runDir, "boot.json")},
+			check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")})
 	}
 	if spec.AuthDouble != "" {
 		checks = append(checks, check.AuthDouble{JournalDir: filepath.Join(runDir, "journals"), Persona: spec.AuthDouble})
@@ -92,6 +93,12 @@ func (l lab) runVerifier(
 ) []check.VerifierRun {
 	runs := make([]check.VerifierRun, 0, len(spec.Verifier))
 	for i, step := range spec.Verifier {
+		if step.Scan != nil {
+			run := newScanRun(i+1, dir)
+			l.runScan(ctx, compose, spec.Profile, dir, made, *step.Scan, &run)
+			runs = append(runs, run)
+			continue
+		}
 		run := newVerifierRun(i+1, *step.Probe, dir)
 		l.runStep(ctx, compose, spec.Profile, dir, made, runs, token, &run)
 		runs = append(runs, run)
@@ -139,7 +146,12 @@ func newVerifierRun(number int, probe labspec.ProbeStep, dir string) check.Verif
 // a red run and never read by a check.
 func (l lab) probeOnce(ctx context.Context, compose Compose, profiles []string, run *check.VerifierRun) {
 	service, profiles := probeService(profiles, run.Probe)
-	split, err := compose.RunSplit(ctx, profiles, service, "", probeArgs(run.URL, run.Probe))
+	l.runOnce(ctx, compose, profiles, service, probeArgs(run.URL, run.Probe), run)
+}
+
+// runOnce runs one verifier step in service and keeps what it printed.
+func (l lab) runOnce(ctx context.Context, compose Compose, profiles []string, service string, args []string, run *check.VerifierRun) {
+	split, err := compose.RunSplit(ctx, profiles, service, "", args)
 	base := strings.TrimSuffix(run.Report, ".json")
 	if keepErr := keepNew(base+".stderr", split.Stderr, 0o600); keepErr != nil {
 		l.note("keeping what the verifier printed on standard error: %v", keepErr)

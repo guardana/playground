@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**]
+covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
 ---
 
 # How a verifier scenario runs
@@ -71,6 +71,18 @@ victims require it on `/mcp`, publish their protected-resource metadata naming
 the scenario's persona and journals each request it gets, with whether it
 carried a credential or a session and never their values.
 
+## Scan steps
+
+A scenario with `scan` steps boots the `scan` profile, which holds one service,
+`scan-verifier`: the verifier image with `network_mode: none`. The runner copies
+the step's target, a directory under `artifacts/`, into the step's `in/target`
+(regular files only, no links, no hidden name or directory the verifier
+skips, within a bound per file, in count and in depth) and runs `scan target --format json --plugins builtins`
+with its working directory at `/lab-run/in`, so the verifier names every file
+`target/<file>`. A target that cannot be copied whole is not scanned. Nothing
+comes up, so a scan run has no boot or effects checks; the reach probes run in
+`scan-verifier`.
+
 ## The agent's trace
 
 A scenario with `trace:` runs through the enforcer as usual. After the replay,
@@ -118,6 +130,8 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier/step-<n>/gate` | the report's own verdict, `run.result_summary.gate`, is the one stated; a report without it fails | the report |
 | `verifier/step-<n>/shortfall` | `run.coverage.shortfall` holds exactly the stated gaps, one each, by kind and, where stated, name; a report without it fails | the report |
 | `verifier/step-<n>/errors` | the report's `errors` name exactly the stated rules; a report without the list fails | the report |
+| `verifier/step-<n>/scope` | a scan's `scope.files` are exactly the stated files under `target/` | the report |
+| `verifier/step-<n>/findings` | a scan's findings are exactly the stated ones, each by rule, severity, file (a `file:line` ref counts as its file) and summary text | the report |
 | `effects/<victim>` | each probed server's journal holds what the scenario states, and every victim it does not name served nothing | `journals/<victim>/<victim>.jsonl` |
 | `effects/<victim>/auth` | every decision in `auth_include` is among the auth lines the victim journalled in this run | `journals/<victim>/<victim>.jsonl` |
 | `auth-double/unauthenticated` | with `auth_double` set, the double served the named persona to at least one metadata request in this run, and no request carried a credential, a session, a query string or a credential-like header name; none fetched is indeterminate | `journals/auth-double/auth-double.jsonl` |
@@ -170,6 +184,7 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 | path | what |
 |---|---|
 | `runner/verifier.go` | the steps, the run's `verifier/` directory |
+| `runner/scan.go` | a scan step's copy of its target |
 | `runner/verifier_reach.go` | the reach dials and the routing tables |
 | `runner/trace.go` | the trace handed over and analysed |
 | `runner/provenance.go` | the image refusal |

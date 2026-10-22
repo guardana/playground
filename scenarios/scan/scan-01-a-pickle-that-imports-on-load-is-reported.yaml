@@ -1,0 +1,29 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-scan.md:256-258  a .pkl is a model file pickle_opcode reads
+#   docs/usage-scan.md:143-147  a model file no rule read is a shortfall, so none means it was read
+#   docs/usage-scan.md:411-413  the finding names every non-allowlisted callable the file imports
+#   docs/generated/rule-catalog.md:59 pickle_opcode is CRITICAL
+#   docs/profiles.md:14 and docs/exit-codes.md:18-19 the default gate fails at high: exit 1, pass 0
+#   docs/usage-scan.md:252      files and findings are named relative to the working directory
+# artifacts/README.md: the defect's one GLOBAL names a module that does not exist and no call
+# follows, so nothing runs even if it is loaded. Step 1 is the same file without it.
+# Red when: the defect's model.pkl holds the control's bytes.
+schema_version: 1
+id: scan-01-a-pickle-that-imports-on-load-is-reported
+title: A pickle that imports a callable on load is reported
+maps_to: { failure_catalog: [SUP-01] }
+profile: [scan]
+verifier:
+  - scan: { target: artifacts/pickle-import/control }
+  - scan: { target: artifacts/pickle-import/defect }
+expect:
+  verifier:
+    1: { exit_code: 0, gate: pass, shortfall: [], errors: [], scope: [model.pkl], findings: [] }
+    2:
+      exit_code: 1
+      gate: fail
+      shortfall: []
+      errors: []
+      scope: [model.pkl]
+      findings:
+        - { rule_id: guardana.supply_chain.pickle_opcode, severity: CRITICAL, file: model.pkl, summary_contains: clab_never_a_module.nothing }

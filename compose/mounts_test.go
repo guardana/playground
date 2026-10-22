@@ -73,6 +73,7 @@ func TestEachServiceMountsOnlyWhatItWrites(t *testing.T) {
 		"trace-verifier":  {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/verifier", workspace + "/config/contracts"},
 		"verifier":        {verifierStep + "/in"},
 		"verifier-pin":    {verifierStep + "/in", verifierStep + "/out"},
+		"scan-verifier":   {verifierStep + "/in"},
 		"toxiproxy-tools": {"./toxiproxy/proxies.json"},
 		"enforcer": {"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/gateway",
 			"${LAB_RUN_HOST_DIR:-/LAB_RUN_HOST_DIR-is-unset}/pki",

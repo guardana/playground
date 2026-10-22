@@ -3,7 +3,22 @@ package labspec
 // VerifierStep is one command the verifier runs. Probe is the only command
 // today; the wrapper keeps the list open to others without a new format.
 type VerifierStep struct {
-	Probe *ProbeStep `json:"probe"`
+	Probe *ProbeStep `json:"probe,omitempty"`
+	Scan  *ScanStep  `json:"scan,omitempty"`
+}
+
+// ArtifactDir is where the artifacts a scan step hands the verifier live.
+const ArtifactDir = "artifacts/"
+
+// ScanProfile is the compose profile a scan scenario runs in: the verifier
+// with no network, and nothing else.
+const ScanProfile = "scan"
+
+// ScanStep has the verifier scan one directory under ArtifactDir, copied into
+// the step whole, under a profile from ProfileDir when one is named.
+type ScanStep struct {
+	Target  string `json:"target"`
+	Profile string `json:"profile,omitempty"`
 }
 
 // ProfileDir is where a verifier step's profiles live.
@@ -39,6 +54,10 @@ type VerifierExpectation struct {
 	Gate              string                  `json:"gate,omitempty"`
 	Shortfall         *[]ShortfallExpectation `json:"shortfall,omitempty"`
 	Errors            *[]string               `json:"errors,omitempty"`
+	// Scope and Findings are a scan step's exact record: every file the
+	// verifier listed, and every finding with the file it is about.
+	Scope    *[]string             `json:"scope,omitempty"`
+	Findings *[]FindingExpectation `json:"findings,omitempty"`
 }
 
 // ShortfallExpectation is one coverage gap the report has to record, by the
@@ -55,8 +74,21 @@ type FindingExpectation struct {
 	RuleID          string `json:"rule_id"`
 	Severity        string `json:"severity,omitempty"`
 	SummaryContains string `json:"summary_contains,omitempty"`
+	// File is the scanned file a finding is about, relative to the target.
+	File string `json:"file,omitempty"`
 }
 
 // IsVerifier reports whether the scenario runs the verifier rather than a
 // trajectory through the enforcer.
 func (s Scenario) IsVerifier() bool { return len(s.Verifier) > 0 }
+
+// IsScan reports whether the scenario scans artifacts rather than probing
+// servers.
+func (s Scenario) IsScan() bool {
+	for _, step := range s.Verifier {
+		if step.Scan != nil {
+			return true
+		}
+	}
+	return false
+}

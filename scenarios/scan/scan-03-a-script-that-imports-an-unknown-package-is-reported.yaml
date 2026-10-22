@@ -1,0 +1,27 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-scan.md:402-409  an import of a package that is neither known nor declared is a
+#                               hallucinated_package finding naming it, read from .py source
+#   docs/generated/rule-catalog.md:51 hallucinated_package is MEDIUM
+#   docs/profiles.md:119        fail_on.severity medium makes a medium finding fail the gate: exit 1
+#   docs/usage-scan.md:252      files and findings are named relative to the working directory
+# Both steps run under config/verifier/profiles/fail-at-medium.yaml; step 1 imports json.
+# Red when: the defect's train.py imports json.
+schema_version: 1
+id: scan-03-a-script-that-imports-an-unknown-package-is-reported
+title: A training script that imports a package nobody publishes is reported
+maps_to: { failure_catalog: [SUP-03] }
+profile: [scan]
+verifier:
+  - scan: { target: artifacts/unknown-import/control, profile: config/verifier/profiles/fail-at-medium.yaml }
+  - scan: { target: artifacts/unknown-import/defect, profile: config/verifier/profiles/fail-at-medium.yaml }
+expect:
+  verifier:
+    1: { exit_code: 0, gate: pass, shortfall: [], errors: [], scope: [train.py], findings: [] }
+    2:
+      exit_code: 1
+      gate: fail
+      shortfall: []
+      errors: []
+      scope: [train.py]
+      findings:
+        - { rule_id: guardana.supply_chain.hallucinated_package, severity: MEDIUM, file: train.py, summary_contains: torchutilz }

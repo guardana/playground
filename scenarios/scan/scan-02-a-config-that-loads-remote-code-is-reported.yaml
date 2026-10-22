@@ -1,0 +1,27 @@
+# Expectations from the verifier's documentation at guardana v1.0.0rc5:
+#   docs/usage-scan.md:133-138  a Hub kernel repository named in _attn_implementation is critical,
+#                               whatever trust_remote_code says
+#   docs/profiles.md:14 and docs/exit-codes.md:18-19 the default gate fails at high: exit 1, pass 0
+#   docs/usage-scan.md:252      files and findings are named relative to the working directory
+# The repository named holds "--", which the hub client refuses before any request, so it
+# leads nowhere; step 1 names "eager".
+# Red when: the defect's config.json names "eager".
+schema_version: 1
+id: scan-02-a-config-that-loads-remote-code-is-reported
+title: A model config that makes the loader fetch remote code is reported
+maps_to: { failure_catalog: [SUP-02] }
+profile: [scan]
+verifier:
+  - scan: { target: artifacts/remote-code-config/control }
+  - scan: { target: artifacts/remote-code-config/defect }
+expect:
+  verifier:
+    1: { exit_code: 0, gate: pass, shortfall: [], errors: [], scope: [config.json], findings: [] }
+    2:
+      exit_code: 1
+      gate: fail
+      shortfall: []
+      errors: []
+      scope: [config.json]
+      findings:
+        - { rule_id: guardana.supply_chain.remote_code_config, severity: CRITICAL, file: config.json, summary_contains: lab--invalid/kernel }

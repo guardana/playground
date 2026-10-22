@@ -145,6 +145,7 @@ func gradeReport(run VerifierRun, want labspec.VerifierExpectation, report verif
 		add("no-finding/"+rule, "the rule ran and reported nothing", func() (bool, string) { return report.concludedClean(rule) })
 	}
 	gradeVerdict(want, report, add)
+	gradeScan(want, report, run.URL+"/", add)
 	for _, rule := range want.UnverifiedInclude {
 		add("unverified/"+rule, "the rule ran and could not reach a verdict", func() (bool, string) {
 			if slices.Contains(ruleIDs(report.Unverified), rule) {

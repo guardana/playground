@@ -51,10 +51,15 @@ func (s Scenario) validateVerifier() error {
 			return fmt.Errorf("%w: %s is set in a verifier scenario, which has nothing to grade it by", ErrInvalid, set.field)
 		}
 	}
-	if !slices.Equal(s.Profile, []string{VerifierProfile}) {
+	profile := VerifierProfile
+	if s.IsScan() {
+		profile = ScanProfile
+	}
+	if !slices.Equal(s.Profile, []string{profile}) {
 		// Another profile boots the gateway, which lists every victim's tools at
-		// startup and spends the listing a drift is read on.
-		return fmt.Errorf("%w: profile is %v; a verifier scenario runs in [%s] alone", ErrInvalid, s.Profile, VerifierProfile)
+		// startup and spends the listing a drift is read on; a scan reaches
+		// nothing, so its profile boots nothing.
+		return fmt.Errorf("%w: profile is %v; this verifier scenario runs in [%s] alone", ErrInvalid, s.Profile, profile)
 	}
 	for i := range s.Verifier {
 		if _, graded := s.Expect.Verifier[i+1]; !graded {
@@ -74,7 +79,16 @@ func (s Scenario) validateVerifier() error {
 }
 
 func (s Scenario) validateVerifierStep(number int) error {
-	probe := s.Verifier[number-1].Probe
+	step := s.Verifier[number-1]
+	switch {
+	case step.Probe != nil && step.Scan != nil:
+		return fmt.Errorf("%w: verifier[%d] names two commands", ErrInvalid, number)
+	case s.IsScan() && step.Scan == nil:
+		return fmt.Errorf("%w: verifier[%d] is not a scan, and a scan scenario runs scan steps alone", ErrInvalid, number)
+	case step.Scan != nil:
+		return s.validateScanStep(number)
+	}
+	probe := step.Probe
 	field := fmt.Sprintf("verifier[%d].probe", number)
 	switch {
 	case probe == nil:
@@ -147,6 +161,8 @@ func (v VerifierExpectation) validate(number int, writesPin bool) error {
 		return fmt.Errorf("%w: %s.exit_code is %d, want 0 to %d", ErrInvalid, field, *v.ExitCode, maxVerifierExitCode)
 	case writesPin && v.readsReport():
 		return fmt.Errorf("%w: %s writes a pin, which exits without a report to read findings from", ErrInvalid, field)
+	case v.Scope != nil || v.Findings != nil:
+		return fmt.Errorf("%w: %s states scope or findings, which only a scan step's report carries", ErrInvalid, field)
 	}
 	if err := v.validateRules(field); err != nil {
 		return err

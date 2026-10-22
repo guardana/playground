@@ -1,3 +1,6 @@
 # LF in the repository and in every checkout: a script checked out with CRLF
 # on Windows keeps a shebang bash cannot run, and the gates compare bytes.
 * text=auto eol=lf
+# The verifier is graded on the exact bytes of an artifact, and a pickle's
+# line ends are part of its opcodes.
+artifacts/** -text

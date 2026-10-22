@@ -87,16 +87,20 @@ func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Sc
 	record := func(what string, probe check.Probe) {
 		fmt.Fprintf(&recorded, "%s %s ran=%t reached=%t %s\n", what, probe.Target, probe.Ran, probe.Reached, probe.Detail)
 	}
+	service := verifierService
+	if spec.IsScan() {
+		service = scanService
+	}
 	for _, server := range spec.Probed() {
-		probe := l.python(ctx, compose, spec.Profile, server+":"+servicePort, reachScript, server+":"+servicePort)
+		probe := l.python(ctx, compose, spec.Profile, service, server+":"+servicePort, reachScript, server+":"+servicePort)
 		reach.Servers = append(reach.Servers, probe)
 		record("server", probe)
 	}
-	reach.Outside = l.python(ctx, compose, spec.Profile, outsideAddress, reachScript, outsideAddress)
+	reach.Outside = l.python(ctx, compose, spec.Profile, service, outsideAddress, reachScript, outsideAddress)
 	record("outside", reach.Outside)
-	reach.Routes = l.python(ctx, compose, spec.Profile, routeTarget, routeScript)
+	reach.Routes = l.python(ctx, compose, spec.Profile, service, routeTarget, routeScript)
 	record("routes", reach.Routes)
-	reach.Proxy = l.python(ctx, compose, spec.Profile, proxyTarget, proxyScript)
+	reach.Proxy = l.python(ctx, compose, spec.Profile, service, proxyTarget, proxyScript)
 	record("proxy", reach.Proxy)
 	if err := writeBytes(reach.Source, []byte(recorded.String())); err != nil {
 		l.note("writing the probe record: %v", err)
@@ -105,8 +109,8 @@ func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Sc
 }
 
 // python runs one script in the verifier's container and reads its markers.
-func (l lab) python(ctx context.Context, compose Compose, profiles []string, target, script string, args ...string) check.Probe {
-	split, err := compose.RunSplit(ctx, profiles, verifierService, "python", append([]string{"-c", script}, args...))
+func (l lab) python(ctx context.Context, compose Compose, profiles []string, service, target, script string, args ...string) check.Probe {
+	split, err := compose.RunSplit(ctx, profiles, service, "python", append([]string{"-c", script}, args...))
 	if err != nil {
 		return check.Probe{Target: target, Detail: err.Error()}
 	}
