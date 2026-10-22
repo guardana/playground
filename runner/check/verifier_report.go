@@ -41,6 +41,10 @@ type verifierReport struct {
 	Unverified []verifierFinding `json:"unverified"`
 	Waived     []verifierFinding `json:"waived"`
 	Errors     *[]verifierError  `json:"errors"`
+	// Scope is what a scan listed; null for any other run.
+	Scope *struct {
+		Files []string `json:"files"`
+	} `json:"scope"`
 }
 
 // verifierShortfall is coverage the run needed and did not get, by kind and
@@ -59,7 +63,9 @@ type verifierError struct {
 type verifierFinding struct {
 	RuleID   string `json:"rule_id"`
 	Severity string `json:"severity"`
-	Evidence *struct {
+	// TargetRef is the file a scan finding is about, as the scan names it.
+	TargetRef string `json:"target_ref"`
+	Evidence  *struct {
 		Summary string `json:"summary"`
 	} `json:"evidence"`
 }

@@ -417,6 +417,21 @@ services:
         bind:
           create_host_path: false
 
+  # The verifier scanning the files a scan step planted, which are hostile on
+  # purpose. It needs no peer, so it has no network at all, not even a sealed
+  # one, and its profile boots nothing beside it. It runs inside the step's
+  # in/, since the paths it reports are relative to where it runs.
+  scan-verifier:
+    image: ${VERIFIER_IMAGE}:${VERIFIER_VERSION}
+    pull_policy: never
+    <<: *hardened
+    user: "65532:65532"
+    network_mode: none
+    profiles: [scan]
+    working_dir: /lab-run/in
+    volumes:
+      - *verifier-step-inputs
+
   # Where the enforcer's trail lands. Nothing else may reach it: a victim that
   # could post its own log records here could forge evidence, so it is the
   # only service on evidence-net and evidence-net carries nothing else (the

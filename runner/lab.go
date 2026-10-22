@@ -185,12 +185,17 @@ func (l lab) runScenario(
 func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, inProfile []string, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
-		return name == agentService || name == verifierService || name == traceService
+		return name == agentService || name == verifierService || name == traceService || name == scanService
 	})
 	if err := compose.Build(ctx, append(slices.Clone(spec.Profile), agentProfile)); err != nil {
 		for _, name := range wanted {
 			boot.Services = append(boot.Services, assertion.Service{Name: name, Detail: "not started, the build failed: " + err.Error()})
 		}
+		return l.writeBoot(runDir, boot)
+	}
+	if len(wanted) == 0 {
+		// A profile of one-shots alone, as a scan's: compose up with no service
+		// named would start them all.
 		return l.writeBoot(runDir, boot)
 	}
 	upErr := compose.Up(ctx, spec.Profile, wanted)

@@ -138,6 +138,11 @@ func namedFiles(spec labspec.Scenario) []namedFile {
 	if spec.AuthDouble != "" {
 		files = append(files, namedFile{"auth_double", personaFile(spec.AuthDouble), labspec.AuthPersonaDir})
 	}
+	for i, step := range spec.Verifier {
+		if step.Scan != nil && step.Scan.Profile != "" {
+			files = append(files, namedFile{fmt.Sprintf("verifier[%d].scan.profile", i+1), step.Scan.Profile, labspec.ProfileDir})
+		}
+	}
 	return files
 }
 
@@ -196,7 +201,7 @@ func (w workspace) holds(named namedFile) error {
 func mountedDirs() []string {
 	return []string{
 		"trajectories", labspec.ContractDir, "config/pdp", "config/approver", labspec.PolicyDir, labspec.GatewayConfigDir,
-		labspec.ProfileDir, labspec.AuthPersonaDir,
+		labspec.ProfileDir, labspec.AuthPersonaDir, labspec.ArtifactDir,
 	}
 }
 

@@ -175,6 +175,7 @@ func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testi
 			"    victim-fs: { calls_served: {} }\n", "    victim-fs: { calls_served: {} }\n    victim-crm: { calls_served: {} }\n"},
 		"writing and reading a pin":  {"pin_from: 1 }", "pin_from: 1, write_pin: true }"},
 		"a pin step grading reports": {"    1: { exit_code: 0 }", "    1: { exit_code: 0, unverified_include: [x] }"},
+		"a probe stating a scope":    {"      unverified_include: [guardana.mcp.session_binding]\n", "      unverified_include: [guardana.mcp.session_binding]\n      scope: [x]\n"},
 		"a finding with no rule":     {"severity: LOW }", "severity: LOW, rule_id: '' }"},
 		"an unknown severity":        {"severity: LOW }", "severity: low }"},
 		"a rule wanted and excluded": {"[guardana.mcp.cache_scope]", "[guardana.mcp.unauthenticated_access]"},

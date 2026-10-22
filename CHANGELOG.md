@@ -7,6 +7,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Verifier scan steps: `scan: { target }` copies a directory under the new
+  `artifacts/` into the step and has the verifier scan it in `scan-verifier`,
+  which has no network, in the `scan` profile alone. A scan step states the
+  exact files the verifier listed (`scope`) and every finding with its file
+  (`findings`). `scan-01` to `scan-04` grade a pickle that imports on load, a
+  model config that fetches remote code, a script importing a package nobody
+  publishes and a planted key, each beside a control that differs in one file.
+  The artifacts are inert by construction, and `internal/labcheck` holds them
+  so: pickle opcodes, ASCII, `.invalid` hosts, one file different per case.
 - Three victims require the run's bearer token, each with one lie its README
   names: `victim-vault` (an annotation, as every victim), `victim-vault-anytoken`
   (accepts any bearer token) and `victim-vault-sessionauth` (a session id stands

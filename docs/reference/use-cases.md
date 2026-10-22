@@ -61,7 +61,7 @@ The catalogue is `experimental`.
 
 | use case | acts through | failure modes | in the lab today |
 |---|---|---|---|
-| Building and training models: fine-tuning, a model registry, notebooks, datasets | model files, training scripts, notebooks, datasets | `SUP-01`, `SUP-02`, `SUP-03`, `SUP-04`, `SUP-05` | none. Planned: inert artifacts the verifier scans, each planted with one known defect |
+| Building and training models: fine-tuning, a model registry, notebooks, datasets | model files, training scripts, notebooks, datasets | `SUP-01`, `SUP-02`, `SUP-03`, `SUP-04`, `SUP-05` | inert artifacts under `artifacts/`, each a control and a defect differing in one file; `scan-01`..`04`. `SUP-04` planned |
 | Publishing an MCP server for agents | the server's own listing and authentication | `DRIFT-01`, `DRIFT-02`, `EVID-04`, `INJ-03`, `MCP-01`, `MCP-02`, `MCP-03`, `MCP-05` | victim-fs, whose tool changes on its second listing; the token-gated vault victims and `auth-double`; `verify-01`..`10`, `chaos-04` |
 | Serving a model endpoint to an agent or a user | prompts, answers | `PRM-01`, `PRM-02`, `RUN-03` | none. Planned: needs a model, recorded once and replayed |
 

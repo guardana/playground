@@ -1,0 +1,5 @@
+# The default gate lowered to medium: a finding at or above medium fails the run.
+schema_version: 1
+name: fail-at-medium
+fail_on:
+  severity: medium

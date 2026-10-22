@@ -67,7 +67,7 @@ Sources: `compose/compose.yaml`, `runner/env.go`, `runner/enforcer.go`, `victims
 | network | who sits on it | why |
 |---|---|---|
 | `agent-net` | `scripted-agent`, `enforcer` | the agent reaches the enforcer and nothing else |
-| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier`, the token-gated victims and `auth-double` (profile `verifier`), `verifier-pin` (its own profile, which only the runner names), `enforcer` | the attack pages and the canary tokens stay behind it |
+| `tool-net` | the victims, `attacker-web`, `mailpit`, `toxiproxy-tools` (profile `chaos`), `verifier`, the token-gated victims and `auth-double` (profile `verifier`), `verifier-pin` (its own profile, which only the runner names), `enforcer`; `scan-verifier` (profile `scan`) has no network at all | the attack pages and the canary tokens stay behind it |
 | `evidence-net` | `collector`, `enforcer` | a victim that could post to the collector could forge the trail |
 | `pdp-net` | `pdp-double`, `enforcer` | the double answers the enforcer alone |
 | `approver-net` | `approver` | a service with no network would land on compose's default one, which has a route out; the approver needs only the `approvals` volume it shares with the enforcer |
@@ -98,6 +98,7 @@ and the parts of `LAB_WORKSPACE` (the clone, or
 | `enforcer` | `gateway/`, `pki/` and `export-ca/`, all read-only | |
 | `verifier` | its step's `verifier/step-<n>/in/`, read-only | |
 | `verifier-pin` | the same, and that step's `out/` | |
+| `scan-verifier` | its step's `verifier/step-<n>/in/`, read-only | |
 | `auth-double` | `journals/auth-double/` | `config/auth/` |
 | `trace-verifier` | `verifier/` read-only | `config/contracts/` |
 

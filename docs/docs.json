@@ -41,6 +41,7 @@
   ],
   "surfaces": [
     "agents/**",
+    "artifacts/**",
     "attacks/**",
     "compose/**",
     "config/**",

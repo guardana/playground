@@ -11,6 +11,7 @@ bin
 dist
 docs
 attacks
+artifacts
 scenarios
 trajectories
 examples

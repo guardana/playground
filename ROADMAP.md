@@ -1,9 +1,9 @@
 # Roadmap
 
 This repository is one playground for testing AI security controls; testing
-agents and models is planned
+agents and model endpoints is planned
 ([P5](#p5--agent-trials-in-the-same-playground-planned),
-[P7](#p7--model-artifacts-and-endpoints-planned)). Control (the enforcer) is
+[P7](#p7--model-artifacts-and-endpoints-partly-implemented)). Control (the enforcer) is
 the inline gate; Guardana (the verifier) grades independently. The planned
 Range path will run an agent as the subject under test. Each path uses synthetic victims,
 scripted scenarios and records of actual effects. The enforcer's scenarios and the
@@ -82,10 +82,12 @@ Cover poisoned content, tool descriptions and schemas, secret-bearing
 arguments, repeated calls and denial routed around. Every case gets a deterministic trajectory, an expected
 verdict, victim-side evidence and a mutation that makes its check fail.
 
-## P7 — Model artifacts and endpoints (planned)
+## P7 — Model artifacts and endpoints (partly implemented)
 
-Serve inert model files, configurations, training code and datasets with known
-defects for the verifier's supply-chain checks (`SUP-01`–`SUP-05`). Add a
+Inert artifacts the verifier scans are in (`scan-01` to `scan-04`, experimental):
+a pickle, a model config, a training script and a pipeline file, each planted
+with one defect (`SUP-01`–`SUP-03`, `SUP-05`). A dataset unlike its record
+(`SUP-04`) waits for a verifier rule that compares the two. Add a
 model endpoint double and recorded model responses for prompt leakage and
 jailbreak cases (`PRM-01`, `PRM-02`). A live model is an optional capture layer
 with a stated budget and version; replay, not a live response, decides CI.

@@ -487,6 +487,16 @@ expect:
   rule that could not run, and under `fail_on_inconclusive` for a check that
   reached no verdict; an unverified rule alone explains nothing, because every
   probe without a token leaves one.
+- `scan: { target, profile }` copies a directory under `artifacts/` into the
+  step and has the verifier scan it, with no network; `profile` is as for a
+  probe. A scenario with scan steps has scan steps alone, `profile: [scan]` and
+  no `effects`. Each scan step states `exit_code`, `gate`, `shortfall`,
+  `errors`, `scope` (the exact files the verifier listed, relative to the
+  target) and `findings` (the exact list, each `{rule_id, severity, file,
+  summary_contains}`); `findings_include` and `findings_exclude` are refused,
+  because the verifier lists every artifact rule as run even over an empty
+  target. The report must hold no waived finding and no unverified result
+  that `unverified_include` does not name.
 - `effects` names every probed server and stays exhaustive: the verifier
   documents that it never calls a tool, and the victim's journal says whether
   that held. The verifier reaches every victim on `tool-net`, so the runner

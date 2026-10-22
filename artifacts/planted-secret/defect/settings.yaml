@@ -1,0 +1,5 @@
+# Synthetic settings for a storage bucket that does not exist.
+storage:
+  bucket: lab-artifacts
+  aws_region: lab-invalid-1
+  aws_access_key_id: AKIALABCANARYEXAMPLE

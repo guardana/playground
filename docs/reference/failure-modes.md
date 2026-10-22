@@ -149,11 +149,11 @@ run.
 
 | id | what goes wrong | catch | in the lab today |
 |---|---|---|---|
-| `SUP-01` | a model file executes code when it is loaded | grader | planned |
-| `SUP-02` | a model's configuration or loader fetches and runs remote code | grader | planned |
-| `SUP-03` | a training script or notebook imports a package that should not be trusted | grader | planned |
-| `SUP-04` | a dataset differs from the one its record names | grader | planned |
-| `SUP-05` | a secret is written into a pipeline artifact | grader | planned |
+| `SUP-01` | a model file executes code when it is loaded | grader | `scan-01` |
+| `SUP-02` | a model's configuration or loader fetches and runs remote code | grader | `scan-02` |
+| `SUP-03` | a training script or notebook imports a package that should not be trusted | grader | `scan-03` |
+| `SUP-04` | a dataset differs from the one its record names | grader | planned: the verifier at its pin has no rule that compares a dataset with a record |
+| `SUP-05` | a secret is written into a pipeline artifact | grader | `scan-04` |
 
 ## Model endpoints
 

@@ -83,13 +83,19 @@ func TestEveryLabNetworkIsInternal(t *testing.T) {
 	}
 }
 
-// network_mode replaces compose's own network isolation with the host's or
-// another container's, which no hardened lab service may do: it would leave
-// that service on whatever network the mode names, unchecked by this file.
-func TestNoServiceSetsNetworkMode(t *testing.T) {
+// Any network_mode but none puts a service on the host's network or another
+// container's, unchecked by this file. A service that names neither networks
+// nor none lands on the project's default network, which has a route out.
+func TestEveryServiceIsOnALabNetworkOrOnNone(t *testing.T) {
 	for name, service := range read(t).Services {
-		if service.NetworkMode != "" {
+		switch {
+		case service.NetworkMode == "none" && len(service.Networks) > 0:
+			t.Errorf("%s sets network_mode: none and joins %v", name, service.Networks)
+		case service.NetworkMode == "none":
+		case service.NetworkMode != "":
 			t.Errorf("%s sets network_mode: %s, which bypasses every network check here", name, service.NetworkMode)
+		case len(service.Networks) == 0:
+			t.Errorf("%s joins no network, so compose puts it on the default one, which has a route out", name)
 		}
 	}
 }

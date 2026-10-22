@@ -24,12 +24,19 @@ func TestEveryVerifierProfileIsNamedAndExists(t *testing.T) {
 			continue
 		}
 		for _, step := range scenario.Verifier {
-			if step.Probe == nil || step.Probe.Profile == "" {
+			profile := ""
+			switch {
+			case step.Probe != nil:
+				profile = step.Probe.Profile
+			case step.Scan != nil:
+				profile = step.Scan.Profile
+			}
+			if profile == "" {
 				continue
 			}
-			named = append(named, step.Probe.Profile)
-			if _, err := os.Stat(filepath.Join(repoRoot, step.Probe.Profile)); err != nil {
-				t.Errorf("%s names profile %s, which does not exist", relative(path), step.Probe.Profile)
+			named = append(named, profile)
+			if _, err := os.Stat(filepath.Join(repoRoot, profile)); err != nil {
+				t.Errorf("%s names profile %s, which does not exist", relative(path), profile)
 			}
 		}
 	}
