@@ -39,7 +39,7 @@ expect:
 	indeterminateReport = `{"schema_version": 18, "run": {"target": {"ref": "http://victim-fs:8080/mcp"},
  "result_summary": {"gate": "indeterminate", "rules_run": ["guardana.mcp.cache_scope"]},
  "coverage": {"shortfall": [{"kind": "demanded_check", "name": "guardana.agent.mcp_server_manifest", "detail": "excluded"}]}},
- "findings": [], "unverified": [], "errors": []}`
+ "findings": [], "unverified": [], "waived": [], "errors": []}`
 )
 
 // profiledUnderTest is the verifier lab running a scenario whose second step

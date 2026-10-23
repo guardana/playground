@@ -84,9 +84,18 @@ type verifierPin struct {
 	Tools         map[string]string `json:"tools"`
 }
 
+// reportLists says whether a report named each list a check reads as exact:
+// a list left out, or null, has not said "none".
+type reportLists struct {
+	Findings   *json.RawMessage `json:"findings"`
+	Unverified *json.RawMessage `json:"unverified"`
+	Waived     *json.RawMessage `json:"waived"`
+}
+
 // readVerifierFile reads a file the verifier wrote into a directory it can
-// write, so a link or an endless file there is refused rather than followed.
-func readVerifierFile(path string, value any) error {
+// write, so a link or an endless file there is refused rather than followed,
+// and decodes the one read into each value.
+func readVerifierFile(path string, values ...any) error {
 	body, err := runfile.ReadRegular(path, maxVerifierFile)
 	if err != nil {
 		return err
@@ -94,17 +103,25 @@ func readVerifierFile(path string, value any) error {
 	if len(body) == 0 {
 		return fmt.Errorf("%s is empty", path)
 	}
-	return json.Unmarshal(body, value)
+	for _, value := range values {
+		if err := json.Unmarshal(body, value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // readReport reads a report and holds it to the endpoint the step probed: a
 // report about another target is a record of something else.
 func readReport(path, url string) (verifierReport, error) {
 	var report verifierReport
-	if err := readVerifierFile(path, &report); err != nil {
+	var lists reportLists
+	if err := readVerifierFile(path, &report, &lists); err != nil {
 		return verifierReport{}, fmt.Errorf("the verifier's report cannot be read: %w", err)
 	}
 	switch {
+	case lists.Findings == nil || lists.Unverified == nil || lists.Waived == nil:
+		return verifierReport{}, fmt.Errorf("the report leaves out findings, unverified or waived, which is not saying none")
 	case report.SchemaVersion != verifierReportSchema:
 		return verifierReport{}, fmt.Errorf("the report is schema %d and the lab reads %d",
 			report.SchemaVersion, verifierReportSchema)

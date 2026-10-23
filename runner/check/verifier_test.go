@@ -186,6 +186,10 @@ func TestAMissingOrForeignRecordGradesNothingBesideIt(t *testing.T) {
 		"an older report schema": {fsPin, strings.Replace(driftReport, `"schema_version": 18`, `"schema_version": 17`, 1)},
 		"a newer report schema":  {fsPin, strings.Replace(driftReport, `"schema_version": 18`, `"schema_version": 19`, 1)},
 		"no rule ran":            {fsPin, strings.Replace(driftReport, `"rules_run": [`, `"rules_run": [], "x": [`, 1)},
+		"no findings list":       {fsPin, strings.Replace(driftReport, `"findings": [`, `"found": [`, 1)},
+		"no unverified list":     {fsPin, strings.Replace(driftReport, `"unverified": [`, `"inconclusive": [`, 1)},
+		"no waived list":         {fsPin, strings.Replace(driftReport, `"waived": [], `, ``, 1)},
+		"a null waived list":     {fsPin, strings.Replace(driftReport, `"waived": []`, `"waived": null`, 1)},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, test.pin, test.report))

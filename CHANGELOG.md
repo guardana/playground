@@ -98,6 +98,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A verifier report that leaves out `findings`, `unverified` or `waived`, or
+  gives one as `null`, is refused as unread instead of read as "none", so a
+  `findings_exclude` or a scan's empty waived list cannot pass on a list the
+  report never gave.
 - Under rootless Docker, `make lab-key`, the runner's policy signing and
   `make classify-victims` ran the enforcer's container as the caller's uid,
   which the daemon maps to a subordinate uid that cannot write the caller's

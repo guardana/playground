@@ -35,7 +35,7 @@ expect:
  "result_summary": {"rules_run": ["guardana.agent.mcp_server_manifest", "guardana.mcp.cache_scope"]}},
  "findings": [{"rule_id": "guardana.agent.mcp_server_manifest", "severity": "CRITICAL",
   "evidence": {"summary": "the declaration of 'fs.read' changed after it was approved (rug pull)"}}],
- "unverified": [], "errors": []}`
+ "unverified": [], "waived": [], "errors": []}`
 	verifierPin = `{"schema_version": 2, "server": "http://victim-fs:8080/mcp", "tools": {"fs.read": "sha256:00"}}`
 )
 
