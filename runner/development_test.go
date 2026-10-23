@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -96,9 +97,9 @@ func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]
 	}
 	compose.image = func(string) (string, error) { return "sha256:dd", nil }
 	brand := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if strings.HasSuffix(args[len(args)-1], "/brand") {
-			return Split{Stdout: "status 200\n" + `{"version":"` + serves + `"}`}
+			return dockercompose.Split{Stdout: "status 200\n" + `{"version":"` + serves + `"}`}
 		}
 		return brand(service, args)
 	}
@@ -176,9 +177,9 @@ func TestTheEnforcerImageIsTheRunnersWhateverTheShellExports(t *testing.T) {
 	t.Setenv("LAB_ENFORCER_REF", devRef)
 	subject, _, _ := enforcerLab(t)
 	env := subject.environment("flow-01-20260909T120000Z-0badc0de", t.TempDir())
-	composed := dockerCompose{}.WithEnv(env).(dockerCompose)
+	composed := dockercompose.CLI{}.WithEnv(env).(dockercompose.CLI)
 	last := ""
-	for _, entry := range composed.env {
+	for _, entry := range composed.Env {
 		if value, found := strings.CutPrefix(entry, "LAB_ENFORCER_REF="); found {
 			last = value
 		}

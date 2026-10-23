@@ -12,13 +12,14 @@ import (
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 // addToxic puts the toxic on the victim's proxy and reads the proxy's own
 // account of that proxy back: the toxic is held only when the proxy lists it
 // with the attribute the scenario asked for.
 func (l lab) addToxic(
-	ctx context.Context, compose Compose, profiles []string, toxic labspec.Toxic, fault *check.ChaosFault, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, toxic labspec.Toxic, fault *check.ChaosFault, log *strings.Builder,
 ) {
 	args := toxicArgs(toxic)
 	added, err := compose.Exec(ctx, profiles, proxyService, args)
@@ -32,7 +33,7 @@ func (l lab) addToxic(
 // removeToxic lifts the toxic, and it is lifted only when the proxy no longer
 // lists it.
 func (l lab) removeToxic(
-	ctx context.Context, compose Compose, profiles []string, victim string, fault *check.ChaosFault, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, fault *check.ChaosFault, log *strings.Builder,
 ) {
 	removed, err := compose.Exec(ctx, profiles, proxyService, []string{proxyCLI, "toxic", "remove", "-n", toxicName, victim})
 	fmt.Fprintf(log, "toxic removed from %s: exit %d %v %s\n", victim, removed.ExitCode, err, strings.TrimSpace(removed.Stdout+removed.Stderr))
@@ -48,7 +49,7 @@ func (l lab) removeToxic(
 // inspectProxy is the proxy's listing of one proxy's toxics, and whether it
 // could be read at all: a proxy with no toxic lists nothing.
 func (l lab) inspectProxy(
-	ctx context.Context, compose Compose, profiles []string, victim string, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, log *strings.Builder,
 ) (string, bool) {
 	listed, err := compose.Exec(ctx, profiles, proxyService, []string{proxyCLI, "inspect", victim})
 	fmt.Fprintf(log, "proxy %s: exit %d %v\n%s\n", victim, listed.ExitCode, err, strings.TrimSpace(listed.Stdout))
@@ -62,7 +63,7 @@ func (l lab) inspectProxy(
 // down, which has to show records waiting for it, then starts it again. The
 // collector is lifted when compose reports it running and the enforcer's
 // exporter has had records acknowledged since it was down.
-func (l lab) restartCollector(ctx context.Context, compose Compose, profiles []string, fault *check.ChaosFault, log *strings.Builder) {
+func (l lab) restartCollector(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *check.ChaosFault, log *strings.Builder) {
 	body, err := l.planeGet(ctx, compose, profiles, "/healthz")
 	fmt.Fprintf(log, "healthz while the collector was down: %v %s\n", err, strings.TrimSpace(string(body)))
 	var down planeHealth
@@ -90,7 +91,7 @@ func (l lab) restartCollector(ctx context.Context, compose Compose, profiles []s
 }
 
 // collectorRunning is compose's own account of the collector's container.
-func (l lab) collectorRunning(ctx context.Context, compose Compose, profiles []string, fault *check.ChaosFault) bool {
+func (l lab) collectorRunning(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *check.ChaosFault) bool {
 	services, err := compose.Status(ctx, profiles, []string{collectorService})
 	for _, service := range services {
 		if service.Name == collectorService {
@@ -105,7 +106,7 @@ func (l lab) collectorRunning(ctx context.Context, compose Compose, profiles []s
 // acknowledgedSince polls the enforcer's /healthz, within the drain's bound,
 // until its exporter has had more records acknowledged than before.
 func (l lab) acknowledgedSince(
-	ctx context.Context, compose Compose, profiles []string, before int64, fault *check.ChaosFault, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, before int64, fault *check.ChaosFault, log *strings.Builder,
 ) bool {
 	bound := l.drainBound
 	if bound <= 0 {
@@ -141,7 +142,7 @@ func (l lab) acknowledgedSince(
 // client the enforcer knows nothing of. It happened when that listing
 // describes a tool otherwise than the snapshot the enforcer's classification
 // was pinned to.
-func (l lab) relist(ctx context.Context, compose Compose, profiles []string, victim string, fault *check.ChaosFault, log *strings.Builder) {
+func (l lab) relist(ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, fault *check.ChaosFault, log *strings.Builder) {
 	listed, err := compose.Exec(ctx, profiles, victim,
 		[]string{"/relist", "http://127.0.0.1:" + servicePort + "/mcp"})
 	fmt.Fprintf(log, "%s listed again: exit %d %v\n%s\n%s\n", victim, listed.ExitCode, err,

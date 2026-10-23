@@ -1,4 +1,4 @@
-package main
+package dockercompose
 
 // composeArgs builds the arguments after "docker compose".
 func composeArgs(file, envFile string, profiles, args []string) []string {

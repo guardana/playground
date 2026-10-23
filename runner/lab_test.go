@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -69,9 +70,9 @@ type fakeCompose struct {
 	servicesErr error
 	built       []string
 	upErr       error
-	gateway     Execution
-	victim      Execution
-	replay      Execution
+	gateway     dockercompose.Execution
+	victim      dockercompose.Execution
+	replay      dockercompose.Execution
 	replayErr   error
 	// trail is an evidence.jsonl the fake writes itself when the replay runs,
 	// as nothing in a working run does; empty writes none.
@@ -82,7 +83,7 @@ type fakeCompose struct {
 	planted map[string]string
 	// split answers the verifier's runs; nil answers every one as not run.
 	// callEnv holds the variables of the call it answers, splits every call.
-	split   func(service, entrypoint string, args []string) (Split, error)
+	split   func(service, entrypoint string, args []string) (dockercompose.Split, error)
 	callEnv map[string]string
 	splits  []splitCall
 
@@ -103,14 +104,14 @@ type fakeCompose struct {
 	// agentTrace is what the fake agent writes when it is asked for a trace.
 	agentTrace string
 	// exec answers a command run inside a service; execs records each one.
-	exec func(service string, args []string) Split
+	exec func(service string, args []string) dockercompose.Split
 	// listener answers a listing of the enforcer's listener from inside a
 	// service, at its name or at its agent-net address; nil answers as the
 	// listener bound to agent-net does: refused at the name, unreachable at the
 	// address.
-	listener func(service, url string) Split
+	listener func(service, url string) dockercompose.Split
 	// logs answers the enforcer's output; nil says it bound agent-net alone.
-	logs    func(service string) Split
+	logs    func(service string) dockercompose.Split
 	execs   [][]string
 	stopped []string
 	// image answers which image a service's container runs.
@@ -132,12 +133,12 @@ func (f *fakeCompose) called(ctx context.Context, call string) error {
 // WithEnv keeps the run's variables in env and answers with a view that
 // carries them, so a variable a later WithEnv adds reaches only the calls made
 // through that later view, as it does with docker compose.
-func (f *fakeCompose) WithEnv(env map[string]string) Compose {
+func (f *fakeCompose) WithEnv(env map[string]string) dockercompose.Compose {
 	f.env = env
 	return fakeEnv{fakeCompose: f, env: env}
 }
 
-func (f *fakeCompose) WithRunEnv(names ...string) Compose {
+func (f *fakeCompose) WithRunEnv(names ...string) dockercompose.Compose {
 	return fakeEnv{fakeCompose: f, env: f.env, runEnv: names}
 }
 
@@ -149,17 +150,17 @@ type fakeEnv struct {
 	runEnv []string
 }
 
-func (v fakeEnv) WithEnv(env map[string]string) Compose {
+func (v fakeEnv) WithEnv(env map[string]string) dockercompose.Compose {
 	added := maps.Clone(v.env)
 	maps.Copy(added, env)
 	return fakeEnv{fakeCompose: v.fakeCompose, env: added, runEnv: v.runEnv}
 }
 
-func (v fakeEnv) WithRunEnv(names ...string) Compose {
+func (v fakeEnv) WithRunEnv(names ...string) dockercompose.Compose {
 	return fakeEnv{fakeCompose: v.fakeCompose, env: v.env, runEnv: append(slices.Clone(v.runEnv), names...)}
 }
 
-func (v fakeEnv) RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (Split, error) {
+func (v fakeEnv) RunSplit(ctx context.Context, profiles []string, service, entrypoint string, args []string) (dockercompose.Split, error) {
 	v.callEnv = v.env
 	v.splits = append(v.splits, splitCall{service: service, profiles: profiles, env: v.env, runEnv: v.runEnv, args: args})
 	return v.fakeCompose.RunSplit(ctx, profiles, service, entrypoint, args)
@@ -203,9 +204,9 @@ func (f *fakeCompose) Down(ctx context.Context, profiles []string) error {
 	return f.downErr
 }
 
-func (f *fakeCompose) RunOnce(ctx context.Context, _ []string, _ string, args []string) (Execution, error) {
+func (f *fakeCompose) RunOnce(ctx context.Context, _ []string, _ string, args []string) (dockercompose.Execution, error) {
 	if err := f.called(ctx, "run "+strings.Join(args, " ")); err != nil {
-		return Execution{}, err
+		return dockercompose.Execution{}, err
 	}
 	f.ran = append(f.ran, args)
 	if len(args) == 2 && args[0] == "-probe" {
@@ -274,15 +275,15 @@ func workingCompose(t *testing.T) *fakeCompose {
 			{Name: "enforcer", Running: true, Detail: "running"},
 			{Name: "victim-fs", Running: true, Detail: "running"},
 		},
-		gateway:   Execution{Output: "probe reached enforcer:8080\n"},
-		victim:    Execution{ExitCode: 1, Output: "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n"},
+		gateway:   dockercompose.Execution{Output: "probe reached enforcer:8080\n"},
+		victim:    dockercompose.Execution{ExitCode: 1, Output: "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n"},
 		collector: otlpOf(t, evidenceFile),
 		journals:  map[string]string{"victim-fs": journalFile},
-		exec: func(_ string, args []string) Split {
+		exec: func(_ string, args []string) dockercompose.Split {
 			if strings.HasSuffix(args[len(args)-1], "/brand") {
-				return Split{Stdout: `status 200` + "\n" + `{"version":"` + testPin + `"}`}
+				return dockercompose.Split{Stdout: `status 200` + "\n" + `{"version":"` + testPin + `"}`}
 			}
-			return Split{Stdout: "status 200\n" + drainedHealth}
+			return dockercompose.Split{Stdout: "status 200\n" + drainedHealth}
 		},
 		image: func(string) (string, error) { return "sha256:aa", nil },
 	}
@@ -290,7 +291,7 @@ func workingCompose(t *testing.T) *fakeCompose {
 
 // labUnderTest is a lab over a root holding the scenario, its trajectory and
 // every file the runner prepares the enforcer from.
-func labUnderTest(t *testing.T, compose Compose) (lab, string) {
+func labUnderTest(t *testing.T, compose dockercompose.Compose) (lab, string) {
 	t.Helper()
 	root := t.TempDir()
 	writeFile(filepath.Join(root, "scenarios/flow/flow-01.yaml"), scenarioFile)
@@ -382,12 +383,12 @@ func TestRunIsNotGreenWhenSomethingItNeededDidNotHappen(t *testing.T) {
 		},
 		{
 			name:  "the probe never ran, so the topology is unproved",
-			spoil: func(f *fakeCompose) { f.victim = Execution{ExitCode: 125, Output: "no such image\n"} },
+			spoil: func(f *fakeCompose) { f.victim = dockercompose.Execution{ExitCode: 125, Output: "no such image\n"} },
 			says:  "network-isolation/victim-unreachable",
 		},
 		{
 			name:  "the agent reached the victim directly",
-			spoil: func(f *fakeCompose) { f.victim = Execution{Output: "probe reached victim-fs:8080\n"} },
+			spoil: func(f *fakeCompose) { f.victim = dockercompose.Execution{Output: "probe reached victim-fs:8080\n"} },
 			says:  "network-isolation/victim-unreachable",
 		},
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -36,7 +37,7 @@ func newScanRun(number int, dir string) check.VerifierRun {
 // that cannot be copied whole is not scanned: a scan of part of it would be
 // graded as a scan of all of it.
 func (l lab) runScan(
-	ctx context.Context, compose Compose, profiles []string, dir string, made error, scan labspec.ScanStep, run *check.VerifierRun,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, dir string, made error, scan labspec.ScanStep, run *check.VerifierRun,
 ) {
 	if made != nil {
 		run.Detail = "the verifier's directory could not be made: " + made.Error()

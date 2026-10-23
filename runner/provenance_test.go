@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -147,7 +148,7 @@ func TestLabCommitCountsAnUntrackedFile(t *testing.T) {
 	defer cancel()
 	git := func(args ...string) {
 		base := []string{"-C", root, "-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false"}
-		if _, err := command(ctx, "git", append(base, args...)...); err != nil {
+		if _, err := dockercompose.Output(ctx, "git", append(base, args...)...); err != nil {
 			t.Fatalf("git %v: %v", args, err)
 		}
 	}
@@ -155,11 +156,11 @@ func TestLabCommitCountsAnUntrackedFile(t *testing.T) {
 	writeFile(filepath.Join(root, "tracked"), "one\n")
 	git("add", "tracked")
 	git("commit", "-q", "-m", "one")
-	if got := labCommit(ctx, command, root); strings.Contains(got, "uncommitted") || len(got) != 40 {
+	if got := labCommit(ctx, dockercompose.Output, root); strings.Contains(got, "uncommitted") || len(got) != 40 {
 		t.Fatalf("a clean checkout reads as %q", got)
 	}
 	writeFile(filepath.Join(root, "scenarios", "new.yaml"), "id: new\n")
-	if got := labCommit(ctx, command, root); !strings.Contains(got, "with uncommitted changes") {
+	if got := labCommit(ctx, dockercompose.Output, root); !strings.Contains(got, "with uncommitted changes") {
 		t.Errorf("a checkout with an untracked scenario reads as %q", got)
 	}
 }
@@ -214,21 +215,21 @@ func TestAWorkspaceInsideAnotherCheckoutIsNotReportedUnderItsCommit(t *testing.T
 	defer cancel()
 	base := []string{"-C", outer, "-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false"}
 	for _, args := range [][]string{{"init", "-q"}, {"commit", "-q", "--allow-empty", "-m", "one"}} {
-		if _, err := command(ctx, "git", append(base, args...)...); err != nil {
+		if _, err := dockercompose.Output(ctx, "git", append(base, args...)...); err != nil {
 			t.Fatalf("git %v: %v", args, err)
 		}
 	}
-	commit, err := command(ctx, "git", "-C", outer, "rev-parse", "HEAD")
+	commit, err := dockercompose.Output(ctx, "git", "-C", outer, "rev-parse", "HEAD")
 	if err != nil {
 		t.Fatal(err)
 	}
 	inner := filepath.Join(outer, "policies")
 	writeFile(filepath.Join(inner, "scenarios", "x.yaml"), "id: x\n")
-	got := describeWorkspace(ctx, command, workspace{dir: resolved(inner), external: true})
+	got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: resolved(inner), external: true})
 	if strings.Contains(got, commit) || !strings.Contains(got, "not a git checkout (inside "+resolved(outer)+")") {
 		t.Errorf("a workspace inside another checkout reads as %q", got)
 	}
-	if got := describeWorkspace(ctx, command, workspace{dir: resolved(outer), external: true}); !strings.Contains(got, commit) {
+	if got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: resolved(outer), external: true}); !strings.Contains(got, commit) {
 		t.Errorf("a workspace that is a checkout reads as %q, want its commit %s", got, commit)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const scanScenarioFile = `schema_version: 1
@@ -43,7 +44,7 @@ func scanUnderTest(t *testing.T) (lab, *fakeCompose, string, *[]string) {
 	t.Helper()
 	compose := &fakeCompose{inProfile: []string{scanService}}
 	seen := &[]string{}
-	compose.split = func(_, entrypoint string, args []string) (Split, error) {
+	compose.split = func(_, entrypoint string, args []string) (dockercompose.Split, error) {
 		if entrypoint == "python" {
 			return reachAnswer(args), nil
 		}
@@ -55,7 +56,7 @@ func scanUnderTest(t *testing.T) (lab, *fakeCompose, string, *[]string) {
 			}
 			return nil
 		})
-		return Split{ExitCode: 1, Stdout: scanAnswer}, nil
+		return dockercompose.Split{ExitCode: 1, Stdout: scanAnswer}, nil
 	}
 	subject, _ := labUnderTest(t, compose)
 	scenario := filepath.Join(subject.root, "scenarios/scan/scan-test.yaml")

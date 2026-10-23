@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 // drainedHealth is the enforcer's /healthz with everything handed over and
@@ -37,9 +38,9 @@ func TestADrainThatLostRecordsFails(t *testing.T) {
 			}
 			subject, compose, scenario := enforcerLab(t)
 			answer := compose.exec
-			compose.exec = func(service string, args []string) Split {
+			compose.exec = func(service string, args []string) dockercompose.Split {
 				if strings.HasSuffix(args[len(args)-1], "/healthz") {
-					return Split{Stdout: "status 200\n" + health}
+					return dockercompose.Split{Stdout: "status 200\n" + health}
 				}
 				return answer(service, args)
 			}

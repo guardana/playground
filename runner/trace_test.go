@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const contractFinding = "contract.lab-bank-account.bank-account-needs-approval"
@@ -32,12 +33,12 @@ func traceLab(t *testing.T, target func(runID string) string, found bool) (lab, 
 	writeFile(filepath.Join(subject.root, "config/contracts/lab.yaml"), "rules: []\n")
 	compose.agentTrace = `{"guardana_trace":3}` + "\n"
 	compose.inProfile = append(compose.inProfile, traceService)
-	compose.split = func(service, _ string, args []string) (Split, error) {
+	compose.split = func(service, _ string, args []string) (dockercompose.Split, error) {
 		if service != "trace-verifier" || args[0] != "analyze-trace" || !slices.Contains(args, "/contracts/lab.yaml") {
-			return Split{}, fmt.Errorf("unexpected verifier call %v", args)
+			return dockercompose.Split{}, fmt.Errorf("unexpected verifier call %v", args)
 		}
 		if _, err := os.Stat(filepath.Join(compose.env["LAB_RUN_HOST_DIR"], "verifier", "trace.jsonl")); err != nil {
-			return Split{}, fmt.Errorf("the trace was not handed to the verifier: %w", err)
+			return dockercompose.Split{}, fmt.Errorf("the trace was not handed to the verifier: %w", err)
 		}
 		findings := "[]"
 		if found {
@@ -46,7 +47,7 @@ func traceLab(t *testing.T, target func(runID string) string, found bool) (lab, 
 		report := `{"schema_version":18,"run":{"target":{"ref":"` + target(compose.env["LAB_RUN_ID"]) +
 			`"},"result_summary":{"rules_run":["` + contractFinding + `"]}},"findings":` + findings +
 			`,"unverified":[],"waived":[],"errors":[]}`
-		return Split{ExitCode: 1, Stdout: report}, nil
+		return dockercompose.Split{ExitCode: 1, Stdout: report}, nil
 	}
 	pinVerifierImage(t, &subject, "1.0.0rc5")
 	return subject, compose, scenario

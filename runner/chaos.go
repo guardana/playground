@@ -12,6 +12,7 @@ import (
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/gateway"
 )
 
@@ -116,7 +117,7 @@ type chaosRun struct {
 
 // applyChaos breaks what the scenario names, in order, after boot and before
 // the replay, and records each step in chaos.log.
-func (l lab) applyChaos(ctx context.Context, compose Compose, spec labspec.Scenario) *chaosRun {
+func (l lab) applyChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario) *chaosRun {
 	run := &chaosRun{}
 	for _, fault := range spec.Chaos {
 		recorded := check.ChaosFault{Name: faultName(fault)}
@@ -140,7 +141,7 @@ func (l lab) applyChaos(ctx context.Context, compose Compose, spec labspec.Scena
 // the victim's proxy. A hang is held to the call timeout the scenario's
 // gateway configuration sets.
 func (l lab) applyToxic(
-	ctx context.Context, compose Compose, spec labspec.Scenario, toxic labspec.Toxic, fault *check.ChaosFault, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, toxic labspec.Toxic, fault *check.ChaosFault, log *strings.Builder,
 ) {
 	fault.Victim = toxic.Victim
 	switch toxic.Type {
@@ -162,7 +163,7 @@ func (l lab) applyToxic(
 // liftChaos mends every fault after the replay and before the drain: toxics
 // removed, the collector's backlog read and the collector started again. A
 // second listing has nothing to lift.
-func (l lab) liftChaos(ctx context.Context, compose Compose, spec labspec.Scenario, run *chaosRun, runDir string) check.Chaos {
+func (l lab) liftChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, run *chaosRun, runDir string) check.Chaos {
 	for i, fault := range spec.Chaos {
 		recorded := &run.faults[i]
 		switch {

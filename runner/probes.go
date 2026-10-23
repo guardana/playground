@@ -10,6 +10,7 @@ import (
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 // a topology that is right about the victim. The listener probes, which run the
 // other way, travel among the sealed ones.
 func (l lab) probes(
-	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runDir string,
 ) (check.Probe, check.Probe, []check.Probe, string) {
 	gateway := l.probe(ctx, compose, spec.Profile, enforcerService+":"+servicePort)
 	victim := l.probe(ctx, compose, spec.Profile, trajectory.Steps[0].Call.Server+":"+servicePort)
@@ -60,7 +61,7 @@ func (l lab) probes(
 	return gateway, victim, sealed, source
 }
 
-func (l lab) probe(ctx context.Context, compose Compose, profiles []string, target string) check.Probe {
+func (l lab) probe(ctx context.Context, compose dockercompose.Compose, profiles []string, target string) check.Probe {
 	execution, err := compose.RunOnce(ctx, profiles, agentService, []string{"-probe", target})
 	if err != nil {
 		return check.Probe{Target: target, Detail: err.Error()}
@@ -75,7 +76,7 @@ func (l lab) probe(ctx context.Context, compose Compose, profiles []string, targ
 // at its agent-net address; and the enforcer's own output says where it bound.
 // Each probe records what it saw; the check decides what that shows.
 func listenerProbes(
-	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, agent string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, agent string,
 ) []check.Probe {
 	from := []string{trajectory.Steps[0].Call.Server}
 	if slices.Contains(spec.Profile, pdpProfile) {
@@ -102,7 +103,7 @@ func listenerProbes(
 	return append(probes, probe)
 }
 
-func listing(kind check.ListenerKind, target, service, agent string, listed Split, err error) check.Probe {
+func listing(kind check.ListenerKind, target, service, agent string, listed dockercompose.Split, err error) check.Probe {
 	probe := check.Probe{Kind: kind, Target: target, From: service, Agent: agent, Ran: err == nil}
 	switch {
 	case err != nil:
@@ -135,4 +136,34 @@ func oneLine(detail string) string {
 		return joined[:maxProbeDetail] + "..."
 	}
 	return joined
+}
+
+// The two markers agents/scripted prints for -probe. They are written out here
+// rather than imported because the agent is a separate command and the frozen
+// contract packages are not the place for a private marker; changing one
+// without the other breaks the network-isolation check, so each side names the
+// other in a comment.
+const (
+	probeReached     = "probe reached"
+	probeUnreachable = "probe unreachable"
+)
+
+// readProbe turns what the agent printed into what the check reads. The marker
+// is what separates "the agent ran and found no route" from "the agent could
+// not be run", which have the same non-zero exit and are different facts.
+func readProbe(target, output string) check.Probe {
+	trimmed := strings.TrimSpace(output)
+	for _, line := range strings.Split(trimmed, "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, probeReached):
+			return check.Probe{Target: target, Ran: true, Reached: true, Detail: line}
+		case strings.HasPrefix(line, probeUnreachable):
+			return check.Probe{Target: target, Ran: true, Detail: line}
+		}
+	}
+	if trimmed == "" {
+		trimmed = "the probe printed nothing"
+	}
+	return check.Probe{Target: target, Detail: trimmed}
 }

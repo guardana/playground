@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -47,9 +48,9 @@ func (f *fakeCompose) Stop(ctx context.Context, _ []string, service string) erro
 	return nil
 }
 
-func (f *fakeCompose) Exec(ctx context.Context, _ []string, service string, args []string) (Split, error) {
+func (f *fakeCompose) Exec(ctx context.Context, _ []string, service string, args []string) (dockercompose.Split, error) {
 	if err := f.called(ctx, "exec "+service+" "+strings.Join(args, " ")); err != nil {
-		return Split{}, err
+		return dockercompose.Split{}, err
 	}
 	f.execs = append(f.execs, append([]string{service}, args...))
 	if url := listenerURLOf(args); url != "" && (url == listenerURL || url == f.agentURL()) {
@@ -57,12 +58,12 @@ func (f *fakeCompose) Exec(ctx context.Context, _ []string, service string, args
 			return f.listener(service, url), nil
 		}
 		if url == listenerURL {
-			return Split{ExitCode: 1, Stderr: `calling "initialize": Post "` + url + `": dial tcp 172.30.0.4:8080: connect: connection refused`}, nil
+			return dockercompose.Split{ExitCode: 1, Stderr: `calling "initialize": Post "` + url + `": dial tcp 172.30.0.4:8080: connect: connection refused`}, nil
 		}
-		return Split{ExitCode: 1, Stderr: `Post "` + url + `": dial tcp ` + f.env["LAB_ENFORCER_ADDRESS"] + `:8080: connect: network is unreachable`}, nil
+		return dockercompose.Split{ExitCode: 1, Stderr: `Post "` + url + `": dial tcp ` + f.env["LAB_ENFORCER_ADDRESS"] + `:8080: connect: network is unreachable`}, nil
 	}
 	if f.exec == nil {
-		return Split{ExitCode: 1, Stderr: "the fake has no exec"}, nil
+		return dockercompose.Split{ExitCode: 1, Stderr: "the fake has no exec"}, nil
 	}
 	return f.exec(service, args), nil
 }
@@ -80,23 +81,23 @@ func (f *fakeCompose) agentURL() string {
 	return "http://" + f.env["LAB_ENFORCER_ADDRESS"] + ":8080/mcp"
 }
 
-func (f *fakeCompose) Logs(ctx context.Context, _ []string, service string) (Split, error) {
+func (f *fakeCompose) Logs(ctx context.Context, _ []string, service string) (dockercompose.Split, error) {
 	if err := f.called(ctx, "logs "+service); err != nil {
-		return Split{}, err
+		return dockercompose.Split{}, err
 	}
 	if f.logs != nil {
 		return f.logs(service), nil
 	}
-	return Split{Stdout: "listening for agents on " + f.env["LAB_ENFORCER_ADDRESS"] + ":8080\n"}, nil
+	return dockercompose.Split{Stdout: "listening for agents on " + f.env["LAB_ENFORCER_ADDRESS"] + ":8080\n"}, nil
 }
 
-func (f *fakeCompose) RunSplit(ctx context.Context, _ []string, service, entrypoint string, args []string) (Split, error) {
+func (f *fakeCompose) RunSplit(ctx context.Context, _ []string, service, entrypoint string, args []string) (dockercompose.Split, error) {
 	if err := f.called(ctx, "run "+service+" "+strings.Join(args, " ")); err != nil {
-		return Split{}, err
+		return dockercompose.Split{}, err
 	}
 	f.ran = append(f.ran, append([]string{service, entrypoint}, args...))
 	if f.split == nil {
-		return Split{}, errors.New("no verifier in this fake")
+		return dockercompose.Split{}, errors.New("no verifier in this fake")
 	}
 	return f.split(service, entrypoint, args)
 }
@@ -146,11 +147,11 @@ func onHost(binds map[string]string, inContainer string) (string, bool) {
 // binds writable, and the report is printed on standard output. Like compose,
 // it refuses to start the verifier when a directory it binds is not there, and
 // like the verifier it exits 3 on a pin it cannot read.
-func workingVerifier(f *fakeCompose) func(string, string, []string) (Split, error) {
-	return func(service, entrypoint string, args []string) (Split, error) {
+func workingVerifier(f *fakeCompose) func(string, string, []string) (dockercompose.Split, error) {
+	return func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		binds, err := verifierBinds(f, service)
 		if err != nil {
-			return Split{}, err
+			return dockercompose.Split{}, err
 		}
 		runDir := f.env["LAB_RUN_HOST_DIR"]
 		for _, victim := range []string{"victim-fs", "victim-crm"} {
@@ -162,17 +163,17 @@ func workingVerifier(f *fakeCompose) func(string, string, []string) (Split, erro
 		if i := slices.Index(args, "--write-mcp-pin"); i >= 0 {
 			at, writable := onHost(binds, args[i+1])
 			if !writable || !strings.HasPrefix(args[i+1], "/lab-run/out/") {
-				return Split{ExitCode: 3, Stderr: "Read-only file system: " + args[i+1]}, nil
+				return dockercompose.Split{ExitCode: 3, Stderr: "Read-only file system: " + args[i+1]}, nil
 			}
 			writeFile(at, verifierPin)
-			return Split{Stdout: "Wrote 1 approved tool description(s)\n"}, nil
+			return dockercompose.Split{Stdout: "Wrote 1 approved tool description(s)\n"}, nil
 		}
 		if i := slices.Index(args, "--mcp-pin"); i >= 0 {
 			if at, bound := onHost(binds, args[i+1]); !bound || !exists(at) {
-				return Split{ExitCode: 3, Stderr: "cannot read the pin " + args[i+1]}, nil
+				return dockercompose.Split{ExitCode: 3, Stderr: "cannot read the pin " + args[i+1]}, nil
 			}
 		}
-		return Split{ExitCode: 1, Stdout: verifierReport, Stderr: "compose: Container verifier Creating\n"}, nil
+		return dockercompose.Split{ExitCode: 1, Stdout: verifierReport, Stderr: "compose: Container verifier Creating\n"}, nil
 	}
 }
 
@@ -181,18 +182,18 @@ func exists(path string) bool {
 	return err == nil
 }
 
-func reachAnswer(args []string) Split {
+func reachAnswer(args []string) dockercompose.Split {
 	if slices.Contains(args, proxyScript) {
-		return Split{Stdout: "probe unreachable " + proxyTarget + ": none in the environment\n"}
+		return dockercompose.Split{Stdout: "probe unreachable " + proxyTarget + ": none in the environment\n"}
 	}
 	if slices.Contains(args, routeScript) {
-		return Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}
+		return dockercompose.Split{Stdout: "probe unreachable " + routeTarget + ": none in /proc/net/route or /proc/net/ipv6_route\n"}
 	}
 	target := args[len(args)-1]
 	if target == outsideAddress {
-		return Split{Stdout: "probe unreachable " + target + ": [Errno 101] Network is unreachable\n"}
+		return dockercompose.Split{Stdout: "probe unreachable " + target + ": [Errno 101] Network is unreachable\n"}
 	}
-	return Split{Stdout: "probe reached " + target + "\n"}
+	return dockercompose.Split{Stdout: "probe reached " + target + "\n"}
 }
 
 func verifierUnderTest(t *testing.T) (lab, *fakeCompose, string) {
@@ -284,38 +285,38 @@ func TestAVerifierRunGradesEveryVictimItBooted(t *testing.T) {
 // recordSpoils each turn one record of a working verifier run red, and name
 // the check that has to say so.
 func recordSpoils() map[string]struct {
-	spoil func(Split, string, []string) Split
+	spoil func(dockercompose.Split, string, []string) dockercompose.Split
 	says  string
 } {
 	return map[string]struct {
-		spoil func(Split, string, []string) Split
+		spoil func(dockercompose.Split, string, []string) dockercompose.Split
 		says  string
 	}{
-		"the report only on stderr": {func(s Split, _ string, args []string) Split {
+		"the report only on stderr": {func(s dockercompose.Split, _ string, args []string) dockercompose.Split {
 			if slices.Contains(args, "--mcp-pin") {
 				s.Stdout, s.Stderr = "", s.Stdout
 			}
 			return s
 		}, "verifier/step-2/report"},
-		"a route out": {func(s Split, entrypoint string, _ []string) Split {
+		"a route out": {func(s dockercompose.Split, entrypoint string, _ []string) dockercompose.Split {
 			if entrypoint == "python" && strings.Contains(s.Stdout, outsideAddress) {
 				s.Stdout = "probe reached " + outsideAddress + "\n"
 			}
 			return s
 		}, "verifier-reach/no-route-out"},
-		"a default route beside an unreachable dial": {func(s Split, entrypoint string, args []string) Split {
+		"a default route beside an unreachable dial": {func(s dockercompose.Split, entrypoint string, args []string) dockercompose.Split {
 			if entrypoint == "python" && slices.Contains(args, routeScript) {
 				s.Stdout = "probe reached " + routeTarget + ": ipv4 via eth0\n"
 			}
 			return s
 		}, "verifier-reach/no-default-route"},
-		"a proxy in the verifier's environment": {func(s Split, entrypoint string, args []string) Split {
+		"a proxy in the verifier's environment": {func(s dockercompose.Split, entrypoint string, args []string) dockercompose.Split {
 			if entrypoint == "python" && slices.Contains(args, proxyScript) {
 				s.Stdout = "probe reached " + proxyTarget + ": HTTPS_PROXY\n"
 			}
 			return s
 		}, "verifier-reach/no-proxy"},
-		"a drift not found": {func(s Split, _ string, args []string) Split {
+		"a drift not found": {func(s dockercompose.Split, _ string, args []string) dockercompose.Split {
 			if slices.Contains(args, "--mcp-pin") {
 				s.ExitCode, s.Stdout = 0, strings.Replace(s.Stdout, "'fs.read' changed", "nothing changed", 1)
 			}
@@ -329,7 +330,7 @@ func TestAVerifierRunIsNotGreenWhenItsRecordsAreNot(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			subject, compose, scenario := verifierUnderTest(t)
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				split, err := working(service, entrypoint, args)
 				return test.spoil(split, entrypoint, args), err
 			}
@@ -358,7 +359,7 @@ func TestEveryVictimInTheProfileIsGradedAsServingNothing(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			subject, compose, scenario := verifierUnderTest(t)
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				split, err := working(service, entrypoint, args)
 				crm := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], "journals", "victim-crm", "victim-crm.jsonl")
 				if journal == "" {

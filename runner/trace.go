@@ -10,6 +10,7 @@ import (
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/internal/runfile"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 // analyzeTrace hands the agent's trace to the verifier with the scenario's
 // contract and returns what the verifier's report is graded on. The trace is
 // copied into the verifier's own directory, the only one it mounts.
-func (l lab) analyzeTrace(ctx context.Context, compose Compose, spec labspec.Scenario, runID, runDir string) check.Trace {
+func (l lab) analyzeTrace(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runID, runDir string) check.Trace {
 	dir := filepath.Join(runDir, "verifier")
 	analysis := check.VerifierRun{
 		URL:    path.Join(verifierMount, traceFile) + "#" + runID,

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 // Each writer's journal lives in a directory of its own, the only one compose
@@ -15,7 +16,7 @@ import (
 func TestAJournalIsReadFromItsWritersOwnDirectory(t *testing.T) {
 	subject, compose, scenario := verifierUnderTest(t)
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		split, err := working(service, entrypoint, args)
 		runDir := compose.env["LAB_RUN_HOST_DIR"]
 		writeFile(filepath.Join(runDir, "journals/victim-crm/victim-crm.jsonl"),

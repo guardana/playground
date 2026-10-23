@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const handedOverScenarioFile = `schema_version: 1
@@ -86,7 +87,7 @@ func TestACredentialStepWithNoTokenToHandOverDoesNotRun(t *testing.T) {
 func TestATokenLeftInTheRunsFilesFailsTheRun(t *testing.T) {
 	subject, compose, scenario := credentialUnderTest(t)
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		split, err := working(service, entrypoint, args)
 		if slices.Contains(args, "--mcp-token-env") {
 			split.Stderr += "debug: bearer " + compose.env[mcpTokenVariable] + "\n"

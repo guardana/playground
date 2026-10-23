@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 // unrecordedReadHealth is drainedHealth with the pipeline counters of a read
@@ -25,14 +26,14 @@ func healthLab(t *testing.T, stated, health string) (lab, string) {
 		writeFile(scenario, body)
 	}
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if !strings.HasSuffix(args[len(args)-1], "/healthz") {
 			return answer(service, args)
 		}
 		if health == "" {
-			return Split{ExitCode: 1, Stderr: "connection refused"}
+			return dockercompose.Split{ExitCode: 1, Stderr: "connection refused"}
 		}
-		return Split{Stdout: "status 200\n" + health}
+		return dockercompose.Split{Stdout: "status 200\n" + health}
 	}
 	return subject, scenario
 }
@@ -111,10 +112,10 @@ func TestTheKeptHealthIsTheLastAnswer(t *testing.T) {
 	inFlight = strings.Replace(inFlight, `"reads_unrecorded":1`, `"reads_unrecorded":0`, 1)
 	polls := 0
 	answer := subject.compose.(*fakeCompose).exec
-	subject.compose.(*fakeCompose).exec = func(service string, args []string) Split {
+	subject.compose.(*fakeCompose).exec = func(service string, args []string) dockercompose.Split {
 		if strings.HasSuffix(args[len(args)-1], "/healthz") {
 			if polls++; polls == 1 {
-				return Split{Stdout: "status 200\n" + inFlight}
+				return dockercompose.Split{Stdout: "status 200\n" + inFlight}
 			}
 		}
 		return answer(service, args)

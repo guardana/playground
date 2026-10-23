@@ -1,4 +1,4 @@
-package main
+package dockercompose
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/runner/check"
 )
 
 // container is the part of `docker compose ps --format json` the runner reads.
@@ -85,34 +84,4 @@ func decodeContainers(output string) (map[string]container, error) {
 		reported[found.Service] = found
 	}
 	return reported, nil
-}
-
-// The two markers agents/scripted prints for -probe. They are written out here
-// rather than imported because the agent is a separate command and the frozen
-// contract packages are not the place for a private marker; changing one
-// without the other breaks the network-isolation check, so each side names the
-// other in a comment.
-const (
-	probeReached     = "probe reached"
-	probeUnreachable = "probe unreachable"
-)
-
-// readProbe turns what the agent printed into what the check reads. The marker
-// is what separates "the agent ran and found no route" from "the agent could
-// not be run", which have the same non-zero exit and are different facts.
-func readProbe(target, output string) check.Probe {
-	trimmed := strings.TrimSpace(output)
-	for _, line := range strings.Split(trimmed, "\n") {
-		line = strings.TrimSpace(line)
-		switch {
-		case strings.HasPrefix(line, probeReached):
-			return check.Probe{Target: target, Ran: true, Reached: true, Detail: line}
-		case strings.HasPrefix(line, probeUnreachable):
-			return check.Probe{Target: target, Ran: true, Detail: line}
-		}
-	}
-	if trimmed == "" {
-		trimmed = "the probe printed nothing"
-	}
-	return check.Probe{Target: target, Detail: trimmed}
 }

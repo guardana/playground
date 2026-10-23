@@ -7,20 +7,8 @@ import (
 	"strings"
 
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
-
-// ContainerImage is the image ID the project's own container of service runs.
-func (d dockerCompose) ContainerImage(ctx context.Context, profiles []string, service string) (string, error) {
-	listed, err := d.capture(ctx, profiles, "ps", "--all", "-q", service)
-	if err != nil {
-		return "", err
-	}
-	ids := strings.Fields(listed)
-	if len(ids) != 1 {
-		return "", fmt.Errorf("the project has %d %s containers, want one", len(ids), service)
-	}
-	return command(ctx, "docker", "inspect", "--format", "{{.Image}}", ids[0])
-}
 
 // treeLabel is where scripts/build-enforcer.sh records the tree it verified the
 // image's source against. Nothing else in the build sets it, so an image built
@@ -30,7 +18,7 @@ const treeLabel = "io.guardana.playground.enforcer.tree"
 
 // readImages records which image the run's enforcer container ran and which
 // image the pin's tag names on this machine, with the commit it was built from.
-func (l lab) readImages(ctx context.Context, compose Compose, profiles []string, plane *check.Plane) {
+func (l lab) readImages(ctx context.Context, compose dockercompose.Compose, profiles []string, plane *check.Plane) {
 	var problems []string
 	running, err := compose.ContainerImage(ctx, profiles, enforcerService)
 	if err != nil {

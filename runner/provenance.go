@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -217,21 +216,4 @@ func machine(ctx context.Context, run lookup) string {
 		docker = "unreadable: " + err.Error()
 	}
 	return fmt.Sprintf("%s/%s, %d CPUs, docker %s", runtime.GOOS, runtime.GOARCH, runtime.NumCPU(), docker)
-}
-
-// command runs one lookup and returns its trimmed output, or the first line of
-// what it said on failure.
-func command(ctx context.Context, name string, args ...string) (string, error) {
-	// #nosec G204,G702 -- fixed programs; the arguments are the lab's own pins and paths.
-	run := exec.CommandContext(ctx, name, args...)
-	var stderr strings.Builder
-	run.Stderr = &stderr
-	out, err := run.Output()
-	if err != nil {
-		if said, _, _ := strings.Cut(strings.TrimSpace(stderr.String()), "\n"); said != "" {
-			return "", fmt.Errorf("%w: %s", err, said)
-		}
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
 }

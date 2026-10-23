@@ -35,6 +35,7 @@ import (
 
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/redbydesign"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -86,7 +87,7 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if chosen.enforcerDev == "" {
 		return execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
 	}
-	if subject, err = withDevelopment(ctx, subject, chosen.enforcerDev, space, command); err != nil {
+	if subject, err = withDevelopment(ctx, subject, chosen.enforcerDev, space, dockercompose.Output); err != nil {
 		return err
 	}
 	err = execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
@@ -171,22 +172,22 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 		root:      root,
 		workspace: space,
 		reports:   chosen.reports,
-		compose: dockerCompose{
-			file:      composeFile,
-			envFile:   versionFile,
-			directory: root,
-			env:       environ,
-			log:       out,
+		compose: dockercompose.CLI{
+			File:      composeFile,
+			EnvFile:   versionFile,
+			Directory: root,
+			Env:       environ,
+			Log:       out,
 		},
 		timeout:  chosen.timeout,
 		keep:     chosen.keep,
 		clock:    time.Now,
 		suffix:   randomSuffix,
 		log:      out,
-		describe: describeHost(root, space, command, nil),
+		describe: describeHost(root, space, dockercompose.Output, nil),
 		keysDir:  labKeysDir(lookupIn(environ)),
-		sign:     signWithEnforcer(root, command),
-		inspect:  command,
+		sign:     signWithEnforcer(root, dockercompose.Output),
+		inspect:  dockercompose.Output,
 	}
 }
 
