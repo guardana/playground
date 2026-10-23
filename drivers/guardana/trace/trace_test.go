@@ -1,4 +1,4 @@
-package main
+package trace
 
 import (
 	"bytes"
@@ -10,6 +10,9 @@ import (
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// testNamespace stands in for the gateway's, which the agent is handed.
+const testNamespace = "lab.test"
 
 func traceStep(server, tool string) labspec.Step {
 	return labspec.Step{Call: labspec.Call{Server: server, Tool: tool}}
@@ -24,7 +27,7 @@ func pendingResult() *mcp.CallToolResult {
 }
 
 func TestTheTraceRecordsEachCallsEffectAndApproval(t *testing.T) {
-	tracer := &traceWriter{runID: "run-1", namespace: testNamespace}
+	tracer := &Writer{runID: "run-1", namespace: testNamespace}
 	served := &mcp.CallToolResult{}
 	blocked := gatewayBlock("RULE_DENY")
 	refusedUpstream := &mcp.CallToolResult{IsError: true}
@@ -41,7 +44,7 @@ func TestTheTraceRecordsEachCallsEffectAndApproval(t *testing.T) {
 		{traceStep("victim-shell", "shell.exec"), refusedUpstream, false},
 		{traceStep("victim-mail", "mail.send"), refusedUpstream, true},
 	} {
-		if err := tracer.record(number+1, call.step, map[string]any{"k": "v"}, call.result, call.pended); err != nil {
+		if err := tracer.Record(number+1, call.step, map[string]any{"k": "v"}, call.result, call.pended); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -65,7 +68,7 @@ func TestTheTraceRecordsEachCallsEffectAndApproval(t *testing.T) {
 // A call held in one step and sent again in a later one resumes the approval
 // the first sought; a different call is a request of its own.
 func TestACallResumedInALaterStepWasApproved(t *testing.T) {
-	tracer := &traceWriter{runID: "run-1", namespace: testNamespace}
+	tracer := &Writer{runID: "run-1", namespace: testNamespace}
 	change := traceStep("victim-crm", "crm.update_bank_account")
 	for number, call := range []struct {
 		arguments map[string]any
@@ -75,7 +78,7 @@ func TestACallResumedInALaterStepWasApproved(t *testing.T) {
 		{map[string]any{"account": "9001"}, &mcp.CallToolResult{}},
 		{map[string]any{"account": "6666"}, &mcp.CallToolResult{}},
 	} {
-		if err := tracer.record(number+1, change, call.arguments, call.result, false); err != nil {
+		if err := tracer.Record(number+1, change, call.arguments, call.result, false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -97,10 +100,10 @@ func gatewayBlock(code string) *mcp.CallToolResult {
 // outcomesOf records the same call once per result, each in a step of its own.
 func outcomesOf(t *testing.T, results ...*mcp.CallToolResult) []string {
 	t.Helper()
-	tracer := &traceWriter{runID: "run-1", namespace: testNamespace}
+	tracer := &Writer{runID: "run-1", namespace: testNamespace}
 	change := traceStep("victim-crm", "crm.update_bank_account")
 	for number, result := range results {
-		if err := tracer.record(number+1, change, map[string]any{"account": "9001"}, result, false); err != nil {
+		if err := tracer.Record(number+1, change, map[string]any{"account": "9001"}, result, false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -155,15 +158,15 @@ func TestOnlyTheGatewaySaysAHoldTimedOut(t *testing.T) {
 }
 
 func TestTheTraceSaysWhetherItEndedWhereTheProducerMeantItTo(t *testing.T) {
-	tracer := &traceWriter{runID: "run-1", namespace: testNamespace}
-	if err := tracer.record(1, traceStep("victim-fs", "fs.read"), nil, &mcp.CallToolResult{}, false); err != nil {
+	tracer := &Writer{runID: "run-1", namespace: testNamespace}
+	if err := tracer.Record(1, traceStep("victim-fs", "fs.read"), nil, &mcp.CallToolResult{}, false); err != nil {
 		t.Fatal(err)
 	}
 	var whole, cut bytes.Buffer
-	if err := tracer.write(&whole, true); err != nil {
+	if err := tracer.Write(&whole, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := tracer.write(&cut, false); err != nil {
+	if err := tracer.Write(&cut, false); err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(whole.String()), "\n")

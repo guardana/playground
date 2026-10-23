@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/guardana/trace"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -43,7 +44,7 @@ const (
 // reason a step could not be sent at all.
 func replay(
 	ctx context.Context, caller toolCaller, trajectory labspec.Trajectory, runID, namespace string, log io.Writer,
-	tracer *traceWriter,
+	tracer *trace.Writer,
 ) error {
 	outputs := make(map[int]string, len(trajectory.Steps))
 	journal := &stepLog{to: log, runID: runID, namespace: namespace}
@@ -81,7 +82,7 @@ func replay(
 		outputs[number] = output
 		journal.record(number, step, statusOf(result, namespace), len(output), nil)
 		if tracer != nil {
-			if err := tracer.record(number, step, arguments, result, pended); err != nil {
+			if err := tracer.Record(number, step, arguments, result, pended); err != nil {
 				return fmt.Errorf("step %d: tracing: %w", number, err)
 			}
 		}
