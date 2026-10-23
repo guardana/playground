@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, drivers/guardana/report/**, runner/check/toolrun.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
+covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, drivers/guardana/report/**, runner/check/toolrun.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, drivers/guardana/trace/**, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
 ---
 
 # How a verifier scenario runs
@@ -101,7 +101,7 @@ sequenceDiagram
   Note over runner: kept as verifier/trace-report.json, graded as trace checks
 ```
 
-Sources: `agents/scripted/trace.go`, `runner/trace.go`, `compose/compose.yaml`.
+Sources: `drivers/guardana/trace/trace.go`, `runner/trace.go`, `compose/compose.yaml`.
 
 `trace-verifier` is alone on `trace-net` and mounts two directories read-only:
 the run's `verifier/` and `config/contracts/`. It calls nothing. The trace is
@@ -193,5 +193,5 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 | `runner/provenance.go` | the image refusal |
 | `drivers/guardana/report/` | the report and the pin, read into a neutral record |
 | `runner/check/verifier.go`, `runner/check/toolrun.go`, `runner/check/trace.go` | the grading |
-| `agents/scripted/trace.go` | the trace the agent writes |
+| `drivers/guardana/trace/` | the trace the agent writes |
 | `compose/Dockerfile.verifier`, `compose/verifier/requirements.lock` | the verifier image, hash-locked |

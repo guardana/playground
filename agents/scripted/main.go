@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/guardana/playground/drivers/guardana/trace"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -131,19 +132,19 @@ func runTrajectory(ctx context.Context, settings options) error {
 	if settings.trace == "" {
 		return replay(ctx, session, trajectory, settings.runID, settings.namespace, log, nil)
 	}
-	tracer := &traceWriter{runID: settings.runID, namespace: settings.namespace}
+	tracer := trace.New(settings.runID, settings.namespace, trace.Producer{Name: agentName, Version: agentVersion})
 	replayed := replay(ctx, session, trajectory, settings.runID, settings.namespace, log, tracer)
 	return errors.Join(replayed, writeTrace(settings.trace, tracer, replayed == nil))
 }
 
 // writeTrace writes the run in the verifier's native dialect; a replay that
 // stopped early leaves the footer out, so the file reads as cut short.
-func writeTrace(path string, tracer *traceWriter, complete bool) error {
+func writeTrace(path string, tracer *trace.Writer, complete bool) error {
 	file, err := createLog(path)
 	if err != nil {
 		return err
 	}
-	return errors.Join(tracer.write(file, complete), file.Close())
+	return errors.Join(tracer.Write(file, complete), file.Close())
 }
 
 // connect opens one MCP session to the gateway.

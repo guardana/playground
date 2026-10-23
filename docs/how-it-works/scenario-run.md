@@ -312,6 +312,6 @@ The files themselves are listed in the quickstart's
 | `runner/enforcer.go`, `runner/signing.go`, `drivers/control/gateway/` | the enforcer's configuration and bundle |
 | `runner/check/` | the checks over boot, topology, replay and the victims' journals |
 | `drivers/control/trailcheck/` | the checks over the enforcer's trail, `/healthz` and build |
-| `agents/scripted/` | the agent and its trace |
+| `agents/scripted/`, `drivers/guardana/trace/` | the agent and the trace it writes |
 | `services/approver/`, `services/pdp-double/` | the doubles |
 | `internal/assertion/`, `drivers/control/evidence/`, `internal/journal/` | outcomes, the trail reader, the journal reader |

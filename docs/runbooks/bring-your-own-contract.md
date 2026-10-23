@@ -3,7 +3,7 @@ title: Bring your own verifier contract
 summary: Have the pinned verifier grade the agent's own trace of a run against a security contract of yours, and see the contract fail when it should.
 type: runbook
 audience: [engineering, product]
-covers: [runner/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
+covers: [runner/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, drivers/guardana/trace/**, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
 ---
 
 # Bring your own verifier contract
@@ -74,7 +74,7 @@ sink a `forbidden_sink` names:
 | `victim-pay` | `payment` |
 
 The agent refuses to record a step to a server with no sink rather than file
-it under `other` (`agents/scripted/trace.go`).
+it under `other` (`drivers/guardana/trace/trace.go`).
 
 ## Say what you expect
 

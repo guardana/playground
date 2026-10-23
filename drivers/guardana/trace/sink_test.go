@@ -1,4 +1,4 @@
-package main
+package trace
 
 import (
 	"maps"
@@ -29,8 +29,8 @@ func TestAServerWithNoSinkIsAnError(t *testing.T) {
 	if sink, err := sinkOf("victim-unlisted"); err == nil {
 		t.Errorf("victim-unlisted has sink %q, want an error", sink)
 	}
-	w := &traceWriter{namespace: "lab"}
-	if err := w.record(1, traceStep("victim-unlisted", "x.y"), map[string]any{}, nil, false); err == nil {
+	w := &Writer{namespace: "lab"}
+	if err := w.Record(1, traceStep("victim-unlisted", "x.y"), map[string]any{}, nil, false); err == nil {
 		t.Error("a step to a server with no sink was recorded")
 	}
 }

@@ -1,4 +1,6 @@
-package main
+// Package trace writes an agent's own account of a run in the verifier's
+// native trace dialect, so the verifier can grade it.
+package trace
 
 import (
 	"encoding/json"
@@ -10,25 +12,34 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// traceVersion is the verifier's native trace dialect this agent writes.
+// traceVersion is the verifier's native trace dialect this package writes.
 const traceVersion = 3
 
 // approvalExpired is the reason code the gateway blocks a held call with once
 // its approval expired, and blockedMark the value it puts under
-// `<namespace>/answer` on a block it made itself.
+// `<namespace>/answer` on a block it made itself. approvalPending and
+// pendingMark are the same pair for a call the gateway still holds.
 const (
 	approvalExpired = "APPROVAL_EXPIRED"
 	blockedMark     = "blocked"
+	approvalPending = "APPROVAL_PENDING"
+	pendingMark     = "pending"
 )
 
-// traceWriter records what this agent saw, as a team's own instrumentation
-// would: one tool span per step, the effect the call had as the gateway
-// answered it, and whether an approval was sought for it. It records approvals
-// and effects, so the verifier grades both; it cannot know who approved, so it
-// never says.
-type traceWriter struct {
+// Producer names the program whose account the trace is.
+type Producer struct {
+	Name    string
+	Version string
+}
+
+// Writer records what an agent saw, as a team's own instrumentation would:
+// one tool span per step, the effect the call had as the gateway answered it,
+// and whether an approval was sought for it. It records approvals and effects,
+// so the verifier grades both; it cannot know who approved, so it never says.
+type Writer struct {
 	runID     string
 	namespace string
+	producer  Producer
 	spans     []traceSpan
 	// held holds every call the gateway still held when its step ended, so a
 	// later step sending the same call again resumes an approval that was sought.
@@ -62,9 +73,15 @@ type traceApproval struct {
 	Outcome string `json:"outcome"`
 }
 
-// record adds one step: result is the final answer, pended whether any answer
+// New returns a Writer for one run; namespace is the gateway's, under which it
+// marks the answers it makes itself.
+func New(runID, namespace string, producer Producer) *Writer {
+	return &Writer{runID: runID, namespace: namespace, producer: producer}
+}
+
+// Record adds one step: result is the final answer, pended whether any answer
 // before it was the pending one.
-func (w *traceWriter) record(number int, step labspec.Step, arguments map[string]any, result *mcp.CallToolResult, pended bool) error {
+func (w *Writer) Record(number int, step labspec.Step, arguments map[string]any, result *mcp.CallToolResult, pended bool) error {
 	encoded, err := json.Marshal(arguments)
 	if err != nil {
 		return err
@@ -112,7 +129,7 @@ func (w *traceWriter) record(number int, step labspec.Step, arguments map[string
 // is still held, and for a held call that ended, granted when the gateway let
 // it through, timed_out when the gateway refused it because its approval
 // expired, denied for any other refusal.
-func (w *traceWriter) approvalOutcome(result *mcp.CallToolResult, stillPending, passed, sought bool) string {
+func (w *Writer) approvalOutcome(result *mcp.CallToolResult, stillPending, passed, sought bool) string {
 	switch {
 	case stillPending:
 		return "unknown"
@@ -142,6 +159,17 @@ func gatewayRefused(result *mcp.CallToolResult, namespace, code string) bool {
 	return slices.Contains(codes, any(code))
 }
 
+// isPending reports whether the gateway itself answered that the call is held.
+// The reason code alone is not enough: an upstream tool can return it, and only
+// the gateway may write under its own namespace.
+func isPending(result *mcp.CallToolResult, namespace string) bool {
+	if result == nil || !result.IsError || result.Meta[namespace+"/answer"] != pendingMark {
+		return false
+	}
+	fields, ok := result.StructuredContent.(map[string]any)
+	return ok && fields["reason_code"] == approvalPending
+}
+
 // sinks names the effect sink each victim's calls land on, from the
 // verifier's closed list.
 func sinks() map[string]string {
@@ -162,14 +190,14 @@ func sinkOf(server string) (string, error) {
 	return sink, nil
 }
 
-// write emits the header, every span and, for a replay that ran every step, the
+// Write emits the header, every span and, for a replay that ran every step, the
 // footer that says the file ended where the producer meant it to; without it
 // the verifier reads the trace as cut short.
-func (w *traceWriter) write(out io.Writer, complete bool) error {
+func (w *Writer) Write(out io.Writer, complete bool) error {
 	encoder := json.NewEncoder(out)
 	header := map[string]any{
 		"guardana_trace": traceVersion, "trace_id": w.runID, "terminated": true,
-		"producer":     map[string]string{"name": agentName, "version": agentVersion},
+		"producer":     map[string]string{"name": w.producer.Name, "version": w.producer.Version},
 		"instrumented": []string{"tools", "approval", "effects"},
 	}
 	if err := encoder.Encode(header); err != nil {
