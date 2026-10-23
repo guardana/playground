@@ -12,6 +12,7 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const testProxies = `[{"name": "victim-fs", "listen": "0.0.0.0:8103", "upstream": "victim-fs:8080", "enabled": true}]`
@@ -36,21 +37,21 @@ func chaosLab(t *testing.T, faults, profile string) (lab, *fakeCompose, string) 
 		`\"result\":{\"startedAt\":\"2026-09-09T12:00:02Z\",\"endedAt\":\"2026-09-09T12:00:03.600Z\",`, 1)
 	health := compose.exec
 	toxic := ""
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		switch {
 		case service == proxyService && args[2] == "add":
 			toxic = "lab-chaos\ttype=" + args[5] + "\tstream=downstream\ttoxicity=1.00\tattributes=[\t" + args[9] + "\t]\n"
-			return Split{}
+			return dockercompose.Split{}
 		case service == proxyService && args[2] == "remove":
 			toxic = ""
-			return Split{}
+			return dockercompose.Split{}
 		case service == proxyService:
-			return Split{Stdout: toxic}
+			return dockercompose.Split{Stdout: toxic}
 		case service == "victim-fs":
-			return Split{Stdout: `{"name":"fs.read","description":"Read a file under /data, the private area included."}` + "\n"}
+			return dockercompose.Split{Stdout: `{"name":"fs.read","description":"Read a file under /data, the private area included."}` + "\n"}
 		case strings.HasSuffix(args[len(args)-1], "/healthz") && slices.Contains(compose.stopped, collectorService) &&
 			!slices.Contains(compose.calls, "up "+collectorService):
-			return Split{Stdout: "status 200\n" + strings.NewReplacer(`"unacknowledged":0`, `"unacknowledged":2048`,
+			return dockercompose.Split{Stdout: "status 200\n" + strings.NewReplacer(`"unacknowledged":0`, `"unacknowledged":2048`,
 				`"acknowledged":12`, `"acknowledged":0`).Replace(drainedHealth)}
 		}
 		return health(service, args)
@@ -114,9 +115,9 @@ func TestAToxicIsPutOnTheVictimsPathForTheReplayAlone(t *testing.T) {
 func TestAToxicTheProxyDoesNotListFails(t *testing.T) {
 	subject, compose, scenario := chaosLab(t, "  - toxic: { victim: victim-fs, type: latency, latency: 1500ms }\n", "[core, enforcer, chaos]")
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if service == proxyService && args[1] == "inspect" {
-			return Split{}
+			return dockercompose.Split{}
 		}
 		return answer(service, args)
 	}
@@ -142,9 +143,9 @@ func TestTheCollectorIsDownForTheReplayAndItsBacklogIsRead(t *testing.T) {
 func TestACollectorDownWithNothingWaitingIsNotShownDown(t *testing.T) {
 	subject, compose, scenario := chaosLab(t, "  - collector: down\n", "[core, enforcer]")
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if strings.HasSuffix(args[len(args)-1], "/healthz") {
-			return Split{Stdout: "status 200\n" + drainedHealth}
+			return dockercompose.Split{Stdout: "status 200\n" + drainedHealth}
 		}
 		return answer(service, args)
 	}
@@ -171,12 +172,12 @@ func TestAToxicNotShownGoneIsNotLifted(t *testing.T) {
 	subject, compose, scenario := chaosLab(t, "  - toxic: { victim: victim-fs, type: latency, latency: 1500ms }\n", "[core, enforcer, chaos]")
 	answer := compose.exec
 	removed := false
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		switch {
 		case service == proxyService && args[2] == "remove":
 			removed = true
 		case service == proxyService && args[1] == "inspect" && removed:
-			return Split{ExitCode: 1, Stderr: "Failed to retrieve proxy"}
+			return dockercompose.Split{ExitCode: 1, Stderr: "Failed to retrieve proxy"}
 		}
 		return answer(service, args)
 	}
@@ -190,9 +191,9 @@ func TestAToxicNotShownGoneIsNotLifted(t *testing.T) {
 func TestARelistThatListedNothingIsNotShownToHaveHappened(t *testing.T) {
 	subject, compose, scenario := chaosLab(t, "  - relist: victim-fs\n", "[core, enforcer]")
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if service == "victim-fs" {
-			return Split{Stdout: "status 200\n"}
+			return dockercompose.Split{Stdout: "status 200\n"}
 		}
 		return answer(service, args)
 	}
@@ -232,7 +233,7 @@ func TestACollectorNotShownBackIsNotLifted(t *testing.T) {
 		"nothing acknowledged since": func(subject *lab, compose *fakeCompose) {
 			subject.drainBound = 800 * time.Millisecond
 			answer := compose.exec
-			compose.exec = func(service string, args []string) Split {
+			compose.exec = func(service string, args []string) dockercompose.Split {
 				split := answer(service, args)
 				if strings.HasSuffix(args[len(args)-1], "/healthz") && !slices.Contains(compose.calls, "up "+collectorService) {
 					split.Stdout = strings.Replace(split.Stdout, `"acknowledged":0`, `"acknowledged":12`, 1)
@@ -257,9 +258,9 @@ func TestACollectorNotShownBackIsNotLifted(t *testing.T) {
 func TestARelistThatChangedNoDescriptionIsNotShownToHaveHappened(t *testing.T) {
 	subject, compose, scenario := chaosLab(t, "  - relist: victim-fs\n", "[core, enforcer]")
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if service == "victim-fs" {
-			return Split{Stdout: `{"name":"fs.read","description":"Read a file from the public area at /data/public."}` + "\n"}
+			return dockercompose.Split{Stdout: `{"name":"fs.read","description":"Read a file from the public area at /data/public."}` + "\n"}
 		}
 		return answer(service, args)
 	}

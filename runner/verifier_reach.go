@@ -8,6 +8,7 @@ import (
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -81,7 +82,7 @@ else:
 // verifierReach dials each probed server and the outside address from the
 // verifier's network, reads the verifier's routing tables, and records all of
 // it in probes.log.
-func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Scenario, runDir string) check.VerifierReach {
+func (l lab) verifierReach(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runDir string) check.VerifierReach {
 	reach := check.VerifierReach{Source: filepath.Join(runDir, "probes.log")}
 	var recorded strings.Builder
 	record := func(what string, probe check.Probe) {
@@ -109,7 +110,7 @@ func (l lab) verifierReach(ctx context.Context, compose Compose, spec labspec.Sc
 }
 
 // python runs one script in the verifier's container and reads its markers.
-func (l lab) python(ctx context.Context, compose Compose, profiles []string, service, target, script string, args ...string) check.Probe {
+func (l lab) python(ctx context.Context, compose dockercompose.Compose, profiles []string, service, target, script string, args ...string) check.Probe {
 	split, err := compose.RunSplit(ctx, profiles, service, "python", append([]string{"-c", script}, args...))
 	if err != nil {
 		return check.Probe{Target: target, Detail: err.Error()}

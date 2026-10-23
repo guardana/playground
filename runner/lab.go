@@ -12,6 +12,7 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -48,7 +49,7 @@ type lab struct {
 	root      string
 	workspace workspace
 	reports   string
-	compose   Compose
+	compose   dockercompose.Compose
 	// timeout is how long one scenario may take. Zero is read as the default:
 	// the rule is that every docker call carries a deadline, and a zero here
 	// would be a deadline that has already passed.
@@ -182,7 +183,7 @@ func (l lab) runScenario(
 // plane loads its policy, whose freshness a build under load would spend; then
 // it brings up the long running services and records what came up. The agent
 // and the verifier are one-shots the runner drives after the topology is proved.
-func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, inProfile []string, runDir string) assertion.Boot {
+func (l lab) boot(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, inProfile []string, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
 		return name == agentService || name == verifierService || name == traceService || name == scanService
@@ -221,7 +222,7 @@ func (l lab) boot(ctx context.Context, compose Compose, spec labspec.Scenario, i
 // takeDown brings the profile down and removes the collector's key. It uses
 // not the run's context: a scenario that ran out of time is the one whose
 // containers are still up, and a cancelled context would leave them there.
-func (l lab) takeDown(ctx context.Context, compose Compose, profile []string, runDir string) {
+func (l lab) takeDown(ctx context.Context, compose dockercompose.Compose, profile []string, runDir string) {
 	down, stop := context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
 	defer stop()
 	if err := compose.Down(down, profile); err != nil {

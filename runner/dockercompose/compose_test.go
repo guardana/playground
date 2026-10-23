@@ -1,4 +1,4 @@
-package main
+package dockercompose
 
 import (
 	"context"
@@ -96,31 +96,6 @@ func TestParseStatusRefusesOutputItCannotRead(t *testing.T) {
 	}
 }
 
-func TestReadProbeTellsNoRouteApartFromNotHavingRun(t *testing.T) {
-	tests := []struct {
-		name    string
-		output  string
-		ran     bool
-		reached bool
-	}{
-		{"reached", "probe reached enforcer:8080\n", true, true},
-		{"no route", "probe unreachable victim-fs:8080: lookup victim-fs: no such host\n", true, false},
-		{"never ran", "Error response from daemon: no such image\n", false, false},
-		{"said nothing at all", "", false, false},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := readProbe("victim-fs:8080", test.output)
-			if got.Ran != test.ran || got.Reached != test.reached {
-				t.Errorf("read %+v, want ran=%t reached=%t", got, test.ran, test.reached)
-			}
-			if got.Detail == "" {
-				t.Errorf("the probe carries no reason: %+v", got)
-			}
-		})
-	}
-}
-
 // A container printing without end is stopped at the bound and the run is an
 // error, never a record cut at an arbitrary byte.
 func TestASplitRunRefusesAStreamPastItsBound(t *testing.T) {
@@ -135,5 +110,40 @@ func TestASplitRunRefusesAStreamPastItsBound(t *testing.T) {
 	split, err := splitWithin(exec.CommandContext(ctx, "sh", "-c", "printf %01024d 0"), 1<<10)
 	if err != nil || len(split.Stdout) != 1<<10 {
 		t.Errorf("output at the bound gave %d bytes, %v", len(split.Stdout), err)
+	}
+}
+
+// Boot built the images; a later build would spend the plane's time again, and
+// a run that built nothing up front would start whatever an older checkout left.
+func TestNothingButTheBootBuilds(t *testing.T) {
+	up := strings.Join(upArgs([]string{"victim-fs"}), " ")
+	if want := "up -d --wait victim-fs"; up != want {
+		t.Errorf("up is %q, want %q", up, want)
+	}
+	run := strings.Join(runOnceArgs("scripted-agent", []string{"-probe", "x:1"}), " ")
+	if want := "run --rm --no-TTY scripted-agent -probe x:1"; run != want {
+		t.Errorf("run is %q, want %q", run, want)
+	}
+}
+
+// A variable added for one call keeps every variable the run was given: a
+// step that lost COMPOSE_PROJECT_NAME would run in another project.
+func TestAVariableAddedForOneCallKeepsTheRunsOwn(t *testing.T) {
+	run := CLI{}.WithEnv(map[string]string{"COMPOSE_PROJECT_NAME": "lab-run1", "LAB_RUN_HOST_DIR": "/r"})
+	step := run.WithEnv(map[string]string{"LAB_VERIFIER_DIR": "step-1"}).(CLI)
+	got := map[string]string{}
+	for _, entry := range step.Env {
+		name, value, _ := strings.Cut(entry, "=")
+		got[name] = value
+	}
+	for name, want := range map[string]string{"COMPOSE_PROJECT_NAME": "lab-run1", "LAB_RUN_HOST_DIR": "/r", "LAB_VERIFIER_DIR": "step-1"} {
+		if got[name] != want {
+			t.Errorf("%s = %q, want %q", name, got[name], want)
+		}
+	}
+	for _, entry := range run.(CLI).Env {
+		if strings.HasPrefix(entry, "LAB_VERIFIER_DIR=") {
+			t.Error("a variable added for one call reached the run's own compose")
+		}
 	}
 }

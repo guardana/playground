@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const testVerifierImage = "lab-verifier"
@@ -78,7 +79,7 @@ func TestAPathTheVerifierPlantedIsNotWrittenThrough(t *testing.T) {
 	subject, compose, scenario := verifierUnderTest(t)
 	target, untouched := outsideFile(t)
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		split, err := working(service, entrypoint, args)
 		if slices.Contains(args, "--write-mcp-pin") {
 			out := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], verifierDir, "step-1", "out")
@@ -110,7 +111,7 @@ func TestTheTraceReportIsNotWrittenThroughAPlantedPath(t *testing.T) {
 	pinVerifierImage(t, &subject, "1.0.0rc5")
 	target, untouched := outsideFile(t)
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		report := filepath.Join(compose.env["LAB_RUN_HOST_DIR"], verifierDir, "trace-report.json")
 		if err := os.Symlink(target, report); err != nil {
 			t.Fatal(err)

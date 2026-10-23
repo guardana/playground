@@ -76,19 +76,6 @@ func TestACompositionThatDoesNotLoadIsRefusedInComposesWords(t *testing.T) {
 	}
 }
 
-// Boot built the images; a later build would spend the plane's time again, and
-// a run that built nothing up front would start whatever an older checkout left.
-func TestNothingButTheBootBuilds(t *testing.T) {
-	up := strings.Join(upArgs([]string{"victim-fs"}), " ")
-	if want := "up -d --wait victim-fs"; up != want {
-		t.Errorf("up is %q, want %q", up, want)
-	}
-	run := strings.Join(runOnceArgs("scripted-agent", []string{"-probe", "x:1"}), " ")
-	if want := "run --rm --no-TTY scripted-agent -probe x:1"; run != want {
-		t.Errorf("run is %q, want %q", run, want)
-	}
-}
-
 // The boot's build names the agent's profile by the constant; compose has to
 // put the agent there and nowhere else, or the build skips the agent's image.
 func TestTheAgentIsBuiltUnderItsOwnProfile(t *testing.T) {

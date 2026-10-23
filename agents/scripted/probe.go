@@ -9,7 +9,7 @@ import (
 )
 
 // The runner reads these two markers out of the probe's output, and repeats
-// them in runner/compose.go because the two are separate commands. An exit code
+// them in runner/probes.go because the two are separate commands. An exit code
 // on its own cannot tell "the agent image would not run" from "the agent ran
 // and found no route", and only the second is evidence about the topology.
 const (

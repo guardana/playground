@@ -12,6 +12,7 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 // victim served. There is no enforcer in the run, so no decision, trail or
 // evidence check applies.
 func (l lab) gradeVerifier(
-	ctx context.Context, compose Compose, spec labspec.Scenario, boot assertion.Boot, runID, runDir, token string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, boot assertion.Boot, runID, runDir, token string,
 ) assertion.Report {
 	dir := filepath.Join(runDir, verifierDir)
 	// Made before any verifier container starts: compose binds directories in
@@ -89,7 +90,7 @@ func makeDirs(paths ...string) error {
 // nothing outlives the run. A step whose inputs were not handed over does not
 // run: what it would print could not be told from the lab's own failure.
 func (l lab) runVerifier(
-	ctx context.Context, compose Compose, spec labspec.Scenario, dir string, made error, token string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, dir string, made error, token string,
 ) []check.VerifierRun {
 	runs := make([]check.VerifierRun, 0, len(spec.Verifier))
 	for i, step := range spec.Verifier {
@@ -107,7 +108,7 @@ func (l lab) runVerifier(
 }
 
 func (l lab) runStep(
-	ctx context.Context, compose Compose, profiles []string, dir string, made error, earlier []check.VerifierRun,
+	ctx context.Context, compose dockercompose.Compose, profiles []string, dir string, made error, earlier []check.VerifierRun,
 	token string, run *check.VerifierRun,
 ) {
 	if made != nil {
@@ -144,13 +145,13 @@ func newVerifierRun(number int, probe labspec.ProbeStep, dir string) check.Verif
 // probeOnce runs one step and keeps both streams: standard output is the
 // record a step is graded from, standard error is kept for the person reading
 // a red run and never read by a check.
-func (l lab) probeOnce(ctx context.Context, compose Compose, profiles []string, run *check.VerifierRun) {
+func (l lab) probeOnce(ctx context.Context, compose dockercompose.Compose, profiles []string, run *check.VerifierRun) {
 	service, profiles := probeService(profiles, run.Probe)
 	l.runOnce(ctx, compose, profiles, service, probeArgs(run.URL, run.Probe), run)
 }
 
 // runOnce runs one verifier step in service and keeps what it printed.
-func (l lab) runOnce(ctx context.Context, compose Compose, profiles []string, service string, args []string, run *check.VerifierRun) {
+func (l lab) runOnce(ctx context.Context, compose dockercompose.Compose, profiles []string, service string, args []string, run *check.VerifierRun) {
 	split, err := compose.RunSplit(ctx, profiles, service, "", args)
 	base := strings.TrimSuffix(run.Report, ".json")
 	if keepErr := keepNew(base+".stderr", split.Stderr, 0o600); keepErr != nil {

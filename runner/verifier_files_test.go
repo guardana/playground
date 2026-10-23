@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -52,7 +53,7 @@ func profiledUnderTest(t *testing.T) (lab, *fakeCompose, string) {
 	writeFile(scenario, profiledScenarioFile)
 	writeFile(filepath.Join(subject.root, "config/verifier/profiles/strict.yaml"), profileBody)
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		split, err := working(service, entrypoint, args)
 		if err == nil && slices.Contains(args, "--mcp-pin") && split.ExitCode != 3 {
 			split.ExitCode, split.Stdout = 2, indeterminateReport
@@ -71,9 +72,9 @@ func TestAStepWhoseInputsWereNotHandedOverDoesNotRun(t *testing.T) {
 			subject, compose, scenario := profiledUnderTest(t)
 			spoil(t, subject, compose)
 			answered := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				if slices.Contains(args, "--mcp-pin") {
-					return Split{ExitCode: 2, Stdout: indeterminateReport}, nil
+					return dockercompose.Split{ExitCode: 2, Stdout: indeterminateReport}, nil
 				}
 				return answered(service, entrypoint, args)
 			}
@@ -99,14 +100,14 @@ func handoverSpoilers() map[string]func(t *testing.T, subject lab, compose *fake
 		},
 		"the profile gone after the scenario was read": func(_ *testing.T, subject lab, compose *fakeCompose) {
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				_ = os.Remove(filepath.Join(subject.root, "config/verifier/profiles/strict.yaml"))
 				return working(service, entrypoint, args)
 			}
 		},
 		"a pin left by a step that failed": func(_ *testing.T, _ lab, compose *fakeCompose) {
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				split, err := working(service, entrypoint, args)
 				if slices.Contains(args, "--write-mcp-pin") {
 					split.ExitCode = 1
@@ -117,7 +118,7 @@ func handoverSpoilers() map[string]func(t *testing.T, subject lab, compose *fake
 		// A valid pin padded past the bound: only the bound refuses it.
 		"a pin past the bound": func(_ *testing.T, _ lab, compose *fakeCompose) {
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				split, err := working(service, entrypoint, args)
 				if slices.Contains(args, "--write-mcp-pin") {
 					pin := writtenPin(filepath.Join(compose.env["LAB_RUN_HOST_DIR"], verifierDir), 1)
@@ -128,9 +129,9 @@ func handoverSpoilers() map[string]func(t *testing.T, subject lab, compose *fake
 		},
 		"no pin written": func(_ *testing.T, _ lab, compose *fakeCompose) {
 			working := compose.split
-			compose.split = func(service, entrypoint string, args []string) (Split, error) {
+			compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 				if slices.Contains(args, "--write-mcp-pin") {
-					return Split{Stdout: "Wrote 1 approved tool description(s)\n"}, nil
+					return dockercompose.Split{Stdout: "Wrote 1 approved tool description(s)\n"}, nil
 				}
 				return working(service, entrypoint, args)
 			}
@@ -169,7 +170,7 @@ func TestAStepsInputsAreWorldReadableFilesBeforeItRuns(t *testing.T) {
 	subject, compose, scenario := profiledUnderTest(t)
 	var seen *inputSeen
 	working := compose.split
-	compose.split = func(service, entrypoint string, args []string) (Split, error) {
+	compose.split = func(service, entrypoint string, args []string) (dockercompose.Split, error) {
 		if slices.Contains(args, "--mcp-pin") {
 			seen = readInputs(t, filepath.Join(compose.env["LAB_RUN_HOST_DIR"], "verifier", "step-2", "in"))
 		}
@@ -249,28 +250,6 @@ func TestEachStepRunsWithItsOwnDirectoryAndOnlyThePinStepWrites(t *testing.T) {
 	for _, kept := range []string{"step-1.stdout", "step-2.json", "step-2.stderr"} {
 		if _, err := os.Lstat(filepath.Join(verifier, kept)); err != nil {
 			t.Errorf("%s was not kept outside the step directories: %v", kept, err)
-		}
-	}
-}
-
-// A variable added for one call keeps every variable the run was given: a
-// step that lost COMPOSE_PROJECT_NAME would run in another project.
-func TestAVariableAddedForOneCallKeepsTheRunsOwn(t *testing.T) {
-	run := dockerCompose{}.WithEnv(map[string]string{"COMPOSE_PROJECT_NAME": "lab-run1", "LAB_RUN_HOST_DIR": "/r"})
-	step := run.WithEnv(map[string]string{"LAB_VERIFIER_DIR": "step-1"}).(dockerCompose)
-	got := map[string]string{}
-	for _, entry := range step.env {
-		name, value, _ := strings.Cut(entry, "=")
-		got[name] = value
-	}
-	for name, want := range map[string]string{"COMPOSE_PROJECT_NAME": "lab-run1", "LAB_RUN_HOST_DIR": "/r", "LAB_VERIFIER_DIR": "step-1"} {
-		if got[name] != want {
-			t.Errorf("%s = %q, want %q", name, got[name], want)
-		}
-	}
-	for _, entry := range run.(dockerCompose).env {
-		if strings.HasPrefix(entry, "LAB_VERIFIER_DIR=") {
-			t.Error("a variable added for one call reached the run's own compose")
 		}
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const (
@@ -130,9 +131,9 @@ func TestAnEnforcerRunIsPreparedAndDrainedThroughTheCollector(t *testing.T) {
 func TestAStaleEnforcerImageIsNotThePin(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if strings.HasSuffix(args[len(args)-1], "/brand") {
-			return Split{Stdout: "status 200\n" + `{"version":"dev"}`}
+			return dockercompose.Split{Stdout: "status 200\n" + `{"version":"dev"}`}
 		}
 		return answer(service, args)
 	}
@@ -148,9 +149,9 @@ func TestAStaleEnforcerImageIsNotThePin(t *testing.T) {
 func TestATrailReadBeforeTheSpoolDrainedFails(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
 	answer := compose.exec
-	compose.exec = func(service string, args []string) Split {
+	compose.exec = func(service string, args []string) dockercompose.Split {
 		if strings.HasSuffix(args[len(args)-1], "/healthz") {
-			return Split{Stdout: "status 200\n" + strings.Replace(drainedHealth, `"unacknowledged":0`, `"unacknowledged":4096`, 1)}
+			return dockercompose.Split{Stdout: "status 200\n" + strings.Replace(drainedHealth, `"unacknowledged":0`, `"unacknowledged":4096`, 1)}
 		}
 		return answer(service, args)
 	}

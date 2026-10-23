@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 const listenerURL = "http://enforcer:8080/mcp"
@@ -65,8 +66,8 @@ func TestTheListenerIsProbedFromTheEnforcersOtherNetworks(t *testing.T) {
 // The deliberate failure the check exists for: the listener answers a victim.
 func TestAVictimThatListsTheEnforcersToolsFailsTheRun(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
-	compose.listener = func(string, string) Split {
-		return Split{Stdout: `{"name":"fs.read","description":"Read a file."}` + "\n"}
+	compose.listener = func(string, string) dockercompose.Split {
+		return dockercompose.Split{Stdout: `{"name":"fs.read","description":"Read a file."}` + "\n"}
 	}
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {

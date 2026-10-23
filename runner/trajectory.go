@@ -8,12 +8,13 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/runner/dockercompose"
 )
 
 // gradeTrajectory replays the trajectory through the gateway and grades the
 // decisions, the trail and the victims' journals.
 func (l lab) gradeTrajectory(
-	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory,
 	boot assertion.Boot, runID, runDir string,
 ) (assertion.Report, []check.DecisionRow) {
 	gateway, victim, sealed, probed := l.probes(ctx, compose, spec, trajectory, runDir)
@@ -52,7 +53,7 @@ func (l lab) gradeTrajectory(
 // replayUnderChaos applies the scenario's faults, replays the trajectory and
 // lifts the faults again, all before anything drains the trail.
 func (l lab) replayUnderChaos(
-	ctx context.Context, compose Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) []assertion.Check {
 	if len(spec.Chaos) == 0 {
 		return []assertion.Check{l.replay(ctx, compose, spec, runID, runDir)}
@@ -67,7 +68,7 @@ func (l lab) replayUnderChaos(
 // replay runs the trajectory by running the agent, and keeps what the agent
 // printed. The exit status is the record; the agent's own log is not read.
 func (l lab) replay(
-	ctx context.Context, compose Compose, spec labspec.Scenario, runID, runDir string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runID, runDir string,
 ) check.Replay {
 	source := filepath.Join(runDir, "replay.log")
 	args := []string{

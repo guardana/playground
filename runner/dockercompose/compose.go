@@ -1,4 +1,6 @@
-package main
+// Package dockercompose is the part of docker compose the runner drives: the
+// commands it builds and the output it reads back.
+package dockercompose
 
 import (
 	"context"
@@ -74,37 +76,41 @@ type Split struct {
 	Stderr   string
 }
 
-// dockerCompose runs the real thing.
-type dockerCompose struct {
-	file      string
-	envFile   string
-	directory string
-	// env is added to the runner's own environment for every invocation, which
+// CLI runs the real thing: the docker compose command line.
+type CLI struct {
+	File      string
+	EnvFile   string
+	Directory string
+	// Env is added to the runner's own environment for every invocation, which
 	// is how compose interpolates ${LAB_RUN_ID} and the rest.
-	env []string
+	Env []string
+	Log io.Writer
 	// runEnv names the variables a RunSplit hands its container.
 	runEnv []string
-	log    io.Writer
 }
 
-func (d dockerCompose) WithEnv(env map[string]string) Compose {
-	added := slices.Clone(d.env)
+// WithEnv appends env to the variables d carries, or to the runner's own
+// environment when it carries none.
+func (d CLI) WithEnv(env map[string]string) Compose {
+	added := slices.Clone(d.Env)
 	if added == nil {
 		added = os.Environ()
 	}
 	for _, name := range slices.Sorted(maps.Keys(env)) {
 		added = append(added, name+"="+env[name])
 	}
-	d.env = added
+	d.Env = added
 	return d
 }
 
-func (d dockerCompose) WithRunEnv(names ...string) Compose {
+// WithRunEnv adds names to those a RunSplit hands its container.
+func (d CLI) WithRunEnv(names ...string) Compose {
 	d.runEnv = append(slices.Clone(d.runEnv), names...)
 	return d
 }
 
-func (d dockerCompose) Services(ctx context.Context, profiles []string) ([]string, error) {
+// Services reads `docker compose config --services`.
+func (d CLI) Services(ctx context.Context, profiles []string) ([]string, error) {
 	output, err := d.capture(ctx, profiles, "config", "--services")
 	if err != nil {
 		return nil, err
@@ -122,17 +128,20 @@ func (d dockerCompose) Services(ctx context.Context, profiles []string) ([]strin
 	return services, nil
 }
 
-func (d dockerCompose) Build(ctx context.Context, profiles []string) error {
+// Build runs `docker compose build`.
+func (d CLI) Build(ctx context.Context, profiles []string) error {
 	_, err := d.capture(ctx, profiles, "build")
 	return err
 }
 
-func (d dockerCompose) Up(ctx context.Context, profiles, services []string) error {
+// Up starts services and waits until each is running and healthy.
+func (d CLI) Up(ctx context.Context, profiles, services []string) error {
 	_, err := d.capture(ctx, profiles, upArgs(services)...)
 	return err
 }
 
-func (d dockerCompose) Status(ctx context.Context, profiles, services []string) ([]assertion.Service, error) {
+// Status reads `docker compose ps --all` as JSON.
+func (d CLI) Status(ctx context.Context, profiles, services []string) ([]assertion.Service, error) {
 	output, err := d.capture(ctx, profiles, append([]string{"ps", "--all", "--format", "json"}, services...)...)
 	if err != nil {
 		return nil, err
@@ -140,7 +149,8 @@ func (d dockerCompose) Status(ctx context.Context, profiles, services []string) 
 	return parseStatus(output, services)
 }
 
-func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service string, args []string) (Execution, error) {
+// RunOnce runs service with `docker compose run --rm`, its streams merged.
+func (d CLI) RunOnce(ctx context.Context, profiles []string, service string, args []string) (Execution, error) {
 	command := d.command(ctx, profiles, runOnceArgs(service, args)...)
 	output, err := command.CombinedOutput()
 	execution := Execution{Output: string(output)}
@@ -155,21 +165,24 @@ func (d dockerCompose) RunOnce(ctx context.Context, profiles []string, service s
 	return execution, nil
 }
 
-func (d dockerCompose) RunSplit(
+// RunSplit runs service with `docker compose run --rm`, its streams apart.
+func (d CLI) RunSplit(
 	ctx context.Context, profiles []string, service, entrypoint string, args []string,
 ) (Split, error) {
 	return d.split(d.command(ctx, profiles, runSplitArgs(service, entrypoint, args, d.runEnv)...))
 }
 
-func (d dockerCompose) Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error) {
+// Exec runs `docker compose exec -T`.
+func (d CLI) Exec(ctx context.Context, profiles []string, service string, args []string) (Split, error) {
 	return d.split(d.command(ctx, profiles, append([]string{"exec", "-T", service}, args...)...))
 }
 
-func (d dockerCompose) Logs(ctx context.Context, profiles []string, service string) (Split, error) {
+// Logs reads `docker compose logs` without colour or prefix.
+func (d CLI) Logs(ctx context.Context, profiles []string, service string) (Split, error) {
 	return d.split(d.command(ctx, profiles, "logs", "--no-color", "--no-log-prefix", service))
 }
 
-func (d dockerCompose) split(command *exec.Cmd) (Split, error) {
+func (d CLI) split(command *exec.Cmd) (Split, error) {
 	return splitWithin(command, maxStreamBytes)
 }
 
@@ -213,17 +226,19 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 	return b.Builder.Write(p)
 }
 
-func (d dockerCompose) Stop(ctx context.Context, profiles []string, service string) error {
+// Stop runs `docker compose stop` on one service.
+func (d CLI) Stop(ctx context.Context, profiles []string, service string) error {
 	_, err := d.capture(ctx, profiles, "stop", service)
 	return err
 }
 
-func (d dockerCompose) Down(ctx context.Context, profiles []string) error {
+// Down removes the project's containers, volumes and orphans.
+func (d CLI) Down(ctx context.Context, profiles []string) error {
 	_, err := d.capture(ctx, profiles, "down", "--volumes", "--remove-orphans")
 	return err
 }
 
-func (d dockerCompose) capture(ctx context.Context, profiles []string, args ...string) (string, error) {
+func (d CLI) capture(ctx context.Context, profiles []string, args ...string) (string, error) {
 	command := d.command(ctx, profiles, args...)
 	var out, problems strings.Builder
 	command.Stdout = &out
@@ -232,19 +247,19 @@ func (d dockerCompose) capture(ctx context.Context, profiles []string, args ...s
 		return out.String(), fmt.Errorf("docker compose %s: %w: %s",
 			strings.Join(args, " "), err, strings.TrimSpace(problems.String()))
 	}
-	if d.log != nil && problems.Len() > 0 {
-		_, _ = io.WriteString(d.log, problems.String())
+	if d.Log != nil && problems.Len() > 0 {
+		_, _ = io.WriteString(d.Log, problems.String())
 	}
 	return out.String(), nil
 }
 
-func (d dockerCompose) command(ctx context.Context, profiles []string, args ...string) *exec.Cmd {
+func (d CLI) command(ctx context.Context, profiles []string, args ...string) *exec.Cmd {
 	// #nosec G204,G702 -- the arguments are built by this package from the
 	// compose topology and the scenario, which is the clone's or the workspace
 	// of the person running the lab; no shell reads them and each is one argument.
 	command := exec.CommandContext(ctx, "docker", append([]string{"compose"},
-		composeArgs(d.file, d.envFile, profiles, args)...)...)
-	command.Dir = d.directory
-	command.Env = d.env
+		composeArgs(d.File, d.EnvFile, profiles, args)...)...)
+	command.Dir = d.Directory
+	command.Env = d.Env
 	return command
 }
