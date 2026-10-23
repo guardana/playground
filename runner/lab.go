@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -111,19 +113,19 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 	return graded, writeReports(runDir, graded, rows, provenance)
 }
 
-// prepare builds the run's environment: the enforcer's signed bundle and its
-// doubles' scripts for a run it decides, the token and the double's persona for
-// a verifier run. The token is returned so the run can look for it after.
-func (l lab) prepare(ctx context.Context, spec labspec.Scenario, runID, runDir string) (map[string]string, string, error) {
-	env := l.environment(runID, runDir)
-	if spec.UsesEnforcer() {
-		if err := l.prepareEnforcer(ctx, spec, runDir); err != nil {
+// prepare builds the run's environment: what the gate needs, when the
+// scenario has one, and the token and the double's persona for a verifier run.
+// The token is returned so the run can look for it after.
+func (l lab) prepare(ctx context.Context, gate driver.Gate, spec labspec.Scenario, run driver.Run) (map[string]string, string, error) {
+	env := l.environment(run.ID, run.Dir)
+	if gate != nil {
+		added, err := gate.Prepare(ctx, run, spec)
+		if err != nil {
 			return nil, "", err
 		}
-		env["LAB_PDP_SCRIPT"] = spec.Gateway.PDPScript
-		env["LAB_APPROVER_SCRIPT"] = spec.Gateway.ApproverScript
+		maps.Copy(env, added)
 	}
-	if err := l.handPersona(spec, runDir); err != nil {
+	if err := l.handPersona(spec, run.Dir); err != nil {
 		return nil, "", err
 	}
 	token, err := l.verifierEnv(spec, env)
@@ -133,20 +135,22 @@ func (l lab) prepare(ctx context.Context, spec labspec.Scenario, runID, runDir s
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
 ) (assertion.Report, []report.StepRow) {
-	if spec.IsVerifier() || spec.Trace != nil {
-		if err := l.refuseVerifierImage(ctx); err != nil {
-			return imageRefused(spec.ID, runID, err, l.clock()), nil
+	chosen := l.pick(spec)
+	for _, subject := range chosen.subjects {
+		if refusal := subject.Ready(ctx); refusal != nil {
+			return subjectRefused(spec.ID, runID, *refusal, l.clock()), nil
 		}
 	}
-	env, token, err := l.prepare(ctx, spec, runID, runDir)
+	run := driver.Run{ID: runID, Dir: runDir}
+	env, token, err := l.prepare(ctx, chosen.gate, spec, run)
 	if err != nil {
 		return unprepared(spec.ID, runID, err, l.clock()), nil
 	}
-	compose := l.compose.WithEnv(env)
+	run.Compose = l.compose.WithEnv(env)
 	if !l.keep {
-		defer l.takeDown(ctx, compose, downProfiles(spec), runDir)
+		defer l.takeDown(ctx, run, chosen.downProfiles(spec), chosen.gate)
 	}
-	inProfile, err := compose.Services(ctx, spec.Profile)
+	inProfile, err := run.Compose.Services(ctx, spec.Profile)
 	switch {
 	case err != nil && ctx.Err() == nil:
 		// A compose that cannot read the topology, an older one included, would
@@ -162,14 +166,14 @@ func (l lab) runScenario(
 	// of its records took no time would be telling a reader the wrong thing
 	// about where the minutes went.
 	started := l.clock()
-	boot := l.boot(ctx, compose, spec, inProfile, runDir)
+	boot := l.boot(ctx, run.Compose, spec, inProfile, runDir)
 
 	var graded assertion.Report
 	var rows []report.StepRow
-	if spec.IsVerifier() {
-		graded = l.gradeVerifier(ctx, compose, spec, boot, runID, runDir, token)
+	if chosen.prober != nil {
+		graded = l.gradeVerifier(ctx, chosen.prober, run, spec, boot, token)
 	} else {
-		graded, rows = l.gradeTrajectory(ctx, compose, spec, trajectory, boot, runID, runDir)
+		graded, rows = l.gradeTrajectory(ctx, chosen, run, spec, trajectory, boot)
 	}
 	graded.StartedAt, graded.EndedAt = started, l.clock()
 	if spec.Gap != nil {
@@ -181,11 +185,12 @@ func (l lab) runScenario(
 // boot builds every image the profile uses, the agent's included, before the
 // plane loads its policy, whose freshness a build under load would spend; then
 // it brings up the long running services and records what came up. The agent
-// and the verifier are one-shots the runner drives after the topology is proved.
+// and each subject's one-shots are run after the topology is proved.
 func (l lab) boot(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, inProfile []string, runDir string) assertion.Boot {
 	boot := assertion.Boot{Profile: strings.Join(spec.Profile, ", ")}
+	oneShots := l.oneShots()
 	wanted := slices.DeleteFunc(slices.Clone(inProfile), func(name string) bool {
-		return name == agentService || name == verifierService || name == traceService || name == scanService
+		return slices.Contains(oneShots, name)
 	})
 	if err := compose.Build(ctx, append(slices.Clone(spec.Profile), agentProfile)); err != nil {
 		for _, name := range wanted {
@@ -218,17 +223,21 @@ func (l lab) boot(ctx context.Context, compose dockercompose.Compose, spec labsp
 	return l.writeBoot(runDir, boot)
 }
 
-// takeDown brings the profile down and removes the collector's key. It uses
-// not the run's context: a scenario that ran out of time is the one whose
-// containers are still up, and a cancelled context would leave them there.
-func (l lab) takeDown(ctx context.Context, compose dockercompose.Compose, profile []string, runDir string) {
+// takeDown brings the profile down and has the gate release what it
+// prepared. It uses not the run's context: a scenario that ran out of time is
+// the one whose containers are still up, and a cancelled context would leave
+// them there.
+func (l lab) takeDown(ctx context.Context, run driver.Run, profile []string, gate driver.Gate) {
 	down, stop := context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
 	defer stop()
-	if err := compose.Down(down, profile); err != nil {
+	if err := run.Compose.Down(down, profile); err != nil {
 		l.note("taking the profile down: %v", err)
 	}
-	if err := dropCollectorKey(runDir); err != nil {
-		l.note("removing the collector's key: %v", err)
+	if gate == nil {
+		return
+	}
+	if err := gate.Release(run); err != nil {
+		l.note("%v", err)
 	}
 }
 
@@ -241,6 +250,18 @@ func composeRefused(id, runID string, cause error, at time.Time) assertion.Repor
 			Check: "compose/loaded", Outcome: assertion.Fail,
 			Want: "docker compose reads the topology for the scenario's profile",
 			Got:  "the run was refused before anything was built", Detail: cause.Error(),
+		}},
+	}
+}
+
+// subjectRefused is the report of a run a subject refused before anything was
+// brought up.
+func subjectRefused(id, runID string, refusal driver.Refusal, at time.Time) assertion.Report {
+	return assertion.Report{
+		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
+		Results: []assertion.Result{{
+			Check: refusal.Check, Outcome: assertion.Fail, Want: refusal.Want,
+			Got: "the run was refused before anything was brought up", Detail: refusal.Cause.Error(),
 		}},
 	}
 }

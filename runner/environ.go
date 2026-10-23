@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/guardana/playground/runner/driver"
 )
 
 // refuseOverriddenPins fails when the environment sets a variable versions.env
 // pins. Compose lets the environment win over its env file, so the run would use
 // that value while the report header prints the file's.
 func refuseOverriddenPins(root string, environ []string) error {
-	pins, err := readPins(filepath.Join(root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
 	if err != nil {
 		return fmt.Errorf("the pins cannot be read: %w", err)
 	}

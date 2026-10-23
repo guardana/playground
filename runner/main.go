@@ -131,7 +131,7 @@ func withDevelopment(ctx context.Context, subject lab, ref string, space workspa
 	}
 	subject.pinned = subject.pin
 	subject.pin, subject.enforcerImage, subject.development = dev.Version, dev.Ref, &dev
-	subject.describe = describeHost(subject.root, space, run, &dev)
+	subject.describe = describeHost(subject.root, space, run, subject.subjects())
 	subject.sign = signWithImage(dev.Ref, run)
 	return subject, nil
 }
@@ -168,7 +168,7 @@ func parse(args []string, out io.Writer) (settings, error) {
 }
 
 func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer) lab {
-	return lab{
+	built := lab{
 		root:      root,
 		workspace: space,
 		reports:   chosen.reports,
@@ -179,16 +179,17 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 			Env:       environ,
 			Log:       out,
 		},
-		timeout:  chosen.timeout,
-		keep:     chosen.keep,
-		clock:    time.Now,
-		suffix:   randomSuffix,
-		log:      out,
-		describe: describeHost(root, space, dockercompose.Output, nil),
-		keysDir:  labKeysDir(lookupIn(environ)),
-		sign:     signWithEnforcer(root, dockercompose.Output),
-		inspect:  dockercompose.Output,
+		timeout: chosen.timeout,
+		keep:    chosen.keep,
+		clock:   time.Now,
+		suffix:  randomSuffix,
+		log:     out,
+		keysDir: labKeysDir(lookupIn(environ)),
+		sign:    signWithEnforcer(root, dockercompose.Output),
+		inspect: dockercompose.Output,
 	}
+	built.describe = describeHost(root, space, dockercompose.Output, built.subjects())
+	return built
 }
 
 // executeAll runs every scenario and reports a failure if any of them did not

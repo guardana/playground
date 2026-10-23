@@ -14,6 +14,7 @@ import (
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 )
 
 const (
@@ -26,35 +27,26 @@ const (
 	victimPrefix = "victim-"
 )
 
-// gradeVerifier runs each verifier step against the victims and grades the
-// reach of the verifier's network, the records each step left, and what every
-// victim served. There is no enforcer in the run, so no decision, trail or
-// evidence check applies.
+// gradeVerifier has the prober run each step against the victims, and grades
+// the reach of its network, the records each step left, and what every victim
+// served. No gate sits in the run, so no decision, trail or evidence check
+// applies.
 func (l lab) gradeVerifier(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, boot assertion.Boot, runID, runDir, token string,
+	ctx context.Context, prober driver.Prober, run driver.Run, spec labspec.Scenario, boot assertion.Boot, token string,
 ) assertion.Report {
-	dir := filepath.Join(runDir, verifierDir)
-	// Made before any verifier container starts: compose binds directories in
-	// it and refuses to create them.
-	made := makeDirs(dir, filepath.Join(dir, reachDir), filepath.Join(dir, reachDir, inputsDir))
-	if made != nil {
-		l.note("making the verifier's directories: %v", made)
-	}
-	reach := l.verifierReach(ctx, compose.WithEnv(map[string]string{stepVariable: reachDir}), spec, runDir)
-	runs := l.runVerifier(ctx, compose, spec, dir, made, token)
+	reach, runs := prober.Probe(ctx, run, spec, token)
 	served := everyVictimServesNothing(spec, boot)
-	records := l.collect(served, boot, runID, runDir, nil)
-	readRecords(runs)
-	checks := []assertion.Check{reach, check.Verifier{Scenario: spec, Runs: runs}, check.TokenKeptOut{RunDir: runDir, Token: token}}
+	records := l.collect(served, boot, run.ID, run.Dir)
+	checks := []assertion.Check{reach, check.Verifier{Scenario: spec, Runs: runs}, check.TokenKeptOut{RunDir: run.Dir, Token: token}}
 	if !spec.IsScan() {
 		// A scan's profile boots no service and reaches no victim, so nothing
 		// came up and nothing could have been served.
 		checks = append(checks,
-			check.Boot{Source: filepath.Join(runDir, "boot.json")},
-			check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")})
+			check.Boot{Source: filepath.Join(run.Dir, "boot.json")},
+			check.Effects{Scenario: served, JournalDir: filepath.Join(run.Dir, "journals")})
 	}
 	if spec.AuthDouble != "" {
-		checks = append(checks, check.AuthDouble{JournalDir: filepath.Join(runDir, "journals"), Persona: spec.AuthDouble})
+		checks = append(checks, check.AuthDouble{JournalDir: filepath.Join(run.Dir, "journals"), Persona: spec.AuthDouble})
 	}
 	return assertion.Run(ctx, records, checks...)
 }
@@ -144,7 +136,7 @@ func newVerifierRun(number int, probe labspec.ProbeStep, dir string) check.Verif
 	return run
 }
 
-// readRecords reads what each step left, just before it is graded.
+// readRecords reads what each step left, once every step has run.
 func readRecords(runs []check.VerifierRun) {
 	for i := range runs {
 		readRecord(&runs[i])

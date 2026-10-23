@@ -6,36 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/report"
 )
-
-func TestReadPinsKeepsTheFileOrder(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "versions.env")
-	writeFile(path, "# comment\n\nB_PIN=two\nA_PIN=python:3.13-slim\nEMPTY=\n")
-	pins, err := readPins(path)
-	if err != nil {
-		t.Fatalf("readPins: %v", err)
-	}
-	want := []report.Pin{{Name: "B_PIN", Value: "two"}, {Name: "A_PIN", Value: "python:3.13-slim"}, {Name: "EMPTY", Value: ""}}
-	if !slices.Equal(pins, want) {
-		t.Errorf("readPins = %v, want %v", pins, want)
-	}
-}
-
-func TestReadPinsRefusesALineThatIsNotAPin(t *testing.T) {
-	for _, body := range []string{"export A=1\n", "a=1\n", "A 1\n", "A=1\nB\n"} {
-		path := filepath.Join(t.TempDir(), "versions.env")
-		writeFile(path, body)
-		if pins, err := readPins(path); err == nil {
-			t.Errorf("readPins(%q) = %v, want a refusal", body, pins)
-		}
-	}
-}
 
 func TestTheReportCarriesWhatProducedTheRun(t *testing.T) {
 	subject, _, scenario := enforcerLab(t)
@@ -127,7 +103,7 @@ func TestEachImageIsReadByItsOwnLabel(t *testing.T) {
 		{Name: "VERIFIER_IMAGE", Value: "playground-verifier"}, {Name: "VERIFIER_VERSION", Value: "1.0.0rc5"},
 		{Name: "ENFORCER_TREE", Value: "7ree"},
 	}
-	found := images(context.Background(), labelledDaemon, pins)
+	found := describeSubjects(context.Background(), lab{}.subjects(), labelledDaemon, pins).Images
 	if len(found) != 2 {
 		t.Fatalf("read %d images, want 2", len(found))
 	}
