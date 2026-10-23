@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
@@ -216,7 +217,9 @@ func TestAProxyListenerTheRunnerCannotNameIsNotLeftUnprobed(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(filepath.Join(subject.root, proxyFile), `[{"name": "victim-web", "listen": "0.0.0.0:8106"}]`)
-	_, _, sealed, _ := subject.probes(context.Background(), compose, spec, trajectory, t.TempDir())
+	run := newRun("chaos-01-20260909T120000Z-run1", t.TempDir())
+	run.Compose = compose
+	sealed := subject.isolation(context.Background(), run, spec, trajectory, subject.control.Begin(run, spec, trajectory)).Sealed
 	unnamed := slices.IndexFunc(sealed, func(probe check.Probe) bool { return probe.Target == proxyService })
 	if unnamed < 0 || sealed[unnamed].Ran || !strings.Contains(sealed[unnamed].Detail, "victim-fs") {
 		t.Errorf("the proxy for victim-fs was not recorded as unprobed: %+v", sealed)
@@ -231,7 +234,7 @@ func TestACollectorNotShownBackIsNotLifted(t *testing.T) {
 			compose.status[len(compose.status)-1] = assertion.Service{Name: collectorService, Detail: "exited (1)"}
 		},
 		"nothing acknowledged since": func(subject *lab, compose *fakeCompose) {
-			subject.drainBound = 800 * time.Millisecond
+			reconfigure(t, subject, func(config *control.Config) { config.DrainBound = 800 * time.Millisecond })
 			answer := compose.exec
 			compose.exec = func(service string, args []string) dockercompose.Split {
 				split := answer(service, args)

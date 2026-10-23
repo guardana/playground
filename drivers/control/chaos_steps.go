@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"context"
@@ -18,26 +18,26 @@ import (
 // addToxic puts the toxic on the victim's proxy and reads the proxy's own
 // account of that proxy back: the toxic is held only when the proxy lists it
 // with the attribute the scenario asked for.
-func (l lab) addToxic(
+func (d *Driver) addToxic(
 	ctx context.Context, compose dockercompose.Compose, profiles []string, toxic labspec.Toxic, fault *trailcheck.ChaosFault, log *strings.Builder,
 ) {
 	args := toxicArgs(toxic)
 	added, err := compose.Exec(ctx, profiles, proxyService, args)
 	fault.Applied = err == nil && added.ExitCode == 0
 	fmt.Fprintf(log, "toxic added on %s: exit %d %v %s\n", toxic.Victim, added.ExitCode, err, strings.TrimSpace(added.Stdout+added.Stderr))
-	listed, _ := l.inspectProxy(ctx, compose, profiles, toxic.Victim, log)
+	listed, _ := d.inspectProxy(ctx, compose, profiles, toxic.Victim, log)
 	fault.Held = fault.Applied && strings.Contains(listed, toxicName+"\ttype=") && strings.Contains(listed, "\t"+args[len(args)-2]+"\t")
 	noteRead(fault, "the proxy listed %q", strings.TrimSpace(listed))
 }
 
 // removeToxic lifts the toxic, and it is lifted only when the proxy no longer
 // lists it.
-func (l lab) removeToxic(
+func (d *Driver) removeToxic(
 	ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, fault *trailcheck.ChaosFault, log *strings.Builder,
 ) {
 	removed, err := compose.Exec(ctx, profiles, proxyService, []string{proxyCLI, "toxic", "remove", "-n", toxicName, victim})
 	fmt.Fprintf(log, "toxic removed from %s: exit %d %v %s\n", victim, removed.ExitCode, err, strings.TrimSpace(removed.Stdout+removed.Stderr))
-	listed, read := l.inspectProxy(ctx, compose, profiles, victim, log)
+	listed, read := d.inspectProxy(ctx, compose, profiles, victim, log)
 	fault.Lifted = err == nil && removed.ExitCode == 0 && read && !strings.Contains(listed, toxicName)
 	if read {
 		noteRead(fault, "after the removal it listed %q", strings.TrimSpace(listed))
@@ -48,7 +48,7 @@ func (l lab) removeToxic(
 
 // inspectProxy is the proxy's listing of one proxy's toxics, and whether it
 // could be read at all: a proxy with no toxic lists nothing.
-func (l lab) inspectProxy(
+func (d *Driver) inspectProxy(
 	ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, log *strings.Builder,
 ) (string, bool) {
 	listed, err := compose.Exec(ctx, profiles, proxyService, []string{proxyCLI, "inspect", victim})
@@ -63,8 +63,8 @@ func (l lab) inspectProxy(
 // down, which has to show records waiting for it, then starts it again. The
 // collector is lifted when compose reports it running and the enforcer's
 // exporter has had records acknowledged since it was down.
-func (l lab) restartCollector(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *trailcheck.ChaosFault, log *strings.Builder) {
-	body, err := l.planeGet(ctx, compose, profiles, "/healthz")
+func (d *Driver) restartCollector(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *trailcheck.ChaosFault, log *strings.Builder) {
+	body, err := d.planeGet(ctx, compose, profiles, "/healthz")
 	fmt.Fprintf(log, "healthz while the collector was down: %v %s\n", err, strings.TrimSpace(string(body)))
 	var down planeHealth
 	if err == nil {
@@ -82,16 +82,16 @@ func (l lab) restartCollector(ctx context.Context, compose dockercompose.Compose
 	}
 	err = compose.Up(ctx, profiles, []string{collectorService})
 	fmt.Fprintf(log, "collector started: %v\n", err)
-	running := err == nil && l.collectorRunning(ctx, compose, profiles, fault)
+	running := err == nil && d.collectorRunning(ctx, compose, profiles, fault)
 	if !counted {
 		noteRead(fault, "no exporter.acknowledged while it was down to compare against")
 		return
 	}
-	fault.Lifted = running && l.acknowledgedSince(ctx, compose, profiles, before, fault, log)
+	fault.Lifted = running && d.acknowledgedSince(ctx, compose, profiles, before, fault, log)
 }
 
 // collectorRunning is compose's own account of the collector's container.
-func (l lab) collectorRunning(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *trailcheck.ChaosFault) bool {
+func (d *Driver) collectorRunning(ctx context.Context, compose dockercompose.Compose, profiles []string, fault *trailcheck.ChaosFault) bool {
 	services, err := compose.Status(ctx, profiles, []string{collectorService})
 	for _, service := range services {
 		if service.Name == collectorService {
@@ -105,10 +105,10 @@ func (l lab) collectorRunning(ctx context.Context, compose dockercompose.Compose
 
 // acknowledgedSince polls the enforcer's /healthz, within the drain's bound,
 // until its exporter has had more records acknowledged than before.
-func (l lab) acknowledgedSince(
+func (d *Driver) acknowledgedSince(
 	ctx context.Context, compose dockercompose.Compose, profiles []string, before int64, fault *trailcheck.ChaosFault, log *strings.Builder,
 ) bool {
-	bound := l.drainBound
+	bound := d.config.DrainBound
 	if bound <= 0 {
 		bound = drainTimeout
 	}
@@ -116,7 +116,7 @@ func (l lab) acknowledgedSince(
 	defer cancel()
 	var last string
 	for {
-		body, err := l.planeGet(ctx, compose, profiles, "/healthz")
+		body, err := d.planeGet(ctx, compose, profiles, "/healthz")
 		health, readErr := readHealth(body)
 		now, counted := health.acknowledged()
 		switch {
@@ -142,13 +142,13 @@ func (l lab) acknowledgedSince(
 // client the enforcer knows nothing of. It happened when that listing
 // describes a tool otherwise than the snapshot the enforcer's classification
 // was pinned to.
-func (l lab) relist(ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, fault *trailcheck.ChaosFault, log *strings.Builder) {
+func (d *Driver) relist(ctx context.Context, compose dockercompose.Compose, profiles []string, victim string, fault *trailcheck.ChaosFault, log *strings.Builder) {
 	listed, err := compose.Exec(ctx, profiles, victim,
 		[]string{"/relist", "http://127.0.0.1:" + servicePort + "/mcp"})
 	fmt.Fprintf(log, "%s listed again: exit %d %v\n%s\n%s\n", victim, listed.ExitCode, err,
 		strings.TrimSpace(listed.Stdout), strings.TrimSpace(listed.Stderr))
 	fault.Applied = err == nil && listed.ExitCode == 0
-	changed, err := l.describedAnew(victim, listed.Stdout)
+	changed, err := d.describedAnew(victim, listed.Stdout)
 	switch {
 	case err != nil:
 		noteRead(fault, "%v", err)
@@ -162,8 +162,8 @@ func (l lab) relist(ctx context.Context, compose dockercompose.Compose, profiles
 
 // describedAnew names each tool the printed listing describes otherwise than
 // the victim's listing snapshot, or does not name at all.
-func (l lab) describedAnew(victim, printed string) ([]string, error) {
-	path := filepath.Join(l.root, listingSnapshots, victim+".json")
+func (d *Driver) describedAnew(victim, printed string) ([]string, error) {
+	path := filepath.Join(d.config.Root, listingSnapshots, victim+".json")
 	body, err := os.ReadFile(path) // #nosec G304 -- the lab's own snapshot of a victim it names.
 	if err != nil {
 		return nil, err

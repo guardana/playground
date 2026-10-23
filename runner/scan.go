@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
 	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
 )
@@ -86,7 +87,7 @@ func copyTree(from, to string) error {
 		return err
 	}
 	defer func() { _ = root.Close() }()
-	if err := makeDir(to, inputDirMode); err != nil {
+	if err := runfile.MakeDir(to, inputDirMode); err != nil {
 		return err
 	}
 	files := 0
@@ -101,7 +102,7 @@ func copyTree(from, to string) error {
 		case strings.Count(name, "/") >= maxScanDepth:
 			return fmt.Errorf("%s is deeper than %d", name, maxScanDepth)
 		case entry.IsDir():
-			return makeDir(filepath.Join(to, filepath.FromSlash(name)), inputDirMode)
+			return runfile.MakeDir(filepath.Join(to, filepath.FromSlash(name)), inputDirMode)
 		case !entry.Type().IsRegular():
 			return fmt.Errorf("%s is not a regular file", name)
 		}

@@ -23,10 +23,16 @@ type Run struct {
 	ID string
 	// Dir is the run's directory on the host.
 	Dir string
+	// GateAddress is the gate's own address on the run's agent-net, which no
+	// container the agent runs in is handed.
+	GateAddress string
 	// Compose carries the run's environment; it is nil until the run's
 	// subjects are prepared.
 	Compose dockercompose.Compose
 }
+
+// Reach asks, from the agent's place on the network, whether target answers.
+type Reach func(ctx context.Context, target string) check.Probe
 
 // Refusal is a run a subject refused before anything was brought up, reported
 // as the one check it fails.
@@ -53,10 +59,17 @@ type Subject interface {
 	OneShots() []string
 	// Describe reads the subject's build with inspect, at pins.
 	Describe(ctx context.Context, inspect Lookup, pins Pins) Description
+	// Env names the variables compose interpolates for the subject's services
+	// in every run, whether or not the scenario picks it: the topology names
+	// them all.
+	Env(run Run) map[string]string
 }
 
 // Gate decides each call the agent makes, in front of the victims.
 type Gate interface {
+	// Admit refuses a scenario and trajectory the gate could not decide as
+	// written, before anything is brought up.
+	Admit(scenario labspec.Scenario, trajectory labspec.Trajectory) error
 	// Prepare writes what the gate needs before the profile boots and returns
 	// the variables compose interpolates for it.
 	Prepare(ctx context.Context, run Run, scenario labspec.Scenario) (map[string]string, error)
@@ -69,8 +82,11 @@ type Gate interface {
 
 // GateRun is a gate's part of one run, in the order the runner calls it.
 type GateRun interface {
-	// Isolation probes that the agent reaches the gate and nothing behind it.
-	Isolation(ctx context.Context) assertion.Check
+	// Endpoint is the host and port at which the agent reaches the gate.
+	Endpoint() string
+	// Sealed probes what the gate keeps from the agent: reach asks from the
+	// agent's place, and the gate's own probes ask from the other side.
+	Sealed(ctx context.Context, reach Reach) []check.Probe
 	// AgentFlags point the agent at the gate.
 	AgentFlags() []string
 	// Chaos runs replay under the scenario's faults, and returns its check and

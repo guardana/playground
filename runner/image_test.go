@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 )
 
@@ -20,6 +21,12 @@ func (f *fakeCompose) ContainerImage(ctx context.Context, _ []string, service st
 		return "", errors.New("no container")
 	}
 	return f.image(service)
+}
+
+// setInspect has the enforcer's driver read images with inspect.
+func setInspect(t *testing.T, subject *lab, inspect lookup) {
+	t.Helper()
+	reconfigure(t, subject, func(config *control.Config) { config.Inspect = inspect })
 }
 
 // testTree is the tree of testPin in the enforcer's repository.
@@ -49,10 +56,10 @@ func TestTheRunsOwnEnforcerContainerIsTheOneGraded(t *testing.T) {
 	}
 	var inspected []string
 	answer := inspectEnforcer(testTree)
-	subject.inspect = func(ctx context.Context, name string, args ...string) (string, error) {
+	setInspect(t, &subject, func(ctx context.Context, name string, args ...string) (string, error) {
 		inspected = append(inspected, strings.Join(append([]string{name}, args...), " "))
 		return answer(ctx, name, args...)
-	}
+	})
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -81,16 +88,16 @@ func TestTheRunsOwnEnforcerContainerIsTheOneGraded(t *testing.T) {
 // that names no tree is not what the build script vouched for.
 func TestAnEnforcerImageWithoutTheVerifiedTreeFails(t *testing.T) {
 	for name, tc := range map[string]struct {
-		set   func(*lab)
+		set   func(*testing.T, *lab)
 		found string
 	}{
-		"built by hand": {func(l *lab) { l.inspect = inspectEnforcer("") }, "no tree label"},
-		"docker saying no value": {func(l *lab) { l.inspect = inspectEnforcer("<no value>") },
+		"built by hand": {func(t *testing.T, l *lab) { setInspect(t, l, inspectEnforcer("")) }, "no tree label"},
+		"docker saying no value": {func(t *testing.T, l *lab) { setInspect(t, l, inspectEnforcer("<no value>")) },
 			"no tree label"},
-		"another tree": {func(l *lab) { l.inspect = inspectEnforcer("5d2260") },
+		"another tree": {func(t *testing.T, l *lab) { setInspect(t, l, inspectEnforcer("5d2260")) },
 			"tree label 5d2260"},
-		"the tree only on the tag": {func(l *lab) {
-			l.inspect = func(_ context.Context, _ string, args ...string) (string, error) {
+		"the tree only on the tag": {func(t *testing.T, l *lab) {
+			setInspect(t, l, func(_ context.Context, _ string, args ...string) (string, error) {
 				if strings.Contains(strings.Join(args, " "), "enforcer.tree") {
 					if args[len(args)-1] == "sha256:aa" {
 						return "", nil
@@ -98,23 +105,23 @@ func TestAnEnforcerImageWithoutTheVerifiedTreeFails(t *testing.T) {
 					return testTree, nil
 				}
 				return "sha256:aa " + testPin, nil
-			}
+			})
 		}, "no tree label"},
-		"no tree pinned": {func(l *lab) {
+		"no tree pinned": {func(_ *testing.T, l *lab) {
 			writeFile(filepath.Join(l.root, versionFile), "ENFORCER_COMMIT="+testPin+"\n")
 		}, "versions.env pins no ENFORCER_TREE"},
-		"the label unreadable": {func(l *lab) {
-			l.inspect = func(_ context.Context, _ string, args ...string) (string, error) {
+		"the label unreadable": {func(t *testing.T, l *lab) {
+			setInspect(t, l, func(_ context.Context, _ string, args ...string) (string, error) {
 				if strings.Contains(strings.Join(args, " "), "enforcer.tree") {
 					return "", errors.New("exit status 1: daemon gone")
 				}
 				return "sha256:aa " + testPin, nil
-			}
+			})
 		}, "daemon gone"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			subject, _, scenario := enforcerLab(t)
-			tc.set(&subject)
+			tc.set(t, &subject)
 			graded, err := subject.execute(context.Background(), scenario)
 			if err != nil {
 				t.Fatalf("execute: %v", err)
@@ -135,23 +142,23 @@ func TestAnEnforcerImageWithoutTheVerifiedTreeFails(t *testing.T) {
 }
 
 func TestAnEnforcerContainerRunningAnotherImageFails(t *testing.T) {
-	for name, set := range map[string]func(*lab, *fakeCompose){
-		"another image": func(_ *lab, c *fakeCompose) {
+	for name, set := range map[string]func(*testing.T, *lab, *fakeCompose){
+		"another image": func(_ *testing.T, _ *lab, c *fakeCompose) {
 			c.image = func(string) (string, error) { return "sha256:bb", nil }
 		},
-		"no container": func(_ *lab, c *fakeCompose) { c.image = nil },
-		"the pinned tag from another commit": func(l *lab, _ *fakeCompose) {
-			l.inspect = func(context.Context, string, ...string) (string, error) { return "sha256:aa 0000", nil }
+		"no container": func(_ *testing.T, _ *lab, c *fakeCompose) { c.image = nil },
+		"the pinned tag from another commit": func(t *testing.T, l *lab, _ *fakeCompose) {
+			setInspect(t, l, func(context.Context, string, ...string) (string, error) { return "sha256:aa 0000", nil })
 		},
-		"the pinned tag absent": func(l *lab, _ *fakeCompose) {
-			l.inspect = func(context.Context, string, ...string) (string, error) {
+		"the pinned tag absent": func(t *testing.T, l *lab, _ *fakeCompose) {
+			setInspect(t, l, func(context.Context, string, ...string) (string, error) {
 				return "", errors.New("No such image")
-			}
+			})
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			subject, compose, scenario := enforcerLab(t)
-			set(&subject, compose)
+			set(t, &subject, compose)
 			graded, err := subject.execute(context.Background(), scenario)
 			if err != nil {
 				t.Fatalf("execute: %v", err)

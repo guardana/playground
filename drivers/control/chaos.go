@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"context"
@@ -29,8 +29,8 @@ const (
 
 // proxyTargets reads which proxy listener stands for each victim, from the
 // file the proxy starts with, as host:port on tool-net.
-func (l lab) proxyTargets() (map[string]string, error) {
-	body, err := os.ReadFile(filepath.Join(l.root, proxyFile)) // #nosec G304 -- the lab's own file.
+func (d *Driver) proxyTargets() (map[string]string, error) {
+	body, err := os.ReadFile(filepath.Join(d.config.Root, proxyFile)) // #nosec G304 -- the lab's own file.
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +54,10 @@ func (l lab) proxyTargets() (map[string]string, error) {
 
 // routedUpstreams is every victim the enforcer fronts, a proxied one reached
 // through its proxy and the rest directly.
-func (l lab) routedUpstreams(proxied []string) ([]gateway.Upstream, error) {
+func (d *Driver) routedUpstreams(proxied []string) ([]gateway.Upstream, error) {
 	var targets map[string]string
 	if len(proxied) > 0 {
-		found, err := l.proxyTargets()
+		found, err := d.proxyTargets()
 		if err != nil {
 			return nil, err
 		}
@@ -89,12 +89,12 @@ func victimIndex(name string) int {
 
 // sealedProxies are the proxy listeners a run routes through, which the agent
 // must not reach any more than the victims behind them.
-func (l lab) sealedProxies(spec labspec.Scenario) ([]string, error) {
+func (d *Driver) sealedProxies(spec labspec.Scenario) ([]string, error) {
 	proxied := spec.Proxied()
 	if len(proxied) == 0 {
 		return nil, nil
 	}
-	targets, err := l.proxyTargets()
+	targets, err := d.proxyTargets()
 	if err != nil {
 		return nil, err
 	}
@@ -117,20 +117,20 @@ type chaosRun struct {
 
 // applyChaos breaks what the scenario names, in order, after boot and before
 // the replay, and records each step in chaos.log.
-func (l lab) applyChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario) *chaosRun {
+func (d *Driver) applyChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario) *chaosRun {
 	run := &chaosRun{}
 	for _, fault := range spec.Chaos {
 		recorded := trailcheck.ChaosFault{Name: faultName(fault)}
 		switch {
 		case fault.Toxic != nil:
-			l.applyToxic(ctx, compose, spec, *fault.Toxic, &recorded, &run.log)
+			d.applyToxic(ctx, compose, spec, *fault.Toxic, &recorded, &run.log)
 		case fault.Collector != "":
 			err := compose.Stop(ctx, spec.Profile, collectorService)
 			recorded.Applied = err == nil
 			fmt.Fprintf(&run.log, "collector stopped: %v\n", err)
 		default:
 			recorded.Unliftable = true
-			l.relist(ctx, compose, spec.Profile, fault.Relist, &recorded, &run.log)
+			d.relist(ctx, compose, spec.Profile, fault.Relist, &recorded, &run.log)
 		}
 		run.faults = append(run.faults, recorded)
 	}
@@ -140,7 +140,7 @@ func (l lab) applyChaos(ctx context.Context, compose dockercompose.Compose, spec
 // applyToxic names what the trail has to show of the toxic, then puts it on
 // the victim's proxy. A hang is held to the call timeout the scenario's
 // gateway configuration sets.
-func (l lab) applyToxic(
+func (d *Driver) applyToxic(
 	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, toxic labspec.Toxic, fault *trailcheck.ChaosFault, log *strings.Builder,
 ) {
 	fault.Victim = toxic.Victim
@@ -149,7 +149,7 @@ func (l lab) applyToxic(
 		fault.Latency = time.Duration(toxic.Latency)
 	case labspec.ToxicHang:
 		fault.Hang = true
-		partial, err := os.ReadFile(l.workspace.file(spec.Gateway.Config)) // #nosec G304 -- a workspace path the scenario names.
+		partial, err := os.ReadFile(d.config.Workspace.file(spec.Gateway.Config)) // #nosec G304 -- a workspace path the scenario names.
 		if err == nil {
 			fault.CallTimeout, err = gateway.CallTimeout(partial)
 		}
@@ -157,25 +157,25 @@ func (l lab) applyToxic(
 			noteRead(fault, "upstream.call_timeout unread: %v", err)
 		}
 	}
-	l.addToxic(ctx, compose, spec.Profile, toxic, fault, log)
+	d.addToxic(ctx, compose, spec.Profile, toxic, fault, log)
 }
 
 // liftChaos mends every fault after the replay and before the drain: toxics
 // removed, the collector's backlog read and the collector started again. A
 // second listing has nothing to lift.
-func (l lab) liftChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, run *chaosRun, runDir string) trailcheck.Chaos {
+func (d *Driver) liftChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, run *chaosRun, runDir string) trailcheck.Chaos {
 	for i, fault := range spec.Chaos {
 		recorded := &run.faults[i]
 		switch {
 		case fault.Toxic != nil:
-			l.removeToxic(ctx, compose, spec.Profile, fault.Toxic.Victim, recorded, &run.log)
+			d.removeToxic(ctx, compose, spec.Profile, fault.Toxic.Victim, recorded, &run.log)
 		case fault.Collector != "":
-			l.restartCollector(ctx, compose, spec.Profile, recorded, &run.log)
+			d.restartCollector(ctx, compose, spec.Profile, recorded, &run.log)
 		}
 	}
 	source := filepath.Join(runDir, "chaos.log")
 	if err := writeBytes(source, []byte(run.log.String())); err != nil {
-		l.note("writing the chaos record: %v", err)
+		d.note("writing the chaos record: %v", err)
 	}
 	return trailcheck.Chaos{Faults: run.faults, Source: source}
 }

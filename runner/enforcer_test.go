@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/runner/dockercompose"
 )
@@ -155,7 +156,7 @@ func TestATrailReadBeforeTheSpoolDrainedFails(t *testing.T) {
 		}
 		return answer(service, args)
 	}
-	subject.drainBound = 800 * time.Millisecond
+	reconfigure(t, &subject, func(config *control.Config) { config.DrainBound = 800 * time.Millisecond })
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -171,7 +172,7 @@ func TestATrailReadBeforeTheSpoolDrainedFails(t *testing.T) {
 
 func TestARunWithNoLabKeyIsRefusedBeforeAnythingBoots(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
-	subject.keysDir = filepath.Join(t.TempDir(), "absent")
+	reconfigure(t, &subject, func(config *control.Config) { config.KeysDir = filepath.Join(t.TempDir(), "absent") })
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)

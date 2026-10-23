@@ -438,7 +438,7 @@ services:
   # enforcer joins it once a service runs that image). It decides nothing and
   # holds no signing key, so a compromise of it forges no verdict, only the
   # record of one. It answers over TLS with the certificate the runner made for this run
-  # (runner/collectortls.go), since the enforcer sends plaintext to a loopback
+  # (drivers/control/collectortls.go), since the enforcer sends plaintext to a loopback
   # address only.
   collector:
     image: ${OTEL_COLLECTOR_IMAGE}

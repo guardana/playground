@@ -10,7 +10,7 @@ import (
 // subjects is every tool the lab drives, in the order the report describes
 // them, whichever a scenario picks.
 func (l lab) subjects() []driver.Subject {
-	return []driver.Subject{newControl(l), newGuardana(l)}
+	return []driver.Subject{l.control, newGuardana(l)}
 }
 
 // picked is what drives one scenario: each role it fills, nil where it fills
@@ -27,9 +27,8 @@ type picked struct {
 func (l lab) pick(spec labspec.Scenario) picked {
 	var chosen picked
 	if spec.Gateway != nil {
-		control := newControl(l)
-		chosen.gate = control
-		chosen.subjects = append(chosen.subjects, control)
+		chosen.gate = l.control
+		chosen.subjects = append(chosen.subjects, l.control)
 	}
 	if !spec.IsVerifier() && spec.Trace == nil {
 		return chosen
@@ -61,4 +60,13 @@ func (l lab) oneShots() []string {
 		shots = append(shots, subject.OneShots()...)
 	}
 	return shots
+}
+
+// admit has the scenario's gate refuse a trajectory it could not decide as
+// written; a scenario with no gate has nothing to refuse.
+func (l lab) admit(spec labspec.Scenario, trajectory labspec.Trajectory) error {
+	if gate := l.pick(spec).gate; gate != nil {
+		return gate.Admit(spec, trajectory)
+	}
+	return nil
 }

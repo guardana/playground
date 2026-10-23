@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/report"
 )
@@ -31,49 +32,6 @@ func TestTheReportCarriesWhatProducedTheRun(t *testing.T) {
 	}
 	if !strings.Contains(string(page), "- Lab: lab-commit-under-test") {
 		t.Errorf("report.md does not carry the provenance:\n%s", page)
-	}
-}
-
-// dockerSays answers `docker image inspect` the way the daemon would, with the
-// output or error given for every image.
-func dockerSays(out string, err error) lookup {
-	return func(_ context.Context, name string, args ...string) (string, error) {
-		if name != "docker" || len(args) < 2 || args[0] != "image" || args[1] != "inspect" {
-			return "", fmt.Errorf("unexpected lookup %s %v", name, args)
-		}
-		return out, err
-	}
-}
-
-func TestInspectImageReadsWhatTheDaemonSays(t *testing.T) {
-	commit := "e72ebe261af4ca9bb4b683ddedda81bfcc5de906"
-	for _, c := range []struct {
-		name        string
-		out         string
-		err         error
-		wantLabel   string
-		wantMissing string
-	}{
-		{name: "another commit's label", out: "sha256:aa 0123456789abcdef0123456789abcdef01234567",
-			wantLabel: "0123456789abcdef0123456789abcdef01234567"},
-		{name: "no label", out: "sha256:aa <no value>"},
-		{name: "not built", err: errors.New("exit status 1: Error response from daemon: No such image: x:y"),
-			wantMissing: "not built on this machine"},
-		{name: "daemon down", err: errors.New("exit status 1: Cannot connect to the Docker daemon"),
-			wantMissing: "unreadable: exit status 1: Cannot connect to the Docker daemon"},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			image := inspectImage(context.Background(), dockerSays(c.out, c.err), "playground-enforcer", commit, revisionLabel)
-			if image.Ref != "playground-enforcer:"+commit || image.Want != commit {
-				t.Errorf("inspected %q wanting %q", image.Ref, image.Want)
-			}
-			if image.Label != c.wantLabel || image.Missing != c.wantMissing {
-				t.Errorf("label %q missing %q, want label %q missing %q", image.Label, image.Missing, c.wantLabel, c.wantMissing)
-			}
-			if image.Matches() {
-				t.Errorf("%+v matches its pin", image)
-			}
-		})
 	}
 }
 
@@ -103,7 +61,8 @@ func TestEachImageIsReadByItsOwnLabel(t *testing.T) {
 		{Name: "VERIFIER_IMAGE", Value: "playground-verifier"}, {Name: "VERIFIER_VERSION", Value: "1.0.0rc5"},
 		{Name: "ENFORCER_TREE", Value: "7ree"},
 	}
-	found := describeSubjects(context.Background(), lab{}.subjects(), labelledDaemon, pins).Images
+	subject, _, _ := enforcerLab(t)
+	found := describeSubjects(context.Background(), subject.subjects(), labelledDaemon, pins).Images
 	if len(found) != 2 {
 		t.Fatalf("read %d images, want 2", len(found))
 	}
@@ -201,11 +160,11 @@ func TestAWorkspaceInsideAnotherCheckoutIsNotReportedUnderItsCommit(t *testing.T
 	}
 	inner := filepath.Join(outer, "policies")
 	writeFile(filepath.Join(inner, "scenarios", "x.yaml"), "id: x\n")
-	got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: resolved(inner), external: true})
-	if strings.Contains(got, commit) || !strings.Contains(got, "not a git checkout (inside "+resolved(outer)+")") {
+	got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: hostpath.Resolved(inner), external: true})
+	if strings.Contains(got, commit) || !strings.Contains(got, "not a git checkout (inside "+hostpath.Resolved(outer)+")") {
 		t.Errorf("a workspace inside another checkout reads as %q", got)
 	}
-	if got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: resolved(outer), external: true}); !strings.Contains(got, commit) {
+	if got := describeWorkspace(ctx, dockercompose.Output, workspace{dir: hostpath.Resolved(outer), external: true}); !strings.Contains(got, commit) {
 		t.Errorf("a workspace that is a checkout reads as %q, want its commit %s", got, commit)
 	}
 }

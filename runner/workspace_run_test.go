@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/internal/hostpath"
 )
 
 // apart moves the lab's own files into a clone of their own and leaves the
@@ -29,19 +31,24 @@ func apart(t *testing.T, subject *lab, labOwned ...string) {
 			t.Fatal(err)
 		}
 	}
-	subject.workspace = workspace{dir: resolved(subject.root)}
+	subject.workspace = workspace{dir: hostpath.Resolved(subject.root)}
 	subject.root = clone
+	reconfigure(t, subject, func(config *control.Config) {
+		config.Root, config.Workspace = clone, control.Workspace{Dir: subject.workspace.dir}
+	})
 }
 
 func TestAScenariosFilesAreReadFromTheWorkspaceAndTheLabsFromTheClone(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
 	apart(t, &subject, classification, fingerprints, versionFile)
 	var signed string
-	sign := subject.sign
-	subject.sign = func(ctx context.Context, keys, policy, out string) error {
-		signed = policy
-		return sign(ctx, keys, policy, out)
-	}
+	reconfigure(t, &subject, func(config *control.Config) {
+		sign := config.Sign
+		config.Sign = func(ctx context.Context, keys, policy, out string) error {
+			signed = policy
+			return sign(ctx, keys, policy, out)
+		}
+	})
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -94,9 +101,9 @@ func TestRunLocatesScenariosOnlyInTheWorkspace(t *testing.T) {
 		args []string
 		says string
 	}{
-		{"by identifier", []string{"-scenario", "flow-01"}, filepath.Join(resolved(space), "scenarios")},
+		{"by identifier", []string{"-scenario", "flow-01"}, filepath.Join(hostpath.Resolved(space), "scenarios")},
 		{"by the clone's path", []string{"-scenario", filepath.Join(root, "scenarios/flow/flow-01.yaml")}, "outside the workspace"},
-		{"all of them", []string{"-all"}, filepath.Join(resolved(space), "scenarios")},
+		{"all of them", []string{"-all"}, filepath.Join(hostpath.Resolved(space), "scenarios")},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var out strings.Builder

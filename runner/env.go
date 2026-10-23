@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash/fnv"
-	"net"
+	"maps"
 	"net/netip"
 	"path/filepath"
 	"strings"
@@ -22,11 +21,11 @@ const (
 )
 
 // agentNet is one run's agent-net: its subnet, the lower half docker hands out
-// to the agent's containers, and the enforcer's fixed address in the upper half.
+// to the agent's containers, and the gate's fixed address in the upper half.
 type agentNet struct {
-	subnet   netip.Prefix
-	dynamic  netip.Prefix
-	enforcer netip.Addr
+	subnet  netip.Prefix
+	dynamic netip.Prefix
+	gate    netip.Addr
 }
 
 // agentNetFor picks the run's subnet from its random suffix, so parallel runs
@@ -44,33 +43,33 @@ func agentNetFor(runID string) agentNet {
 	binary.BigEndian.PutUint32(last[:], offset+1<<(32-agentBits)-2)
 	start := netip.AddrFrom4(first)
 	return agentNet{
-		subnet:   netip.PrefixFrom(start, agentBits),
-		dynamic:  netip.PrefixFrom(start, agentBits+1),
-		enforcer: netip.AddrFrom4(last),
+		subnet:  netip.PrefixFrom(start, agentBits),
+		dynamic: netip.PrefixFrom(start, agentBits+1),
+		gate:    netip.AddrFrom4(last),
 	}
 }
 
-// enforcerListener is the address the enforcer's agent listener binds in this
-// run: its own address on agent-net, which no other network of its reaches.
-func enforcerListener(runID string) string {
-	return net.JoinHostPort(agentNetFor(runID).enforcer.String(), servicePort)
+// newRun is one scenario's run, with the gate's address on its agent-net.
+func newRun(runID, runDir string) driver.Run {
+	return driver.Run{ID: runID, Dir: runDir, GateAddress: agentNetFor(runID).gate.String()}
 }
 
-// environment is what compose interpolates into the topology for this run.
-func (l lab) environment(runID, runDir string) map[string]string {
+// environment is what compose interpolates into the topology for this run:
+// the run's own variables, and every subject's, whichever the scenario picks.
+func (l lab) environment(run driver.Run) map[string]string {
 	env := map[string]string{
-		"LAB_RUN_ID":           runID,
+		"LAB_RUN_ID":           run.ID,
 		"LAB_REPORTS_DIR":      containerReports,
-		"COMPOSE_PROJECT_NAME": projectName(runID),
-		"LAB_ENFORCER_REF":     l.enforcerImage,
-		"LAB_ENFORCER_TAG":     l.enforcerImage[strings.LastIndex(l.enforcerImage, ":")+1:],
+		"COMPOSE_PROJECT_NAME": projectName(run.ID),
 		workspaceVariable:      l.workspace.dir,
 	}
-	network := agentNetFor(runID)
+	network := agentNetFor(run.ID)
 	env["LAB_AGENT_SUBNET"] = network.subnet.String()
 	env["LAB_AGENT_RANGE"] = network.dynamic.String()
-	env["LAB_ENFORCER_ADDRESS"] = network.enforcer.String()
-	if absolute, err := filepath.Abs(runDir); err == nil {
+	for _, subject := range l.subjects() {
+		maps.Copy(env, subject.Env(run))
+	}
+	if absolute, err := filepath.Abs(run.Dir); err == nil {
 		env["LAB_RUN_HOST_DIR"] = absolute
 	}
 	return env
@@ -81,47 +80,6 @@ func (l lab) environment(runID, runDir string) map[string]string {
 // one boots into. The random suffix of the run id is what makes it unique.
 func projectName(runID string) string {
 	return "lab-" + strings.ToLower(runID[strings.LastIndex(runID, "-")+1:])
-}
-
-// enforcerNamespace is the namespace versions.env pins for the enforcer. Its
-// gateway marks the answers it makes itself under it, and the agent is told it
-// so an upstream result shaped like a pending answer is not retried as one.
-func enforcerNamespace(root string) (string, error) {
-	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
-	if err != nil {
-		return "", fmt.Errorf("the pins cannot be read: %w", err)
-	}
-	namespace := pins.Value("ENFORCER_NAMESPACE")
-	if namespace == "" {
-		return "", fmt.Errorf("%s pins no ENFORCER_NAMESPACE", versionFile)
-	}
-	return namespace, nil
-}
-
-// enforcerPin is the commit versions.env pins the enforcer at.
-func enforcerPin(root string) (string, error) {
-	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
-	if err != nil {
-		return "", fmt.Errorf("the pins cannot be read: %w", err)
-	}
-	pin := pins.Value("ENFORCER_COMMIT")
-	if pin == "" {
-		return "", fmt.Errorf("%s pins no ENFORCER_COMMIT", versionFile)
-	}
-	return pin, nil
-}
-
-// enforcerImage is the enforcer's image as versions.env pins it, name and tag.
-func enforcerImage(root string) (string, error) {
-	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
-	if err != nil {
-		return "", fmt.Errorf("the pins cannot be read: %w", err)
-	}
-	name, commit := pins.Value("ENFORCER_IMAGE"), pins.Value("ENFORCER_COMMIT")
-	if name == "" || commit == "" {
-		return "", fmt.Errorf("%s pins no ENFORCER_IMAGE or no ENFORCER_COMMIT", versionFile)
-	}
-	return name + ":" + commit, nil
 }
 
 // lookupIn reads one variable from an environment given as NAME=VALUE lines.

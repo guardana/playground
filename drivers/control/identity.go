@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ type gatewayIdentity struct {
 // listener authenticates nobody and decides every call for the identity its
 // configuration names, so a trajectory naming another would describe a run
 // the enforcer never decided.
-func refuseAnotherIdentity(space workspace, spec labspec.Scenario, trajectory labspec.Trajectory) error {
+func refuseAnotherIdentity(space Workspace, spec labspec.Scenario, trajectory labspec.Trajectory) error {
 	if spec.Gateway == nil {
 		return nil
 	}

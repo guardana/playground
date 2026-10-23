@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"path/filepath"
@@ -33,7 +33,7 @@ func identityRefusal(t *testing.T, gateway string, trajectory labspec.Trajectory
 	root := t.TempDir()
 	writeFile(filepath.Join(root, "config/gateway/scenarios/case.yaml"), gateway)
 	spec := labspec.Scenario{Gateway: &labspec.Gateway{Config: "config/gateway/scenarios/case.yaml"}}
-	return refuseAnotherIdentity(workspace{dir: root}, spec, trajectory)
+	return refuseAnotherIdentity(Workspace{Dir: root}, spec, trajectory)
 }
 
 // The listener authenticates nobody: the enforcer decides every call for the

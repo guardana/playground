@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/dockercompose"
@@ -64,25 +65,12 @@ type lab struct {
 	// describe reads what produced the run for the report header; nil records
 	// that nothing was read.
 	describe func(context.Context) report.Provenance
-	// namespace is the enforcer's, under which its gateway marks the answers
-	// it makes itself; the agent reads a pending answer only under it.
-	namespace string
-	// pin is the version the running enforcer has to report: ENFORCER_COMMIT,
-	// or a development build's own, with the pin it replaced in pinned.
-	pin    string
-	pinned string
-	// development is the development build the run uses instead of the pin.
-	development *devBuild
-	// keysDir holds the lab key; sign signs a scenario's policy with it.
-	keysDir string
-	sign    signer
-	// drainBound bounds the wait for the plane's trail; zero reads as the
-	// default in drain.go.
-	drainBound time.Duration
-	// enforcerImage is ENFORCER_IMAGE:ENFORCER_COMMIT, or the development
-	// image the run uses instead; inspect reads it.
-	enforcerImage string
-	inspect       lookup
+	// control is the enforcer, the gate of every scenario with a gateway.
+	control *control.Driver
+	// development names a build a subject runs in place of its pin, for the
+	// run's lines; empty when every subject runs at its pin.
+	development string
+	inspect     lookup
 }
 
 // execute runs one scenario and writes its reports. It returns an error only
@@ -101,7 +89,7 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 	}
 
 	provenance := l.provenance(ctx)
-	spec, trajectory, err := load(l.workspace, scenarioPath)
+	spec, trajectory, err := load(l.workspace, scenarioPath, l.admit)
 	if err != nil {
 		// Nothing has been brought up, and nothing will be: a pair that does
 		// not validate cannot be graded, and a run that cannot be graded is a
@@ -117,7 +105,7 @@ func (l lab) execute(ctx context.Context, scenarioPath string) (assertion.Report
 // scenario has one, and the token and the double's persona for a verifier run.
 // The token is returned so the run can look for it after.
 func (l lab) prepare(ctx context.Context, gate driver.Gate, spec labspec.Scenario, run driver.Run) (map[string]string, string, error) {
-	env := l.environment(run.ID, run.Dir)
+	env := l.environment(run)
 	if gate != nil {
 		added, err := gate.Prepare(ctx, run, spec)
 		if err != nil {
@@ -141,7 +129,7 @@ func (l lab) runScenario(
 			return subjectRefused(spec.ID, runID, *refusal, l.clock()), nil
 		}
 	}
-	run := driver.Run{ID: runID, Dir: runDir}
+	run := newRun(runID, runDir)
 	env, token, err := l.prepare(ctx, chosen.gate, spec, run)
 	if err != nil {
 		return unprepared(spec.ID, runID, err, l.clock()), nil
@@ -238,31 +226,6 @@ func (l lab) takeDown(ctx context.Context, run driver.Run, profile []string, gat
 	}
 	if err := gate.Release(run); err != nil {
 		l.note("%v", err)
-	}
-}
-
-// composeRefused is the report of a run whose compose file did not load for its
-// profile, so nothing was built or brought up.
-func composeRefused(id, runID string, cause error, at time.Time) assertion.Report {
-	return assertion.Report{
-		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
-		Results: []assertion.Result{{
-			Check: "compose/loaded", Outcome: assertion.Fail,
-			Want: "docker compose reads the topology for the scenario's profile",
-			Got:  "the run was refused before anything was built", Detail: cause.Error(),
-		}},
-	}
-}
-
-// subjectRefused is the report of a run a subject refused before anything was
-// brought up.
-func subjectRefused(id, runID string, refusal driver.Refusal, at time.Time) assertion.Report {
-	return assertion.Report{
-		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
-		Results: []assertion.Result{{
-			Check: refusal.Check, Outcome: assertion.Fail, Want: refusal.Want,
-			Got: "the run was refused before anything was brought up", Detail: refusal.Cause.Error(),
-		}},
 	}
 }
 

@@ -33,9 +33,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/redbydesign"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 )
 
 const (
@@ -80,18 +82,15 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	subject := newLab(root, space, chosen, environ, out)
-	if subject, err = pinEnforcer(subject); err != nil {
+	gate, err := newControl(ctx, root, space, chosen, environ, out)
+	if err != nil {
 		return err
 	}
-	if chosen.enforcerDev == "" {
-		return execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
-	}
-	if subject, err = withDevelopment(ctx, subject, chosen.enforcerDev, space, dockercompose.Output); err != nil {
-		return err
-	}
+	subject := newLab(root, space, chosen, environ, out, gate)
 	err = execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
-	_, _ = fmt.Fprintf(out, "runner: graded against the %s\n", subject.development.describe(subject.pinned))
+	if subject.development != "" {
+		_, _ = fmt.Fprintf(out, "runner: graded against the %s\n", subject.development)
+	}
 	return err
 }
 
@@ -104,36 +103,26 @@ func execute(
 	return executeAll(ctx, subject, scenarios, out)
 }
 
-// pinEnforcer reads what versions.env pins the enforcer at: its namespace, its
-// commit and its image.
-func pinEnforcer(subject lab) (lab, error) {
-	var err error
-	if subject.namespace, err = enforcerNamespace(subject.root); err != nil {
-		return lab{}, err
-	}
-	if subject.pin, err = enforcerPin(subject.root); err != nil {
-		return lab{}, err
-	}
-	if subject.enforcerImage, err = enforcerImage(subject.root); err != nil {
-		return lab{}, err
-	}
-	return subject, nil
-}
-
-// withDevelopment points the run at a development image of the enforcer: the
-// version, the tree and the image ID it is checked against are the image's
-// own, policies are signed with its command, and the report names the build
-// and the pin it is not.
-func withDevelopment(ctx context.Context, subject lab, ref string, space workspace, run lookup) (lab, error) {
-	dev, err := readDevelopment(ctx, run, ref)
+// newControl builds the enforcer's driver from the lab-wide inputs, at its
+// pins or on the development image -enforcer-dev names.
+func newControl(
+	ctx context.Context, root string, space workspace, chosen settings, environ []string, out io.Writer,
+) (*control.Driver, error) {
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
 	if err != nil {
-		return lab{}, err
+		return nil, fmt.Errorf("the pins cannot be read: %w", err)
 	}
-	subject.pinned = subject.pin
-	subject.pin, subject.enforcerImage, subject.development = dev.Version, dev.Ref, &dev
-	subject.describe = describeHost(subject.root, space, run, subject.subjects())
-	subject.sign = signWithImage(dev.Ref, run)
-	return subject, nil
+	return control.New(ctx, control.Config{
+		Root:        root,
+		Reports:     chosen.reports,
+		Workspace:   control.Workspace{Dir: space.dir, External: space.external},
+		Inspect:     dockercompose.Output,
+		Log:         out,
+		Clock:       time.Now,
+		KeysDir:     control.KeysDir(lookupIn(environ)),
+		Pins:        pins,
+		Development: chosen.enforcerDev,
+	})
 }
 
 func parse(args []string, out io.Writer) (settings, error) {
@@ -167,7 +156,7 @@ func parse(args []string, out io.Writer) (settings, error) {
 	return chosen, empty
 }
 
-func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer) lab {
+func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer, gate *control.Driver) lab {
 	built := lab{
 		root:      root,
 		workspace: space,
@@ -179,14 +168,14 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 			Env:       environ,
 			Log:       out,
 		},
-		timeout: chosen.timeout,
-		keep:    chosen.keep,
-		clock:   time.Now,
-		suffix:  randomSuffix,
-		log:     out,
-		keysDir: labKeysDir(lookupIn(environ)),
-		sign:    signWithEnforcer(root, dockercompose.Output),
-		inspect: dockercompose.Output,
+		timeout:     chosen.timeout,
+		keep:        chosen.keep,
+		clock:       time.Now,
+		suffix:      randomSuffix,
+		log:         out,
+		control:     gate,
+		development: gate.Development(),
+		inspect:     dockercompose.Output,
 	}
 	built.describe = describeHost(root, space, dockercompose.Output, built.subjects())
 	return built
@@ -223,7 +212,7 @@ func runEach(ctx context.Context, subject lab, scenarios []string, out io.Writer
 			continue
 		}
 		suite := graded.Suite()
-		if subject.development != nil {
+		if subject.development != "" {
 			suite = "dev-" + suite
 		}
 		_, _ = fmt.Fprintf(out, "%-10s %-9s %s  %s\n", graded.Outcome(), suite, graded.Scenario,

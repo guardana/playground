@@ -11,7 +11,7 @@ import (
 
 // readers are the files that build or run the lab. A pin none of them reads is
 // a version nobody tests, and a header that says otherwise.
-var readers = []string{"compose.yaml", "Dockerfile.*", "../scripts/*.sh", "../runner/*.go", "../Makefile"}
+var readers = []string{"compose.yaml", "Dockerfile.*", "../scripts/*.sh", "../runner/*.go", "../drivers/*/*.go", "../Makefile"}
 
 func pins(t *testing.T) map[string]string {
 	t.Helper()

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/labspec"
 )
 
@@ -26,7 +27,7 @@ func TestEachRoleIsPickedFromTheScenariosOwnKeys(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			chosen := lab{}.pick(test.spec)
-			_, gate := chosen.gate.(controlSubject)
+			_, gate := chosen.gate.(*control.Driver)
 			_, prober := chosen.prober.(guardanaSubject)
 			_, grader := chosen.grader.(guardanaSubject)
 			if gate != test.gate || prober != test.prober || grader != test.grader {

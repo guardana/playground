@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"context"
@@ -29,21 +29,21 @@ var errNotDrained = errors.New("the spool still holds unacknowledged records")
 // unacknowledged and lost nothing on the way, stops the collector so its file
 // exporter flushes, and writes the run's evidence.jsonl from that file. Every
 // step is recorded in plane.log.
-func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, profiles []string, pin, runDir string) trailcheck.Plane {
-	bound := l.drainBound
+func (d *Driver) drainPlane(ctx context.Context, compose dockercompose.Compose, profiles []string, pin, runDir string) trailcheck.Plane {
+	bound := d.config.DrainBound
 	if bound <= 0 {
 		bound = drainTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, bound)
 	defer cancel()
 	plane := trailcheck.Plane{Pin: pin, Source: filepath.Join(runDir, "plane.log")}
-	if l.development != nil {
+	if d.development != nil {
 		plane.Builder = "scripts/build-enforcer-dev.sh"
 	}
 	var log strings.Builder
 	defer func() { _ = writeBytes(plane.Source, []byte(log.String())) }()
 
-	if body, err := l.planeGet(ctx, compose, profiles, "/brand"); err == nil {
+	if body, err := d.planeGet(ctx, compose, profiles, "/brand"); err == nil {
 		var brand struct {
 			Version string `json:"version"`
 		}
@@ -53,10 +53,10 @@ func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, prof
 	} else {
 		fmt.Fprintf(&log, "brand unreadable: %v\n", err)
 	}
-	l.readImages(ctx, compose, profiles, &plane)
+	d.readImages(ctx, compose, profiles, &plane)
 	fmt.Fprintf(&log, "image running %s, pinned %s built from %s, tree label %q, ENFORCER_TREE %q: %s\n",
 		plane.RunningImage, plane.PinnedImage, plane.PinnedLabel, plane.RunningTree, plane.TreePin, plane.ImageDetail)
-	health, err := l.waitHandedOver(ctx, compose, profiles)
+	health, err := d.waitHandedOver(ctx, compose, profiles)
 	fmt.Fprintf(&log, "healthz %s\nhanded over: %v\n", strings.TrimSpace(string(health)), err)
 	keepHealth(&log, runDir, health)
 	if err == nil {
@@ -67,7 +67,7 @@ func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, prof
 	}
 	if err == nil {
 		err = writeEvidenceFromCollector(filepath.Join(runDir, collectorOutput),
-			filepath.Join(runDir, "evidence.jsonl"), l.namespace, maxEvents)
+			filepath.Join(runDir, "evidence.jsonl"), d.namespace, maxEvents)
 		fmt.Fprintf(&log, "evidence written: %v\n", err)
 	}
 	plane.Drained = err == nil
@@ -82,11 +82,11 @@ func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, prof
 // unacknowledged, then requires that nothing was lost on the way. A lossy or
 // unreadable answer ends the wait at once: a quarantine does not drain. It
 // returns the last answer it read, nil when it read none.
-func (l lab) waitHandedOver(ctx context.Context, compose dockercompose.Compose, profiles []string) ([]byte, error) {
+func (d *Driver) waitHandedOver(ctx context.Context, compose dockercompose.Compose, profiles []string) ([]byte, error) {
 	var answer []byte
 	var last string
 	for {
-		body, err := l.planeGet(ctx, compose, profiles, "/healthz")
+		body, err := d.planeGet(ctx, compose, profiles, "/healthz")
 		if err != nil {
 			last = err.Error()
 		} else {
@@ -121,7 +121,7 @@ func keepHealth(log *strings.Builder, runDir string, health []byte) {
 
 // planeGet reads one of the enforcer's health endpoints from inside its own
 // container, whatever the status: a 503 is an answer worth reading.
-func (l lab) planeGet(ctx context.Context, compose dockercompose.Compose, profiles []string, path string) ([]byte, error) {
+func (d *Driver) planeGet(ctx context.Context, compose dockercompose.Compose, profiles []string, path string) ([]byte, error) {
 	split, err := compose.Exec(ctx, profiles, enforcerService,
 		[]string{"/healthprobe", "-show", "http://127.0.0.1:8081" + path})
 	if err != nil {

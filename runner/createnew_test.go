@@ -80,18 +80,21 @@ func TestNoRunnerSourceWritesThroughAnExistingPath(t *testing.T) {
 	}
 }
 
-// runnerSources lists this package's sources and its subpackages', tests aside.
+// runnerSources lists this package's sources and its subpackages', the
+// drivers' and the run-directory writer's, tests aside.
 func runnerSources(t *testing.T) []string {
 	t.Helper()
 	var sources []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
-		if err == nil && !entry.IsDir() && strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
-			sources = append(sources, path)
+	for _, root := range []string{".", "../drivers", "../internal/runfile"} {
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			if err == nil && !entry.IsDir() && strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
+				sources = append(sources, path)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
-		return err
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 	return sources
 }

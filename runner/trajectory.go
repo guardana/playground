@@ -20,7 +20,9 @@ func (l lab) gradeTrajectory(
 	boot assertion.Boot,
 ) (assertion.Report, []report.StepRow) {
 	gate := chosen.gate.Begin(run, spec, trajectory)
-	checks := []assertion.Check{check.Boot{Source: filepath.Join(run.Dir, "boot.json")}, gate.Isolation(ctx)}
+	checks := []assertion.Check{
+		check.Boot{Source: filepath.Join(run.Dir, "boot.json")}, l.isolation(ctx, run, spec, trajectory, gate),
+	}
 	flags := gate.AgentFlags()
 	if chosen.grader != nil {
 		flags = append(flags, chosen.grader.AgentFlags(run)...)
