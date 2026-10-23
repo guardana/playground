@@ -1,16 +1,28 @@
 # Project rules
 
-This is a laboratory. It exists to answer one question, for every release of the
-systems it tests: do they actually block, approve, oblige, record and detect what
-they claim to?
+This is a laboratory for AI tools and models. It exists to answer one question,
+for every release of every tool it tests: does it actually block, approve,
+oblige, record and detect what it claims to?
 
-Two systems are under test. [Guardana](https://github.com/guardana/guardana)
-verifies a deployed system and grades a run after the fact. Control (the
-enforcer) decides one tool call as it is made, and records why. This repository
-attacks both and checks the evidence they leave behind.
+It is tool-neutral. Two tools are wired in today: Control (the enforcer)
+decides one tool call as it is made and records why, and
+[Guardana](https://github.com/guardana/guardana) (the verifier) probes servers,
+scans artifacts and grades a run after the fact. This repository attacks each
+tool and checks the evidence it leaves behind.
 
 These rules bind everyone and everything that writes code here. Contributors
 should also read CONTRIBUTING.md, which says the same things for people.
+
+## No tool gets a special place
+
+Name shared formats, runner code, checks, files and documentation after roles
+(enforcer, verifier, scanner, prober, grader, monitor), never after a product,
+and never shape them after one tool's command line or report. A tool's own names
+(its CLI, report schema, rule ids, image, package) belong in the code that
+drives it, its pin in `versions.env` and its own scenarios. Test a design by
+asking whether a second tool could be graded the same way. Parts of the runner
+still follow the two tools wired in first; moving them behind drivers is
+`planned` (ROADMAP P8).
 
 ## The systems under test are not ours to edit
 

@@ -37,6 +37,8 @@ your setup does not become everyone's.
 - `INDETERMINATE` is stated, not tolerated by accident.
 - A victim's wrong annotation is deliberate and stays wrong.
 - No real data. Fixtures are synthetic and canaries lead nowhere.
+- No tool gets a special place. Shared formats, code and docs name roles, and
+  a tool's own names stay in the code that drives it and its own scenarios.
 - Documentation changed in the same commit as the behaviour it describes.
 
 ## Commits

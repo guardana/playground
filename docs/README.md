@@ -27,7 +27,7 @@ with `make docs-gen`; an edit made here does not survive the next run.
 ## Reference
 
 - [Failure modes](reference/failure-modes.md): How an agent deployment goes wrong, which kind of tooling must catch each failure, and the scenarios that simulate it today.
-- [Glossary](reference/glossary.md): The lab's own terms, one name per concept, and the name each page uses for the two systems under test.
+- [Glossary](reference/glossary.md): The lab's own terms, one name per concept, and the role names pages use for the systems under test.
 - [Agent use cases](reference/use-cases.md): The agent deployments the lab simulates or plans to, what each acts through, the failure modes it meets, and what the lab covers of it today.
 
 ## Contracts

@@ -18,7 +18,7 @@
 #
 # Every image name and tag is a variable from versions.env. A tag written here
 # would be a second place to change when an upstream moves.
-name: guardana-playground
+name: playground
 
 x-lab-env: &lab-env
   # The runner mints the run id. `manual` is what a lab brought up by hand

@@ -1,15 +1,18 @@
-# Guardana Playground
+# Playground
 
-A lab for finding out whether agent security tooling does what it says.
+A tool-neutral lab for finding out whether AI tools and models do what they
+claim. A tool under test meets synthetic victims, deceptive tool servers,
+injected content and inert artifacts, and is graded on the records it leaves
+and the effects the victims show.
 
-Two systems are under test. [Guardana](https://github.com/guardana/guardana),
-the verifier, grades recorded runs;
-[Control](https://github.com/guardana/control), the enforcer, decides tool
-calls inline. The lab replays scripted agent trajectories against deceptive
-tool servers and injected content, then checks both systems' records and the
-victims' effects.
+Two tools are wired in today, each at the pin in `versions.env`:
+[Control](https://github.com/guardana/control) (the enforcer) decides tool
+calls inline, and [Guardana](https://github.com/guardana/guardana) (the
+verifier) probes servers, scans artifacts and grades recorded runs. A driver
+that plugs any other gate, grader, scanner or monitor in the same way is
+`planned` ([P8](ROADMAP.md#p8--more-gates-graders-and-monitors-planned)).
 
-Maintainers test releases; adopters test their own policy, gateway
+A tool's maintainers test its releases; adopters test their own policy, gateway
 configuration or verifier contract. See the [use cases](docs/reference/use-cases.md)
 and [failure modes](docs/reference/failure-modes.md).
 
@@ -41,7 +44,7 @@ make scenario ID=tool-02-permitted-read-is-recorded-by-the-enforcer
 Its result line gives the verdict and report path. The
 [quickstart](docs/runbooks/quickstart.md) covers setup and failures.
 
-`make smoke` (experimental) runs five green paths across both systems and
+`make smoke` (experimental) runs five green paths across the tools wired in and
 fails on any red or unrunnable path. `make scenarios` runs the whole catalogue
 and is red on the scenarios [red by design](scenarios/red-by-design.txt).
 
@@ -77,7 +80,7 @@ and the attack payloads sit on compose networks with no route out.
 
 ## Versions
 
-`versions.env` pins both systems and every image the lab runs;
+`versions.env` pins every system under test and every image the lab runs;
 [dependencies](docs/dependencies.md) says how each is built and checked.
 
 ## Contributing
