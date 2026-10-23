@@ -34,6 +34,12 @@ type Run struct {
 // Reach asks, from the agent's place on the network, whether target answers.
 type Reach func(ctx context.Context, target string) check.Probe
 
+// ReachOut probes from inside one of a prober's services, run through compose,
+// whether it reaches every server the scenario probes and whether it has any
+// way out of the lab. The probes are python scripts, so the service has to
+// run python.
+type ReachOut func(ctx context.Context, compose dockercompose.Compose, service string) check.VerifierReach
+
 // Refusal is a run a subject refused before anything was brought up, reported
 // as the one check it fails.
 type Refusal struct {
@@ -106,9 +112,9 @@ type Prober interface {
 	// DownProfiles names profiles beyond the scenario's own that the prober's
 	// containers can be in.
 	DownProfiles() []string
-	// Probe runs every step of the scenario and reads the record each left,
-	// beside the check of where the prober could reach.
-	Probe(ctx context.Context, run Run, scenario labspec.Scenario, token string) (assertion.Check, []check.VerifierRun)
+	// Probe has reach probe the prober's network, then runs every step of the
+	// scenario and reads the record each left.
+	Probe(ctx context.Context, run Run, scenario labspec.Scenario, token string, reach ReachOut) (assertion.Check, []check.StepRun)
 }
 
 // Grader grades what the agent left behind once its trajectory has run.

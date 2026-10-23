@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -16,10 +15,6 @@ import (
 
 // provenanceTimeout bounds the git and docker lookups a report header needs.
 const provenanceTimeout = 30 * time.Second
-
-// versionLabel is where the verifier's image build stamps the release it
-// installed.
-const versionLabel = "org.opencontainers.image.version"
 
 // lookup runs one program and returns its trimmed output; command is the real
 // one, and a test hands in what the program would have said.
@@ -62,30 +57,6 @@ func describeSubjects(ctx context.Context, subjects []driver.Subject, run lookup
 	}
 	joined.Development = strings.Join(development, "; ")
 	return joined
-}
-
-// refuseVerifierImage refuses a run the verifier grades when the local image
-// under the pin's tag was not built from VERIFIER_VERSION: compose never pulls
-// it, and a tag alone says nothing about what was installed behind it.
-func (l lab) refuseVerifierImage(ctx context.Context) error {
-	if l.inspect == nil {
-		return errors.New("nothing reads the verifier's image")
-	}
-	pins, err := driver.ReadPins(filepath.Join(l.root, versionFile))
-	if err != nil {
-		return fmt.Errorf("the pins cannot be read: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
-	defer cancel()
-	want := pins.Value("VERIFIER_VERSION")
-	image := driver.InspectImage(ctx, l.inspect, pins.Value("VERIFIER_IMAGE"), want, versionLabel)
-	switch {
-	case image.Missing != "":
-		return fmt.Errorf("%s: %s", image.Ref, image.Missing)
-	case image.Label != want:
-		return fmt.Errorf("%s carries %s %q, want %q", image.Ref, versionLabel, image.Label, want)
-	}
-	return nil
 }
 
 func (l lab) provenance(ctx context.Context) report.Provenance {

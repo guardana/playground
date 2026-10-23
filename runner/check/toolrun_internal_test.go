@@ -27,7 +27,7 @@ func silentRun() record.Run {
 
 func gradeRecord(t *testing.T, want labspec.VerifierExpectation, ran record.Run, check string) assertion.Result {
 	t.Helper()
-	for _, result := range gradeReport(VerifierRun{Step: 1, URL: "target"}, want, ran, nil) {
+	for _, result := range gradeReport(StepRun{Step: 1, Target: "target"}, want, ran, nil) {
 		if result.Check == "verifier/step-1/"+check {
 			return result
 		}

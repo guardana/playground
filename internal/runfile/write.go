@@ -22,6 +22,18 @@ func CreateNew(path string, mode fs.FileMode, body func(*os.File) error) error {
 	return errors.Join(body(file), file.Close())
 }
 
+// KeepNew writes body to a new file at path with exactly mode: a file a
+// container's uid reads needs the mode the umask narrowed at creation.
+func KeepNew(path, body string, mode fs.FileMode) error {
+	return CreateNew(path, mode, func(file *os.File) error {
+		if err := file.Chmod(mode); err != nil {
+			return err
+		}
+		_, err := file.WriteString(body)
+		return err
+	})
+}
+
 // MakeDir sets the mode again after Mkdir, whose mode the umask of whoever ran
 // the runner narrows.
 func MakeDir(path string, mode fs.FileMode) error {

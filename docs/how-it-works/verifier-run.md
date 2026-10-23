@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier*.go, runner/subject*.go, runner/driver/**, runner/token.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, drivers/guardana/report/**, runner/check/toolrun.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, drivers/guardana/trace/**, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
+covers: [drivers/guardana/**, runner/prober.go, runner/reach.go, runner/subject*.go, runner/driver/**, runner/token.go, runner/check/verifier.go, runner/check/toolrun.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/check/scan.go, scenarios/scan/**, artifacts/**]
 ---
 
 # How a verifier scenario runs
@@ -43,7 +43,7 @@ sequenceDiagram
   Note over runner: grades each step, then every victim's journal
 ```
 
-Sources: `runner/verifier.go`, `runner/verifier_reach.go`, `runner/provenance.go`.
+Sources: `drivers/guardana/subject.go`, `drivers/guardana/verifier.go`, `runner/reach.go`.
 
 Every step, and every reach dial, is a new container from the image
 `make verifier-image` built. Compose never pulls that image, and the runner
@@ -101,7 +101,7 @@ sequenceDiagram
   Note over runner: kept as verifier/trace-report.json, graded as trace checks
 ```
 
-Sources: `drivers/guardana/trace/trace.go`, `runner/trace.go`, `compose/compose.yaml`.
+Sources: `drivers/guardana/trace/trace.go`, `drivers/guardana/trace.go`, `compose/compose.yaml`.
 
 `trace-verifier` is alone on `trace-net` and mounts two directories read-only:
 the run's `verifier/` and `config/contracts/`. It calls nothing. The trace is
@@ -156,7 +156,7 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
   finding is absent (`runner/check/toolrun.go`). A rule that did not run, could
   not tell, or was waived has established nothing.
 - **A step's inputs reach it read-only, in a directory of its own**
-  (`runner/verifier_files.go`, `compose/compose.yaml`). The verifier writes only
+  (`drivers/guardana/verifier_files.go`, `compose/compose.yaml`). The verifier writes only
   a pin step's `out/`, so it cannot change what a later step is handed or a
   report the runner grades.
 - **An exit 2 says why** (`internal/labspec/verifier_rules.go`). The verifier
@@ -173,9 +173,9 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
   of the run carried. The victim cannot tell one step from another, so a step
   that never sent the token is caught by its exit code and gate, not here.
 - **The victims' journals grade the verifier's own promise** to call no tool
-  (`runner/verifier.go`, `everyVictimServesNothing`).
+  (`runner/prober.go`, `everyVictimServesNothing`).
 - **The verifier's network is proved sealed on every run**
-  (`runner/verifier_reach.go`): a router past the network answers "no
+  (`runner/reach.go`): a router past the network answers "no
   route" too, so the verifier's own routing tables are read as well. The
   probes run in `verifier`; `verifier-pin` is held to the same network and
   hardening by `compose/verifier_test.go`, and the teardown names its
@@ -187,12 +187,12 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 | path | what |
 |---|---|
 | `runner/subjects.go`, `runner/driver/` | which tool probes the victims or grades the trace, picked from the scenario's keys |
-| `runner/subject_guardana.go` | the verifier as prober and as grader |
-| `runner/verifier.go` | the steps, the run's `verifier/` directory |
-| `runner/scan.go` | a scan step's copy of its target |
-| `runner/verifier_reach.go` | the reach dials and the routing tables |
-| `runner/trace.go` | the trace handed over and analysed |
-| `runner/provenance.go` | the image refusal, which the verifier's `Ready` reports |
+| `drivers/guardana/subject.go` | the verifier as prober and as grader, and the image refusal its `Ready` reports |
+| `drivers/guardana/verifier.go`, `drivers/guardana/verifier_files.go` | the steps, the run's `verifier/` directory |
+| `drivers/guardana/scan.go` | a scan step's copy of its target |
+| `drivers/guardana/trace.go` | the trace handed over and analysed |
+| `runner/prober.go` | the grading of a prober's run, every victim's journal included |
+| `runner/reach.go` | the reach dials and the routing tables, run in the prober's own service |
 | `drivers/guardana/report/` | the report and the pin, read into a neutral record |
 | `runner/check/verifier.go`, `runner/check/toolrun.go`, `runner/check/trace.go` | the grading |
 | `drivers/guardana/trace/` | the trace the agent writes |

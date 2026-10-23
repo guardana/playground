@@ -10,7 +10,7 @@ import (
 // subjects is every tool the lab drives, in the order the report describes
 // them, whichever a scenario picks.
 func (l lab) subjects() []driver.Subject {
-	return []driver.Subject{l.control, newGuardana(l)}
+	return []driver.Subject{l.control, l.verifier}
 }
 
 // picked is what drives one scenario: each role it fills, nil where it fills
@@ -33,13 +33,12 @@ func (l lab) pick(spec labspec.Scenario) picked {
 	if !spec.IsVerifier() && spec.Trace == nil {
 		return chosen
 	}
-	guardana := newGuardana(l)
-	chosen.subjects = append(chosen.subjects, guardana)
+	chosen.subjects = append(chosen.subjects, l.verifier)
 	if spec.IsVerifier() {
-		chosen.prober = guardana
+		chosen.prober = l.verifier
 	}
 	if spec.Trace != nil {
-		chosen.grader = guardana
+		chosen.grader = l.verifier
 	}
 	return chosen
 }

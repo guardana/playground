@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/drivers/control"
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/labspec"
 )
 
@@ -28,8 +29,8 @@ func TestEachRoleIsPickedFromTheScenariosOwnKeys(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			chosen := lab{}.pick(test.spec)
 			_, gate := chosen.gate.(*control.Driver)
-			_, prober := chosen.prober.(guardanaSubject)
-			_, grader := chosen.grader.(guardanaSubject)
+			_, prober := chosen.prober.(*guardana.Driver)
+			_, grader := chosen.grader.(*guardana.Driver)
 			if gate != test.gate || prober != test.prober || grader != test.grader {
 				t.Errorf("picked gate %t, prober %t, grader %t; want %t, %t, %t", gate, prober, grader, test.gate, test.prober, test.grader)
 			}

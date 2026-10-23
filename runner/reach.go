@@ -9,6 +9,7 @@ import (
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 	// to read the error: a network with no route out answers that at once, and
 	// the address leads nowhere should the lab ever have a route.
 	outsideAddress = "192.0.2.1:443"
-	// reachScript dials one host:port from the verifier's network position and
+	// reachScript dials one host:port from the prober's network position and
 	// prints the markers readProbe reads. Unreachable is claimed only for no
 	// name or no route; anything else says nothing about the topology.
 	reachScript = `import errno, socket, sys
@@ -35,7 +36,7 @@ except OSError as e:
 `
 	// proxyTarget is what proxyScript names in the probe markers.
 	proxyTarget = "a proxy"
-	// proxyScript reads the verifier's own environment: reached when any
+	// proxyScript reads the prober's own environment: reached when any
 	// *_proxy variable is set, which would carry its requests and make the
 	// servers it probes no longer local to it. no_proxy names exceptions, not a
 	// proxy.
@@ -48,7 +49,7 @@ else:
 `
 	// routeTarget is what routeScript names in the probe markers.
 	routeTarget = "a default route"
-	// routeScript reads the verifier's own routing tables: reached when a
+	// routeScript reads the prober's own routing tables: reached when a
 	// usable default route is there, unreachable when none is. A reject route
 	// is the kernel's "no route", not a way out, and a kernel without
 	// ipv6_route has no IPv6 route at all.
@@ -79,37 +80,35 @@ else:
 `
 )
 
-// verifierReach dials each probed server and the outside address from the
-// verifier's network, reads the verifier's routing tables, and records all of
-// it in probes.log.
-func (l lab) verifierReach(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runDir string) check.VerifierReach {
-	reach := check.VerifierReach{Source: filepath.Join(runDir, "probes.log")}
-	var recorded strings.Builder
-	record := func(what string, probe check.Probe) {
-		fmt.Fprintf(&recorded, "%s %s ran=%t reached=%t %s\n", what, probe.Target, probe.Ran, probe.Reached, probe.Detail)
+// reachOut dials each server the scenario probes and the outside address from
+// inside a prober's service, reads its routing tables and its environment,
+// and records all of it in probes.log.
+func (l lab) reachOut(spec labspec.Scenario, runDir string) driver.ReachOut {
+	return func(ctx context.Context, compose dockercompose.Compose, service string) check.VerifierReach {
+		reach := check.VerifierReach{Source: filepath.Join(runDir, "probes.log")}
+		var recorded strings.Builder
+		record := func(what string, probe check.Probe) {
+			fmt.Fprintf(&recorded, "%s %s ran=%t reached=%t %s\n", what, probe.Target, probe.Ran, probe.Reached, probe.Detail)
+		}
+		for _, server := range spec.Probed() {
+			probe := l.python(ctx, compose, spec.Profile, service, server+":"+servicePort, reachScript, server+":"+servicePort)
+			reach.Servers = append(reach.Servers, probe)
+			record("server", probe)
+		}
+		reach.Outside = l.python(ctx, compose, spec.Profile, service, outsideAddress, reachScript, outsideAddress)
+		record("outside", reach.Outside)
+		reach.Routes = l.python(ctx, compose, spec.Profile, service, routeTarget, routeScript)
+		record("routes", reach.Routes)
+		reach.Proxy = l.python(ctx, compose, spec.Profile, service, proxyTarget, proxyScript)
+		record("proxy", reach.Proxy)
+		if err := writeBytes(reach.Source, []byte(recorded.String())); err != nil {
+			l.note("writing the probe record: %v", err)
+		}
+		return reach
 	}
-	service := verifierService
-	if spec.IsScan() {
-		service = scanService
-	}
-	for _, server := range spec.Probed() {
-		probe := l.python(ctx, compose, spec.Profile, service, server+":"+servicePort, reachScript, server+":"+servicePort)
-		reach.Servers = append(reach.Servers, probe)
-		record("server", probe)
-	}
-	reach.Outside = l.python(ctx, compose, spec.Profile, service, outsideAddress, reachScript, outsideAddress)
-	record("outside", reach.Outside)
-	reach.Routes = l.python(ctx, compose, spec.Profile, service, routeTarget, routeScript)
-	record("routes", reach.Routes)
-	reach.Proxy = l.python(ctx, compose, spec.Profile, service, proxyTarget, proxyScript)
-	record("proxy", reach.Proxy)
-	if err := writeBytes(reach.Source, []byte(recorded.String())); err != nil {
-		l.note("writing the probe record: %v", err)
-	}
-	return reach
 }
 
-// python runs one script in the verifier's container and reads its markers.
+// python runs one script in a prober's service and reads its markers.
 func (l lab) python(ctx context.Context, compose dockercompose.Compose, profiles []string, service, target, script string, args ...string) check.Probe {
 	split, err := compose.RunSplit(ctx, profiles, service, "python", append([]string{"-c", script}, args...))
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
 )
 
 // The run's bearer token travels by these names only: the token-gated victims
@@ -18,8 +19,13 @@ const (
 	tokenBytes          = 32
 )
 
-// personaDir is where a run holds the persona its double serves.
-const personaDir = "auth"
+// personaDir is where a run holds the persona its double serves; the persona
+// is taken within maxPersonaBytes and handed over readable by the double's uid.
+const (
+	personaDir      = "auth"
+	maxPersonaBytes = 1 << 20
+	personaMode     = 0o644
+)
 
 // handPersona copies the persona the scenario names into the run, where the
 // double reads it: a workspace directory is never mounted for it, so a link
@@ -29,10 +35,19 @@ func (l lab) handPersona(spec labspec.Scenario, runDir string) error {
 		return nil
 	}
 	to := filepath.Join(runDir, personaDir, spec.AuthDouble+".json")
-	if err := copyInput(l.workspace.file(personaFile(spec.AuthDouble)), to); err != nil {
+	if err := copyPersona(l.workspace.file(personaFile(spec.AuthDouble)), to); err != nil {
 		return fmt.Errorf("handing the double persona %s: %w", spec.AuthDouble, err)
 	}
 	return nil
+}
+
+// copyPersona takes only a regular file within the bound, never a link.
+func copyPersona(from, to string) error {
+	body, err := runfile.ReadRegular(from, maxPersonaBytes)
+	if err != nil {
+		return err
+	}
+	return runfile.KeepNew(to, string(body), personaMode)
 }
 
 // verifierEnv adds a verifier run's token and the double's persona to env,

@@ -3,7 +3,7 @@ title: Bring your own verifier contract
 summary: Have the pinned verifier grade the agent's own trace of a run against a security contract of yours, and see the contract fail when it should.
 type: runbook
 audience: [engineering, product]
-covers: [runner/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, drivers/guardana/trace/**, drivers/control/answer/**, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
+covers: [drivers/guardana/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, drivers/guardana/trace/**, drivers/control/answer/**, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
 ---
 
 # Bring your own verifier contract

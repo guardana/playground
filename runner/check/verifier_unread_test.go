@@ -22,9 +22,9 @@ func TestAStepWhoseRecordNobodyReadIsIndeterminate(t *testing.T) {
 		},
 		Expect: labspec.Expect{Verifier: map[int]labspec.VerifierExpectation{1: {ExitCode: &zero}, 2: want}},
 	}
-	runs := []check.VerifierRun{
-		{Step: 1, Probe: labspec.ProbeStep{Server: "victim-fs", WritePin: true}, URL: url, Ran: true, Pin: "pin-1.json"},
-		{Step: 2, Probe: labspec.ProbeStep{Server: "victim-fs", PinFrom: 1}, URL: url, Ran: true, Report: "step-2.json"},
+	runs := []check.StepRun{
+		{Step: 1, Target: url, Ran: true, Kind: check.PinRecord, Want: "a pin approving " + url, Source: "pin-1.json"},
+		{Step: 2, Target: url, Ran: true, Kind: check.ReportRecord, Want: "a report about " + url, Source: "step-2.json"},
 	}
 	for name, subject := range map[string]assertion.Check{
 		"verifier": check.Verifier{Scenario: spec, Runs: runs},

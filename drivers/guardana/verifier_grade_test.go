@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"context"
@@ -62,7 +62,7 @@ func driftExpectation() labspec.VerifierExpectation {
 
 // writeRuns writes the pin and the report into a run directory and returns
 // the two steps as the runner records and reads them.
-func writeRuns(t *testing.T, pin, report string) []check.VerifierRun {
+func writeRuns(t *testing.T, pin, report string) []check.StepRun {
 	t.Helper()
 	dir := t.TempDir()
 	files := map[string]string{"pin-1.json": pin, "step-2.json": report}
@@ -74,17 +74,14 @@ func writeRuns(t *testing.T, pin, report string) []check.VerifierRun {
 			t.Fatal(err)
 		}
 	}
-	runs := []check.VerifierRun{
-		{Step: 1, Probe: labspec.ProbeStep{Server: "victim-fs", WritePin: true}, URL: fsURL, Ran: true,
-			Report: filepath.Join(dir, "step-1.json"), Pin: filepath.Join(dir, "pin-1.json")},
-		{Step: 2, Probe: labspec.ProbeStep{Server: "victim-fs", PinFrom: 1}, URL: fsURL, Ran: true, ExitCode: 1,
-			Report: filepath.Join(dir, "step-2.json")},
-	}
+	runs := []check.StepRun{pinRun(1, fsURL, filepath.Join(dir, "pin-1.json")), reportRun(2, fsURL, filepath.Join(dir, "step-2.json"))}
+	runs[0].Ran = true
+	runs[1].Ran, runs[1].ExitCode = true, 1
 	readRecords(runs)
 	return runs
 }
 
-func gradeVerifierRuns(t *testing.T, spec labspec.Scenario, runs []check.VerifierRun) map[string]assertion.Result {
+func gradeVerifierRuns(t *testing.T, spec labspec.Scenario, runs []check.StepRun) map[string]assertion.Result {
 	t.Helper()
 	results, err := check.Verifier{Scenario: spec, Runs: runs}.Run(context.Background(), assertion.Records{})
 	if err != nil {
@@ -252,5 +249,30 @@ func TestAWaivedFindingIsNotAnExcludedOne(t *testing.T) {
 	result := got["verifier/step-2/no-finding/guardana.mcp.cache_scope"]
 	if result.Outcome != assertion.Fail || !strings.Contains(result.Got, "waived") {
 		t.Errorf("no-finding = %s (%q), want a failure naming the waiver", result.Outcome, result.Got)
+	}
+}
+
+// A record's check says, in the report, what it wanted and where it read it;
+// a want drifted between builds is invisible to a diff of outcomes.
+func TestEachRecordIsWantedInTheWordsTheReportShows(t *testing.T) {
+	runs := writeRuns(t, fsPin, driftReport)
+	got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), runs)
+	for name, want := range map[string]struct{ want, source string }{
+		"verifier/step-1/pin":    {"a pin approving http://victim-fs:8080/mcp", runs[0].Source},
+		"verifier/step-2/report": {"a JSON report about http://victim-fs:8080/mcp", runs[1].Source},
+	} {
+		result := got[name]
+		if result.Want != want.want || result.Got != want.want || result.Source != want.source {
+			t.Errorf("%s wants %q, got %q from %s; want %q from %s", name, result.Want, result.Got, result.Source, want.want, want.source)
+		}
+	}
+	for number, base := range map[int]string{1: "pin-1.json", 2: "step-2.json"} {
+		if filepath.Base(runs[number-1].Source) != base {
+			t.Errorf("step %d is read from %s, want %s", number, runs[number-1].Source, base)
+		}
+	}
+	scan := newScanRun(3, "/run/verifier")
+	if scan.Want != "a JSON report about target" || scan.Source != "/run/verifier/step-3.json" || scan.Kind != check.ReportRecord {
+		t.Errorf("a scan step wants %q from %s as %s", scan.Want, scan.Source, scan.Kind)
 	}
 }

@@ -13,7 +13,7 @@ import (
 // about this run's trace; its exit code and findings are then read as a
 // verifier step's are.
 type Trace struct {
-	Analysis VerifierRun
+	Analysis StepRun
 	Want     labspec.VerifierExpectation
 }
 

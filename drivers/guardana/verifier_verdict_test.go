@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func undecidedExpectation() labspec.VerifierExpectation {
 	}
 }
 
-func undecidedRuns(t *testing.T, report string) []check.VerifierRun {
+func undecidedRuns(t *testing.T, report string) []check.StepRun {
 	t.Helper()
 	runs := writeRuns(t, fsPin, report)
 	runs[1].ExitCode = 2
