@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	verifierreport "github.com/guardana/playground/drivers/guardana/report"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
@@ -43,6 +44,7 @@ func (l lab) gradeVerifier(
 	runs := l.runVerifier(ctx, compose, spec, dir, made, token)
 	served := everyVictimServesNothing(spec, boot)
 	records := l.collect(served, boot, runID, runDir, nil)
+	readRecords(runs)
 	checks := []assertion.Check{reach, check.Verifier{Scenario: spec, Runs: runs}, check.TokenKeptOut{RunDir: runDir, Token: token}}
 	if !spec.IsScan() {
 		// A scan's profile boots no service and reaches no victim, so nothing
@@ -140,6 +142,34 @@ func newVerifierRun(number int, probe labspec.ProbeStep, dir string) check.Verif
 		run.Pin = writtenPin(dir, number)
 	}
 	return run
+}
+
+// readRecords reads what each step left, just before it is graded.
+func readRecords(runs []check.VerifierRun) {
+	for i := range runs {
+		readRecord(&runs[i])
+	}
+}
+
+// readRecord reads the record a step is graded from: the pin a write_pin step
+// approved, or the report any other step printed.
+func readRecord(run *check.VerifierRun) {
+	if run.Probe.WritePin {
+		pin, err := verifierreport.ReadPin(run.Pin)
+		if err != nil {
+			run.ApprovedErr = err
+			return
+		}
+		approved := pin.Approval()
+		run.Approved = &approved
+		return
+	}
+	ran, err := verifierreport.Read(run.Report, run.URL)
+	if err != nil {
+		run.RecordErr = err
+		return
+	}
+	run.Record = &ran
 }
 
 // probeOnce runs one step and keeps both streams: standard output is the

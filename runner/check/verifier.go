@@ -2,6 +2,7 @@ package check
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -28,6 +29,14 @@ type VerifierRun struct {
 	// file a write_pin step approves the manifest in.
 	Report string
 	Pin    string
+	// Record is the report as the runner read it and RecordErr why it could
+	// not be read; both are nil when nobody read it.
+	Record    *record.Run
+	RecordErr error
+	// Approved is what a write_pin step's pin approves and ApprovedErr why it
+	// could not be read; both are nil when nobody read it.
+	Approved    *record.Approval
+	ApprovedErr error
 }
 
 // Verifier grades each verifier step from the record it left: the pin a
@@ -77,25 +86,61 @@ func (v Verifier) grade(run VerifierRun, want labspec.VerifierExpectation) []ass
 		}}
 	}
 	if run.Probe.WritePin {
-		_, err := readPin(run.Pin, run.URL)
+		read := run.Approved != nil || run.ApprovedErr != nil
+		err := approvalErr(run)
 		return []assertion.Result{
-			recordResult(run, "pin", run.Pin, "a pin approving "+run.URL, err),
-			exitResult(run, want, run.Pin, err),
+			recordResult(run, "pin", run.Pin, "a pin approving "+run.URL, read, err),
+			exitResult(run, want, run.Pin, read, err),
 		}
 	}
-	ran, err := readReport(run.Report, run.URL)
+	read := run.Record != nil || run.RecordErr != nil
+	ran, err := reportOf(run)
 	results := []assertion.Result{
-		recordResult(run, "report", run.Report, "a JSON report about "+run.URL, err),
-		exitResult(run, want, run.Report, err),
+		recordResult(run, "report", run.Report, "a JSON report about "+run.URL, read, err),
+		exitResult(run, want, run.Report, read, err),
 	}
 	return append(results, gradeReport(run, want, ran, err)...)
 }
 
+// approvalErr says why the pin a step wrote does not approve the server it
+// probed, if it does not.
+func approvalErr(run VerifierRun) error {
+	approved := run.Approved
+	switch {
+	case run.ApprovedErr != nil:
+		return run.ApprovedErr
+	case approved == nil:
+		return errors.New("the pin was not read")
+	case approved.Server != run.URL:
+		return fmt.Errorf("the pin approves %q, not the probed %s", approved.Server, run.URL)
+	case approved.Tools == 0:
+		return errors.New("the pin approves no tool")
+	}
+	return nil
+}
+
+// reportOf is the step's report, or why there is none to grade. A report
+// nobody read is never an empty one.
+func reportOf(run VerifierRun) (record.Run, error) {
+	switch {
+	case run.RecordErr != nil:
+		return record.Run{}, run.RecordErr
+	case run.Record == nil:
+		return record.Run{}, errors.New("the report was not read")
+	}
+	return *run.Record, nil
+}
+
 // recordResult fails a step whose record is missing or about something else:
-// the verifier documents both files, and a missing record is never a pass.
-func recordResult(run VerifierRun, what, source, want string, err error) assertion.Result {
+// the verifier documents both files, and a missing record is never a pass. A
+// record nobody read has established nothing either way.
+func recordResult(run VerifierRun, what, source, want string, read bool, err error) assertion.Result {
 	result := assertion.Result{Check: stepName(run.Step, what), Want: want, Source: source}
-	if err != nil {
+	switch {
+	case !read:
+		result.Outcome, result.Got, result.Detail = assertion.Indeterminate, "the record was not read", err.Error()
+		return result
+	case err != nil:
 		result.Outcome, result.Got, result.Detail = assertion.Fail, "no such record", err.Error()
 		return result
 	}
@@ -103,12 +148,15 @@ func recordResult(run VerifierRun, what, source, want string, err error) asserti
 	return result
 }
 
-func exitResult(run VerifierRun, want labspec.VerifierExpectation, source string, unread error) assertion.Result {
+func exitResult(run VerifierRun, want labspec.VerifierExpectation, source string, read bool, unread error) assertion.Result {
 	result := assertion.Result{
 		Check: stepName(run.Step, "exit-code"), Want: fmt.Sprintf("exit %d", *want.ExitCode),
 		Got: fmt.Sprintf("exit %d", run.ExitCode), Source: source,
 	}
 	switch {
+	case !read:
+		result.Outcome = assertion.Indeterminate
+		result.Detail = "the step's record was not read, so its exit status may be docker's and not the verifier's"
 	case unread != nil:
 		result.Outcome = assertion.Indeterminate
 		result.Detail = "the step left no record, so its exit status may be docker's and not the verifier's"

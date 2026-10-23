@@ -1,4 +1,4 @@
-package check_test
+package main
 
 import (
 	"context"
@@ -42,6 +42,7 @@ func gradeScan(t *testing.T, want labspec.VerifierExpectation, report string) ma
 		Expect:   labspec.Expect{Verifier: map[int]labspec.VerifierExpectation{1: want}},
 	}
 	runs := []check.VerifierRun{{Step: 1, URL: "target", Ran: true, ExitCode: 1, Report: filepath.Join(dir, "step-1.json")}}
+	readRecords(runs)
 	results, err := check.Verifier{Scenario: spec, Runs: runs}.Run(context.Background(), assertion.Records{})
 	if err != nil {
 		t.Fatal(err)
