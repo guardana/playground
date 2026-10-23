@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/internal/evidence"
 )
 
 // resultStatusPrefix is how the wire spells a result status; a scenario names

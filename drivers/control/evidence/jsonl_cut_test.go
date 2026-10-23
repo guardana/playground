@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // A valid object without its newline is what a write cut short looks like:

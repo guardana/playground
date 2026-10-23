@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // The collector's file exporter writes one request per line, and a request may

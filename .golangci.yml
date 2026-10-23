@@ -30,7 +30,7 @@ linters:
         lab-contract:
           files:
             - "**/internal/labspec/**"
-            - "**/internal/evidence/**"
+            - "**/drivers/control/evidence/**"
             - "**/internal/journal/**"
             - "**/internal/assertion/**"
           deny:

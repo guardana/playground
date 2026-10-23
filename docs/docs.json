@@ -47,7 +47,6 @@
     "config/**",
     "drivers/**",
     "internal/assertion/**",
-    "internal/evidence/**",
     "internal/journal/**",
     "internal/labspec/**",
     "runner/**",

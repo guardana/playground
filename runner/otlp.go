@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/runfile"
 )
 

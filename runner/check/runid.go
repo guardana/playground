@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/internal/evidence"
 )
 
 // uncomputed is the tag the enforcer stamps on a proposal it decided with no

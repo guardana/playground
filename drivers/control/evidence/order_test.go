@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // ev is one event of project p, tenant t, as the enforcer scopes every trail.

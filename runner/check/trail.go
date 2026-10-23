@@ -3,7 +3,7 @@ package check
 import (
 	"errors"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // errUnread is a trail the checks were handed before anything read it.

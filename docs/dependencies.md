@@ -95,8 +95,8 @@ index; the digest is what Docker resolves.
 ### OpenTelemetry Collector
 
 `OTEL_COLLECTOR_IMAGE`. The one place the enforcer's OTLP/HTTP log export
-lands, so `internal/evidence.DecodeOTLP` reads back what the enforcer actually
-sent rather than a file the lab wrote itself. It receives over TLS with a
+lands, so `drivers/control/evidence.DecodeOTLP` reads back what the enforcer
+actually sent rather than a file the lab wrote itself. It receives over TLS with a
 certificate the runner signs for each run with a CA of its own, since the
 enforcer sends plaintext only to a loopback address. The
 core distribution carries the file exporter (`docker run --rm

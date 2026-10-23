@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // Each line sets every field of api/proto/guardana/control/v1 that one payload
