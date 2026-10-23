@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	gateanswer "github.com/guardana/playground/drivers/control/answer"
 	"github.com/guardana/playground/drivers/guardana/trace"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -80,9 +82,10 @@ func replay(
 			output = textOf(result)
 		}
 		outputs[number] = output
-		journal.record(number, step, statusOf(result, namespace), len(output), nil)
+		gate := gateanswer.Classify(result, namespace)
+		journal.record(number, step, statusOf(result, gate), len(output), nil)
 		if tracer != nil {
-			if err := tracer.Record(number, step, arguments, result, pended); err != nil {
+			if err := tracer.Record(number, step, arguments, result, gate, pended); err != nil {
 				return fmt.Errorf("step %d: tracing: %w", number, err)
 			}
 		}
@@ -115,8 +118,8 @@ func answeredWithError(step labspec.Step, err error) bool {
 	return true
 }
 
-func statusOf(result *mcp.CallToolResult, namespace string) outcome {
-	if isPending(result, namespace) {
+func statusOf(result *mcp.CallToolResult, gate record.GateAnswer) outcome {
+	if gate == record.AnswerHeld {
 		return pendingOutcome
 	}
 	if result.IsError {

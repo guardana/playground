@@ -3,7 +3,7 @@ title: Bring your own verifier contract
 summary: Have the pinned verifier grade the agent's own trace of a run against a security contract of yours, and see the contract fail when it should.
 type: runbook
 audience: [engineering, product]
-covers: [runner/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, drivers/guardana/trace/**, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
+covers: [runner/trace.go, drivers/guardana/report/**, runner/check/toolrun.go, drivers/guardana/trace/**, drivers/control/answer/**, compose/compose.yaml, compose/Dockerfile.verifier, config/contracts/**, examples/**]
 ---
 
 # Bring your own verifier contract
@@ -54,7 +54,8 @@ analysis indeterminate, exit `2`.
 
 One span per step, in the verifier's native dialect: the call's effect is
 `executed` when the victim returned a result, `attempted` when it returned an
-error, and `failed` when the enforcer blocked or held it; its approval is
+error, and `failed` when the enforcer blocked or held it
+(`drivers/control/answer/answer.go` reads which); its approval is
 `not_requested`, `granted`, `timed_out`, `denied` or `unknown`. It is the
 agent's own record, so state the scenario's decisions and effects beside it for
 what the trace cannot tell apart

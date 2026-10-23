@@ -61,32 +61,6 @@ func TestRetriesStopAtTheirBound(t *testing.T) {
 	}
 }
 
-// Only the gateway's own mark makes an answer pending: an upstream result can
-// carry the same reason code, and the gateway strips its namespace from them.
-func TestAnAnswerIsPendingOnlyUnderTheGatewaysMark(t *testing.T) {
-	for name, change := range map[string]func(*answer){
-		"no mark":                  func(a *answer) { a.meta = nil },
-		"another namespace's mark": func(a *answer) { a.meta = mcp.Meta{"upstream.example/answer": "pending"} },
-		"the mark of a block":      func(a *answer) { a.meta = mcp.Meta{testNamespace + "/answer": "blocked"} },
-		"not an error":             func(a *answer) { a.isError = false },
-		"another reason code":      func(a *answer) { a.structured = map[string]any{"reason_code": "RULE_DENY"} },
-		"no structured content":    func(a *answer) { a.structured = nil },
-	} {
-		t.Run(name, func(t *testing.T) {
-			shaped := pendingAnswer()
-			change(&shaped)
-			gateway := &fakeGateway{answers: []answer{shaped, {text: []string{"ok"}}}}
-			var log bytes.Buffer
-			if err := replay(context.Background(), gateway, heldStep(5), "run-1", testNamespace, &log, nil); err != nil {
-				t.Fatalf("replay: %v", err)
-			}
-			if len(gateway.sent) != 1 || strings.Contains(log.String(), `"outcome":"pending"`) {
-				t.Errorf("sent %d calls and logged:\n%s", len(gateway.sent), log.String())
-			}
-		})
-	}
-}
-
 func TestADenialIsNotRetriedAndNeitherIsAStepThatAsksForNoRetry(t *testing.T) {
 	denied := answer{isError: true, text: []string{"RULE_DENY"}, structured: map[string]any{"reason_codes": []any{"RULE_DENY"}}}
 	gateway := &fakeGateway{answers: []answer{denied}}

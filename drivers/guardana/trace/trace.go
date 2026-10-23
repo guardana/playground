@@ -6,25 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"slices"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // traceVersion is the verifier's native trace dialect this package writes.
 const traceVersion = 3
-
-// approvalExpired is the reason code the gateway blocks a held call with once
-// its approval expired, and blockedMark the value it puts under
-// `<namespace>/answer` on a block it made itself. approvalPending and
-// pendingMark are the same pair for a call the gateway still holds.
-const (
-	approvalExpired = "APPROVAL_EXPIRED"
-	blockedMark     = "blocked"
-	approvalPending = "APPROVAL_PENDING"
-	pendingMark     = "pending"
-)
 
 // Producer names the program whose account the trace is.
 type Producer struct {
@@ -33,15 +22,14 @@ type Producer struct {
 }
 
 // Writer records what an agent saw, as a team's own instrumentation would:
-// one tool span per step, the effect the call had as the gateway answered it,
+// one tool span per step, the effect the call had as the gate answered it,
 // and whether an approval was sought for it. It records approvals and effects,
 // so the verifier grades both; it cannot know who approved, so it never says.
 type Writer struct {
-	runID     string
-	namespace string
-	producer  Producer
-	spans     []traceSpan
-	// held holds every call the gateway still held when its step ended, so a
+	runID    string
+	producer Producer
+	spans    []traceSpan
+	// held holds every call the gate still held when its step ended, so a
 	// later step sending the same call again resumes an approval that was sought.
 	held map[string]bool
 }
@@ -73,21 +61,22 @@ type traceApproval struct {
 	Outcome string `json:"outcome"`
 }
 
-// New returns a Writer for one run; namespace is the gateway's, under which it
-// marks the answers it makes itself.
-func New(runID, namespace string, producer Producer) *Writer {
-	return &Writer{runID: runID, namespace: namespace, producer: producer}
+// New returns a Writer for one run.
+func New(runID string, producer Producer) *Writer {
+	return &Writer{runID: runID, producer: producer}
 }
 
-// Record adds one step: result is the final answer, pended whether any answer
-// before it was the pending one.
-func (w *Writer) Record(number int, step labspec.Step, arguments map[string]any, result *mcp.CallToolResult, pended bool) error {
+// Record adds one step: result is the final answer, gate what the gate made of
+// it, and pended whether any answer before it was the gate holding the call.
+func (w *Writer) Record(
+	number int, step labspec.Step, arguments map[string]any, result *mcp.CallToolResult, gate record.GateAnswer, pended bool,
+) error {
 	encoded, err := json.Marshal(arguments)
 	if err != nil {
 		return err
 	}
 	call := step.Call.Server + "\x00" + step.Call.Tool + "\x00" + string(encoded)
-	stillPending := isPending(result, w.namespace)
+	stillPending := gate == record.AnswerHeld
 	sought := pended || w.held[call]
 	// A hold is spent by the step that ends it, run or refused: the same call
 	// sent later without a new hold rides on no approval.
@@ -100,10 +89,9 @@ func (w *Writer) Record(number int, step labspec.Step, arguments map[string]any,
 		delete(w.held, call)
 	}
 	ran := result != nil && !result.IsError
-	// The gateway marks every answer it makes itself and strips the mark from
-	// an upstream's, so an unmarked error is the upstream's answer to a call
-	// the gateway let through: the effect may have happened.
-	passed := ran || (result != nil && result.Meta[w.namespace+"/answer"] == nil)
+	// An error the gate let through is the upstream's answer: the effect may
+	// have happened.
+	passed := ran || gate == record.AnswerPassed
 	span := traceSpan{
 		SpanID: fmt.Sprintf("s%d", number), Kind: "tool_execution", Name: step.Call.Tool,
 		Tool: traceTool{Name: step.Call.Tool, Arguments: string(encoded), Status: "failed"},
@@ -120,16 +108,16 @@ func (w *Writer) Record(number int, step labspec.Step, arguments map[string]any,
 		effect.Status = "attempted"
 	}
 	span.Effects = []traceEffect{effect}
-	span.Approvals = []traceApproval{{Action: step.Call.Tool, Outcome: w.approvalOutcome(result, stillPending, passed, sought)}}
+	span.Approvals = []traceApproval{{Action: step.Call.Tool, Outcome: approvalOutcome(gate, stillPending, passed, sought)}}
 	w.spans = append(w.spans, span)
 	return nil
 }
 
 // approvalOutcome speaks the verifier's approval words: unknown while the call
-// is still held, and for a held call that ended, granted when the gateway let
-// it through, timed_out when the gateway refused it because its approval
-// expired, denied for any other refusal.
-func (w *Writer) approvalOutcome(result *mcp.CallToolResult, stillPending, passed, sought bool) string {
+// is still held, and for a held call that ended, granted when the gate let it
+// through, timed_out when the gate refused it because its approval expired,
+// denied for any other refusal.
+func approvalOutcome(gate record.GateAnswer, stillPending, passed, sought bool) string {
 	switch {
 	case stillPending:
 		return "unknown"
@@ -137,37 +125,11 @@ func (w *Writer) approvalOutcome(result *mcp.CallToolResult, stillPending, passe
 		return "not_requested"
 	case passed:
 		return "granted"
-	case gatewayRefused(result, w.namespace, approvalExpired):
+	case gate == record.AnswerApprovalExpired:
 		return "timed_out"
 	default:
 		return "denied"
 	}
-}
-
-// gatewayRefused reports whether the gateway itself blocked the call with this
-// reason code. Only the gateway writes under its namespace, so an upstream
-// result carrying the same code is not read as the gateway's.
-func gatewayRefused(result *mcp.CallToolResult, namespace, code string) bool {
-	if result == nil || !result.IsError || result.Meta[namespace+"/answer"] != blockedMark {
-		return false
-	}
-	fields, ok := result.StructuredContent.(map[string]any)
-	if !ok {
-		return false
-	}
-	codes, _ := fields["reason_codes"].([]any)
-	return slices.Contains(codes, any(code))
-}
-
-// isPending reports whether the gateway itself answered that the call is held.
-// The reason code alone is not enough: an upstream tool can return it, and only
-// the gateway may write under its own namespace.
-func isPending(result *mcp.CallToolResult, namespace string) bool {
-	if result == nil || !result.IsError || result.Meta[namespace+"/answer"] != pendingMark {
-		return false
-	}
-	fields, ok := result.StructuredContent.(map[string]any)
-	return ok && fields["reason_code"] == approvalPending
 }
 
 // sinks names the effect sink each victim's calls land on, from the

@@ -194,4 +194,5 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 | `drivers/guardana/report/` | the report and the pin, read into a neutral record |
 | `runner/check/verifier.go`, `runner/check/toolrun.go`, `runner/check/trace.go` | the grading |
 | `drivers/guardana/trace/` | the trace the agent writes |
+| `drivers/control/answer/` | how the agent tells a held, refused or expired call from one the gateway let through |
 | `compose/Dockerfile.verifier`, `compose/verifier/requirements.lock` | the verifier image, hash-locked |
