@@ -80,7 +80,7 @@ func TestTheAgentIsToldTheEnforcersNamespace(t *testing.T) {
 		t.Fatalf("execute: %v", err)
 	}
 	replay := compose.ran[len(compose.ran)-1]
-	if !strings.Contains(strings.Join(replay, " "), "-namespace guardana.control") {
+	if !strings.Contains(strings.Join(replay, " "), "-namespace lab.example.gate") {
 		t.Errorf("the replay ran with %q", replay)
 	}
 }

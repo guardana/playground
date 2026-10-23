@@ -8,9 +8,10 @@ and the effects the victims show.
 Two tools are wired in today, each at the pin in `versions.env`:
 [Control](https://github.com/guardana/control) (the enforcer) decides tool
 calls inline, and [Guardana](https://github.com/guardana/guardana) (the
-verifier) probes servers, scans artifacts and grades recorded runs. A driver
-that plugs any other gate, grader, scanner or monitor in the same way is
-`planned` ([P8](ROADMAP.md#p8--more-gates-graders-and-monitors-planned)).
+verifier) probes servers, scans artifacts and grades recorded runs. Each is a
+driver in `drivers/`, behind roles any gate, grader, scanner or monitor can
+fill; a driver for a third tool is `planned`
+([P8](ROADMAP.md#p8--more-gates-graders-and-monitors-partly-implemented)).
 
 A tool's maintainers test its releases; adopters test their own policy, gateway
 configuration or verifier contract. See the [use cases](docs/reference/use-cases.md)

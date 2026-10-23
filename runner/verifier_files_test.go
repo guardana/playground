@@ -29,7 +29,7 @@ expect:
     2:
       exit_code: 2
       gate: indeterminate
-      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]
+      shortfall: [{ kind: demanded_check, name: lab.example.drift }]
       errors: []
   effects:
     victim-fs: { calls_served: {} }
@@ -38,8 +38,8 @@ expect:
 	// indeterminateReport is what the verifier prints when the pin it was
 	// handed is one its profile does not check.
 	indeterminateReport = `{"schema_version": 18, "run": {"target": {"ref": "http://victim-fs:8080/mcp"},
- "result_summary": {"gate": "indeterminate", "rules_run": ["guardana.mcp.cache_scope"]},
- "coverage": {"shortfall": [{"kind": "demanded_check", "name": "guardana.agent.mcp_server_manifest", "detail": "excluded"}]}},
+ "result_summary": {"gate": "indeterminate", "rules_run": ["lab.example.cache_scope"]},
+ "coverage": {"shortfall": [{"kind": "demanded_check", "name": "lab.example.drift", "detail": "excluded"}]}},
  "findings": [], "unverified": [], "waived": [], "errors": []}`
 )
 

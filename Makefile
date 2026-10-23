@@ -17,7 +17,7 @@ GO_FILES = set -eu -o pipefail; files=$$(scripts/repo-files.sh); \
 
 .PHONY: bootstrap fmt fmt-check vet lint test test-race security docs-check \
 	docs-frontmatter docs-gen docs-impact \
-	check-sizes check-attribution check-hygiene check-actions-pinned check-go-version check-tools \
+	check-sizes check-attribution check-hygiene check-product-names check-actions-pinned check-go-version check-tools \
 	enforcer-image verifier-image images enforcer-dev-image dev-scenarios lab-key classify-victims up down \
 	scenario scenarios smoke ci-scenarios \
 	quality-quick quality
@@ -67,6 +67,9 @@ check-attribution:
 
 check-hygiene:
 	scripts/check-hygiene.sh
+
+check-product-names:
+	scripts/check-product-names.sh
 
 check-actions-pinned:
 	scripts/check-actions-pinned.sh
@@ -182,8 +185,8 @@ smoke:
 ci-scenarios:
 	REPORTS="$(REPORTS)" scripts/ci-scenarios.sh
 
-quality-quick: check-go-version fmt-check vet test check-attribution check-hygiene
+quality-quick: check-go-version fmt-check vet test check-attribution check-hygiene check-product-names
 
 quality: check-go-version check-tools fmt-check vet lint test test-race security docs-check docs-frontmatter check-sizes \
-	check-attribution check-hygiene check-actions-pinned
+	check-attribution check-hygiene check-product-names check-actions-pinned
 	@echo "quality: green"

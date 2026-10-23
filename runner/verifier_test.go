@@ -27,14 +27,14 @@ expect:
     1: { exit_code: 0 }
     2:
       exit_code: 1
-      findings_include: [{ rule_id: guardana.agent.mcp_server_manifest, summary_contains: "'fs.read'" }]
-      findings_exclude: [guardana.mcp.cache_scope]
+      findings_include: [{ rule_id: lab.example.drift, summary_contains: "'fs.read'" }]
+      findings_exclude: [lab.example.cache_scope]
   effects:
     victim-fs: { calls_served: {} }
 `
 	verifierReport = `{"schema_version": 18, "run": {"target": {"ref": "http://victim-fs:8080/mcp"},
- "result_summary": {"rules_run": ["guardana.agent.mcp_server_manifest", "guardana.mcp.cache_scope"]}},
- "findings": [{"rule_id": "guardana.agent.mcp_server_manifest", "severity": "CRITICAL",
+ "result_summary": {"rules_run": ["lab.example.drift", "lab.example.cache_scope"]}},
+ "findings": [{"rule_id": "lab.example.drift", "severity": "CRITICAL",
   "evidence": {"summary": "the declaration of 'fs.read' changed after it was approved (rug pull)"}}],
  "unverified": [], "waived": [], "errors": []}`
 	verifierPin = `{"schema_version": 2, "server": "http://victim-fs:8080/mcp", "tools": {"fs.read": "sha256:00"}}`
@@ -321,7 +321,7 @@ func recordSpoils() map[string]struct {
 				s.ExitCode, s.Stdout = 0, strings.Replace(s.Stdout, "'fs.read' changed", "nothing changed", 1)
 			}
 			return s
-		}, "verifier/step-2/finding/guardana.agent.mcp_server_manifest"},
+		}, "verifier/step-2/finding/lab.example.drift"},
 	}
 }
 

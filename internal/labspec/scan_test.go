@@ -25,7 +25,7 @@ expect:
       errors: []
       scope: [model.pkl]
       findings:
-        - { rule_id: guardana.supply_chain.pickle_opcode, severity: CRITICAL, file: model.pkl, summary_contains: clab_never_a_module }
+        - { rule_id: lab.example.pickle_opcode, severity: CRITICAL, file: model.pkl, summary_contains: clab_never_a_module }
 `
 
 func TestAScanOfAnArtifactLoadsWithItsExactRecord(t *testing.T) {

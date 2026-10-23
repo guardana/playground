@@ -18,7 +18,7 @@ import (
 
 const (
 	testPin       = "e72ebe261af4ca9bb4b683ddedda81bfcc5de906"
-	testNamespace = "guardana.control"
+	testNamespace = "lab.example.gate"
 )
 
 // otlpOf wraps trail lines the way the collector's file exporter writes them:

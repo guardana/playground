@@ -21,10 +21,10 @@ expect:
     2:
       exit_code: 1
       findings_include:
-        - { rule_id: guardana.agent.mcp_server_manifest, summary_contains: "'fs.read'" }
-        - { rule_id: guardana.mcp.unauthenticated_access, severity: LOW }
-      findings_exclude: [guardana.mcp.cache_scope]
-      unverified_include: [guardana.mcp.session_binding]
+        - { rule_id: lab.example.drift, summary_contains: "'fs.read'" }
+        - { rule_id: lab.example.open_access, severity: LOW }
+      findings_exclude: [lab.example.cache_scope]
+      unverified_include: [lab.example.session_binding]
   effects:
     victim-fs: { calls_served: {} }
 `
@@ -84,7 +84,7 @@ expect:
     2:
       exit_code: 2
       gate: indeterminate
-      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]
+      shortfall: [{ kind: demanded_check, name: lab.example.drift }]
       errors: []
     3: { exit_code: 1, gate: fail, shortfall: [] }
   effects:
@@ -107,7 +107,7 @@ func TestAPinOfAnotherServerAndAnExactCauseLoad(t *testing.T) {
 func wantExactCause(t *testing.T, second, third labspec.VerifierExpectation) {
 	t.Helper()
 	if second.Gate != "indeterminate" || second.Shortfall == nil || len(*second.Shortfall) != 1 ||
-		(*second.Shortfall)[0] != (labspec.ShortfallExpectation{Kind: "demanded_check", Name: "guardana.agent.mcp_server_manifest"}) {
+		(*second.Shortfall)[0] != (labspec.ShortfallExpectation{Kind: "demanded_check", Name: "lab.example.drift"}) {
 		t.Errorf("expect.verifier[2] = %+v", second)
 	}
 	if second.Errors == nil || len(*second.Errors) != 0 {
@@ -136,15 +136,15 @@ func TestAPinOrAVerdictThatCannotBeGradedIsRefused(t *testing.T) {
 		"a shortfall of no kind":       {"{ kind: demanded_check, name:", "{ kind: '', name:"},
 		"an error of no source":        {"      errors: []\n", "      errors: ['']\n"},
 		"exit 2 without a gate":        {"      gate: indeterminate\n", ""},
-		"exit 2 without a cause": {"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n",
+		"exit 2 without a cause": {"      shortfall: [{ kind: demanded_check, name: lab.example.drift }]\n",
 			"      shortfall: []\n"},
-		"exit 2 without its shortfall stated": {"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n", ""},
+		"exit 2 without its shortfall stated": {"      shortfall: [{ kind: demanded_check, name: lab.example.drift }]\n", ""},
 		"exit 2 without its errors stated":    {"      errors: []\n", ""},
 		// Every probe without a token leaves session_binding unverified, so
 		// it explains an exit 2 only beside a stated shortfall and errors.
 		"exit 2 put down to an unverified rule alone": {
-			"      shortfall: [{ kind: demanded_check, name: guardana.agent.mcp_server_manifest }]\n      errors: []\n",
-			"      unverified_include: [guardana.mcp.session_binding]\n"},
+			"      shortfall: [{ kind: demanded_check, name: lab.example.drift }]\n      errors: []\n",
+			"      unverified_include: [lab.example.session_binding]\n"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			body := strings.NewReplacer(replace...).Replace(indeterminateScenario)
@@ -175,12 +175,12 @@ func TestAVerifierScenarioThatGradesNothingOrContradictsItselfIsRefused(t *testi
 			"    victim-fs: { calls_served: {} }\n", "    victim-fs: { calls_served: {} }\n    victim-crm: { calls_served: {} }\n"},
 		"writing and reading a pin":  {"pin_from: 1 }", "pin_from: 1, write_pin: true }"},
 		"a pin step grading reports": {"    1: { exit_code: 0 }", "    1: { exit_code: 0, unverified_include: [x] }"},
-		"a probe stating a scope":    {"      unverified_include: [guardana.mcp.session_binding]\n", "      unverified_include: [guardana.mcp.session_binding]\n      scope: [x]\n"},
+		"a probe stating a scope":    {"      unverified_include: [lab.example.session_binding]\n", "      unverified_include: [lab.example.session_binding]\n      scope: [x]\n"},
 		"a finding with no rule":     {"severity: LOW }", "severity: LOW, rule_id: '' }"},
 		"an unknown severity":        {"severity: LOW }", "severity: low }"},
-		"a rule wanted and excluded": {"[guardana.mcp.cache_scope]", "[guardana.mcp.unauthenticated_access]"},
-		"excluded and unverified":    {"[guardana.mcp.cache_scope]", "[guardana.mcp.session_binding]"},
-		"an empty rule excluded":     {"[guardana.mcp.cache_scope]", "['']"},
+		"a rule wanted and excluded": {"[lab.example.cache_scope]", "[lab.example.open_access]"},
+		"excluded and unverified":    {"[lab.example.cache_scope]", "[lab.example.session_binding]"},
+		"an empty rule excluded":     {"[lab.example.cache_scope]", "['']"},
 		"a probed server unstated":   {"    victim-fs: { calls_served: {} }\n", "    victim-crm: { calls_served: {} }\n"},
 		"a profile beside verifier":  {"profile: [verifier]", "profile: [verifier, core]"},
 		"another profile":            {"profile: [verifier]", "profile: [core, enforcer]"},

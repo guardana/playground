@@ -19,10 +19,12 @@ Name shared formats, runner code, checks, files and documentation after roles
 (enforcer, verifier, scanner, prober, grader, monitor), never after a product,
 and never shape them after one tool's command line or report. A tool's own names
 (its CLI, report schema, rule ids, image, package) belong in the code that
-drives it, its pin in `versions.env` and its own scenarios. Test a design by
-asking whether a second tool could be graded the same way. Parts of the runner
-still follow the two tools wired in first; moving them behind drivers is
-`planned` (ROADMAP P8).
+drives it, its pin in `versions.env` and its own scenarios;
+`scripts/check-product-names.sh` refuses them anywhere its allowlist does not
+name with a reason. Test a design by asking whether a second tool could be
+graded the same way. Each tool is driven from `drivers/<tool>/` through the
+roles in `runner/driver`; the scenario format still carries the first two
+tools' shape, and a format every driver shares is `planned` (ROADMAP P8).
 
 ## The systems under test are not ours to edit
 

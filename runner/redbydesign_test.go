@@ -13,7 +13,7 @@ import (
 
 const (
 	modeCheck   = "evidence/executed-digest"
-	verifyCheck = "verifier/step-2/finding/guardana.agent.mcp_server_manifest"
+	verifyCheck = "verifier/step-2/finding/lab.example.drift"
 )
 
 var listedTwo = []redbydesign.Entry{
