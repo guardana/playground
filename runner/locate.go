@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/guardana/playground/internal/hostpath"
 )
 
 // scenarioDir is where a scenario lives, one directory per family.
@@ -82,7 +84,7 @@ func scenarioAt(root, given string) ([]string, error) {
 // however it was found: a link out of it is another scenario than its name says.
 func refuseOutside(root, asked string, found []string) ([]string, error) {
 	for _, path := range found {
-		if !within(resolved(path), resolved(root)) {
+		if !hostpath.Within(hostpath.Resolved(path), hostpath.Resolved(root)) {
 			return nil, fmt.Errorf("%s: %s is outside the workspace %s", asked, path, root)
 		}
 	}

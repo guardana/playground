@@ -3,7 +3,7 @@ title: Bring your own gateway configuration
 summary: Which settings of the enforcer's gateway a scenario sets, which the lab owns and refuses, and how a run assembles the rest.
 type: runbook
 audience: [engineering, product]
-covers: [drivers/control/gateway/**, runner/enforcer.go, runner/env.go, compose/compose.yaml, config/gateway/**, examples/**]
+covers: [drivers/control/gateway/**, drivers/control/enforcer.go, runner/env.go, compose/compose.yaml, config/gateway/**, examples/**]
 ---
 
 # Bring your own gateway configuration

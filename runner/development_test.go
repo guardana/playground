@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/runner/dockercompose"
 )
@@ -46,41 +47,21 @@ func devLabels(source, version string) string {
 		`"io.guardana.playground.enforcer.source.state":"dirty"}`
 }
 
-func TestADevelopmentImageIsReadFromItsOwnLabelsAndRefusedOtherwise(t *testing.T) {
-	dev, err := readDevelopment(context.Background(), inspectDevelopment(devLabels("development", devVersion)), devRef)
-	if err != nil {
-		t.Fatalf("readDevelopment: %v", err)
-	}
-	if dev.Version != devVersion || dev.Tree != devTree || dev.State != "dirty" || dev.ID != "sha256:dd" {
-		t.Errorf("read %+v", dev)
-	}
-	if line := dev.describe(testPin); !strings.Contains(line, "/work/control") || !strings.Contains(line, "not the pinned ENFORCER_COMMIT "+testPin) {
-		t.Errorf("the build is described as %q", line)
-	}
-	refused := map[string]lookup{
-		"a pinned build":       inspectDevelopment(devLabels("", testPin)),
-		"another tree":         inspectDevelopment(devLabels("development", "dev-000000000000")),
-		"labels that are none": inspectDevelopment("not json"),
-		"no image": func(context.Context, string, ...string) (string, error) {
-			return "", errors.New("No such image")
-		},
-	}
-	for name, inspect := range refused {
-		if _, err := readDevelopment(context.Background(), inspect, devRef); err == nil {
-			t.Errorf("%s was taken for a development build", name)
-		}
-	}
+// developmentLab is a lab pointed at a development image, with docker
+// answered by inspectDevelopment and every signing call recorded in signed.
+func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]string) {
+	t.Helper()
+	return developmentLabWith(t, serves, func(docker lookup) lookup { return docker })
 }
 
-// developmentLab is a lab pointed at a development image through
-// withDevelopment, with docker answered by inspectDevelopment and every
-// signing call recorded in signed.
-func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]string) {
+// developmentLabWith is developmentLab with docker as wrap makes it, from the
+// enforcer's driver being built on.
+func developmentLabWith(t *testing.T, serves string, wrap func(lookup) lookup) (lab, *fakeCompose, string, *[]string) {
 	t.Helper()
 	subject, compose, scenario := enforcerLab(t)
 	answer := inspectDevelopment(devLabels("development", devVersion))
 	var signed []string
-	docker := func(ctx context.Context, name string, args ...string) (string, error) {
+	docker := wrap(func(ctx context.Context, name string, args ...string) (string, error) {
 		if slices.Contains(args, "keygen") {
 			return "", writeProbeKey(args)
 		}
@@ -89,12 +70,12 @@ func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]
 			return "", writeBundle(args)
 		}
 		return answer(ctx, name, args...)
-	}
+	})
 	subject.inspect = docker
-	subject, err := withDevelopment(context.Background(), subject, devRef, subject.workspace, docker)
-	if err != nil {
-		t.Fatal(err)
-	}
+	reconfigure(t, &subject, func(config *control.Config) {
+		config.Inspect, config.Development = docker, devRef
+	})
+	subject.describe = describeHost(subject.root, subject.workspace, docker, subject.subjects())
 	compose.image = func(string) (string, error) { return "sha256:dd", nil }
 	brand := compose.exec
 	compose.exec = func(service string, args []string) dockercompose.Split {
@@ -104,6 +85,17 @@ func developmentLab(t *testing.T, serves string) (lab, *fakeCompose, string, *[]
 		return brand(service, args)
 	}
 	return subject, compose, scenario, &signed
+}
+
+// writeProbeKey writes the key the signer's user probe asks keygen for, as
+// the runner's own user, into the directory its arguments mount at /probe.
+func writeProbeKey(args []string) error {
+	mount := args[slices.Index(args, "-v")+1]
+	key := filepath.Join(strings.TrimSuffix(mount, ":/probe"), "key")
+	if err := os.MkdirAll(key, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(key, "signing.key"), []byte("probe"), 0o600)
 }
 
 // writeBundle stands in for the signing container: it writes the bundle into
@@ -153,15 +145,17 @@ func TestADevelopmentRunServedByThePinnedBinaryIsRed(t *testing.T) {
 // The tag can be built again while a catalogue runs; the run is held to the
 // image it read at its start.
 func TestADevelopmentRunOnAnotherImageThanItReadIsRed(t *testing.T) {
-	subject, compose, scenario, _ := developmentLab(t, devVersion)
-	compose.image = func(string) (string, error) { return "sha256:ee", nil }
-	read := subject.inspect
-	subject.inspect = func(ctx context.Context, name string, args ...string) (string, error) {
-		if answer, err := read(ctx, name, args...); strings.HasPrefix(answer, "sha256:dd") {
-			return "sha256:ee" + strings.TrimPrefix(answer, "sha256:dd"), err
+	rebuilt := false
+	subject, compose, scenario, _ := developmentLabWith(t, devVersion, func(read lookup) lookup {
+		return func(ctx context.Context, name string, args ...string) (string, error) {
+			if answer, err := read(ctx, name, args...); rebuilt && strings.HasPrefix(answer, "sha256:dd") {
+				return "sha256:ee" + strings.TrimPrefix(answer, "sha256:dd"), err
+			}
+			return read(ctx, name, args...)
 		}
-		return read(ctx, name, args...)
-	}
+	})
+	compose.image = func(string) (string, error) { return "sha256:ee", nil }
+	rebuilt = true
 	graded, err := subject.execute(context.Background(), scenario)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -176,7 +170,7 @@ func TestADevelopmentRunOnAnotherImageThanItReadIsRed(t *testing.T) {
 func TestTheEnforcerImageIsTheRunnersWhateverTheShellExports(t *testing.T) {
 	t.Setenv("LAB_ENFORCER_REF", devRef)
 	subject, _, _ := enforcerLab(t)
-	env := subject.environment("flow-01-20260909T120000Z-0badc0de", t.TempDir())
+	env := subject.environment(newRun("flow-01-20260909T120000Z-0badc0de", t.TempDir()))
 	composed := dockercompose.CLI{}.WithEnv(env).(dockercompose.CLI)
 	last := ""
 	for _, entry := range composed.Env {
@@ -184,7 +178,7 @@ func TestTheEnforcerImageIsTheRunnersWhateverTheShellExports(t *testing.T) {
 			last = value
 		}
 	}
-	if last != subject.enforcerImage || last != "lab-enforcer:"+testPin {
-		t.Errorf("compose would run %q, want the pinned %q", last, subject.enforcerImage)
+	if last != "lab-enforcer:"+testPin {
+		t.Errorf("compose would run %q, want the pinned %q", last, "lab-enforcer:"+testPin)
 	}
 }

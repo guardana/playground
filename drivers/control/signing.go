@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"context"
@@ -6,24 +6,24 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/runner/driver"
 )
 
-// signer signs a policy document into a bundle with the lab key. The key is
+// Signer signs a policy document into a bundle with the lab key. The key is
 // mounted only into the one-shot container that signs, never into the gateway.
-type signer func(ctx context.Context, keysDir, policy, outDir string) error
+type Signer func(ctx context.Context, keysDir, policy, outDir string) error
 
 const bundleName = "policy.bundle"
 
 // signWithEnforcer signs with the pinned enforcer's own `policy sign`, in a
 // container with no network, no capability and no image but the local pin, as
 // a user whose files the invoking user owns, so the key's owner reads it.
-func signWithEnforcer(root string, run lookup) signer {
+func signWithEnforcer(root string, run driver.Lookup) Signer {
 	var once sync.Once
-	var sign signer
+	var sign Signer
 	var err error
 	return func(ctx context.Context, keysDir, policy, outDir string) error {
 		once.Do(func() {
@@ -40,7 +40,7 @@ func signWithEnforcer(root string, run lookup) signer {
 }
 
 // signWithImage signs with the `policy sign` of the enforcer image named.
-func signWithImage(image string, run lookup) signer {
+func signWithImage(image string, run driver.Lookup) Signer {
 	user := onceUser(image, run)
 	return func(ctx context.Context, keysDir, policy, outDir string) error {
 		as, err := user(ctx)
@@ -59,13 +59,13 @@ func signWithImage(image string, run lookup) signer {
 // signInto signs in a directory of its own and copies the bundle alone into
 // the run's gateway directory, which the enforcer mounts: whatever else the
 // signing container leaves behind never reaches the plane.
-func (l lab) signInto(ctx context.Context, policy, gatewayDir string) error {
+func (d *Driver) signInto(ctx context.Context, policy, gatewayDir string) error {
 	scratch, err := os.MkdirTemp("", "lab-sign-")
 	if err != nil {
 		return err
 	}
 	defer func() { _ = os.RemoveAll(scratch) }()
-	if err := l.sign(ctx, l.keysDir, policy, scratch); err != nil {
+	if err := d.sign(ctx, d.config.KeysDir, policy, scratch); err != nil {
 		return err
 	}
 	return copyRegular(filepath.Join(scratch, bundleName), filepath.Join(gatewayDir, bundleName))
@@ -97,8 +97,8 @@ func copyRegular(from, to string) error {
 	return target.Close()
 }
 
-// labKeysDir is where scripts/lab-key.sh keeps the lab key on this machine.
-func labKeysDir(lookup func(string) string) string {
+// KeysDir is where scripts/lab-key.sh keeps the lab key on this machine.
+func KeysDir(lookup func(string) string) string {
 	if dir := lookup("LAB_KEYS_DIR"); dir != "" {
 		return dir
 	}
@@ -112,58 +112,17 @@ func labKeysDir(lookup func(string) string) string {
 // refuseKeysPlace refuses a key directory inside the clone, where it could be
 // committed, inside the reports, which services write into and people share,
 // or inside a workspace, whose directories containers mount.
-func (l lab) refuseKeysPlace() error {
-	keys := resolved(l.keysDir)
-	places := map[string]string{"the clone": l.root, "the reports directory": l.reports}
-	if l.workspace.external {
-		places["the workspace"] = l.workspace.dir
+func (d *Driver) refuseKeysPlace() error {
+	keys := hostpath.Resolved(d.config.KeysDir)
+	places := map[string]string{"the clone": d.config.Root, "the reports directory": d.config.Reports}
+	if d.config.Workspace.External {
+		places["the workspace"] = d.config.Workspace.Dir
 	}
 	for name, dir := range places {
-		if within(keys, resolved(dir)) {
+		if hostpath.Within(keys, hostpath.Resolved(dir)) {
 			return fmt.Errorf("LAB_KEYS_DIR %s is inside %s; keep the lab key outside the clone, the reports and the workspace",
-				l.keysDir, name)
+				d.config.KeysDir, name)
 		}
 	}
 	return nil
-}
-
-// resolved is path made absolute with every link resolved. A path that does
-// not exist yet keeps its missing tail under its nearest existing directory,
-// resolved, so it compares with paths that do exist.
-func resolved(path string) string {
-	absolute, err := filepath.Abs(path)
-	if err != nil {
-		return filepath.Clean(path)
-	}
-	if evaluated, err := filepath.EvalSymlinks(absolute); err == nil {
-		return evaluated
-	}
-	parent := filepath.Dir(absolute)
-	if parent == absolute {
-		return absolute
-	}
-	return filepath.Join(resolved(parent), filepath.Base(absolute))
-}
-
-// within reports whether path is dir or lies below it. Spellings are compared
-// first; then every existing ancestor of path is compared with dir as a file,
-// because a case-insensitive file system or a second name for a volume gives
-// one directory several spellings that resolving links does not reconcile.
-func within(path, dir string) bool {
-	relative, err := filepath.Rel(dir, path)
-	if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return true
-	}
-	target, err := os.Stat(dir)
-	if err != nil {
-		return false
-	}
-	for at := filepath.Clean(path); ; at = filepath.Dir(at) {
-		if info, err := os.Stat(at); err == nil && os.SameFile(info, target) {
-			return true
-		}
-		if filepath.Dir(at) == at {
-			return false
-		}
-	}
 }

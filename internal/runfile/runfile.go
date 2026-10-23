@@ -1,5 +1,5 @@
-// Package runfile reads files a container could have written into a run
-// directory, where a link or an endless file is the container's to plant.
+// Package runfile reads and writes files in a run directory, where a container
+// can plant a link or an endless file.
 package runfile
 
 import (

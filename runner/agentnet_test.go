@@ -15,7 +15,8 @@ import (
 
 func agentNetOf(t *testing.T, runID string) (subnet, dynamic netip.Prefix, enforcer netip.Addr) {
 	t.Helper()
-	env := lab{}.environment(runID, t.TempDir())
+	subject, _, _ := enforcerLab(t)
+	env := subject.environment(newRun(runID, t.TempDir()))
 	var err error
 	if subnet, err = netip.ParsePrefix(env["LAB_AGENT_SUBNET"]); err != nil {
 		t.Fatalf("LAB_AGENT_SUBNET: %v", err)

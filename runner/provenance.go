@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/runner/driver"
 	"github.com/guardana/playground/runner/report"
 )
@@ -16,11 +17,9 @@ import (
 // provenanceTimeout bounds the git and docker lookups a report header needs.
 const provenanceTimeout = 30 * time.Second
 
-// Labels the image builds stamp with the pin each image was built from.
-const (
-	revisionLabel = "org.opencontainers.image.revision"
-	versionLabel  = "org.opencontainers.image.version"
-)
+// versionLabel is where the verifier's image build stamps the release it
+// installed.
+const versionLabel = "org.opencontainers.image.version"
 
 // lookup runs one program and returns its trimmed output; command is the real
 // one, and a test hands in what the program would have said.
@@ -65,13 +64,6 @@ func describeSubjects(ctx context.Context, subjects []driver.Subject, run lookup
 	return joined
 }
 
-func or(value, otherwise string) string {
-	if value == "" {
-		return otherwise
-	}
-	return value
-}
-
 // refuseVerifierImage refuses a run the verifier grades when the local image
 // under the pin's tag was not built from VERIFIER_VERSION: compose never pulls
 // it, and a tag alone says nothing about what was installed behind it.
@@ -86,7 +78,7 @@ func (l lab) refuseVerifierImage(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
 	defer cancel()
 	want := pins.Value("VERIFIER_VERSION")
-	image := inspectImage(ctx, l.inspect, pins.Value("VERIFIER_IMAGE"), want, versionLabel)
+	image := driver.InspectImage(ctx, l.inspect, pins.Value("VERIFIER_IMAGE"), want, versionLabel)
 	switch {
 	case image.Missing != "":
 		return fmt.Errorf("%s: %s", image.Ref, image.Missing)
@@ -120,7 +112,7 @@ func labCommit(ctx context.Context, run lookup, root string) string {
 	switch {
 	case err != nil:
 		return "not a git checkout: " + err.Error()
-	case resolved(top) != resolved(root):
+	case hostpath.Resolved(top) != hostpath.Resolved(root):
 		return fmt.Sprintf("not a git checkout (inside %s)", top)
 	}
 	commit, err := run(ctx, "git", "-C", root, "rev-parse", "HEAD")
@@ -135,29 +127,6 @@ func labCommit(ctx context.Context, run lookup, root string) string {
 		return commit + " with uncommitted changes"
 	}
 	return commit
-}
-
-func inspectImage(ctx context.Context, run lookup, name, pin, label string) report.Image {
-	image := report.Image{Ref: name + ":" + pin, Want: pin}
-	if name == "" || pin == "" {
-		image.Missing = "versions.env names no image or no pin for it"
-		return image
-	}
-	format := fmt.Sprintf(`{{.Id}} {{index .Config.Labels %q}}`, label)
-	found, err := run(ctx, "docker", "image", "inspect", "--format", format, image.Ref)
-	switch {
-	case err != nil && strings.Contains(err.Error(), "No such image"):
-		image.Missing = "not built on this machine"
-		return image
-	case err != nil:
-		image.Missing = "unreadable: " + err.Error()
-		return image
-	}
-	image.ID, image.Label, _ = strings.Cut(found, " ")
-	if image.Label == "<no value>" {
-		image.Label = ""
-	}
-	return image
 }
 
 func machine(ctx context.Context, run lookup) string {

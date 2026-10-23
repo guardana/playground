@@ -31,9 +31,12 @@ func (guardanaSubject) OneShots() []string {
 
 // Describe reads the verifier's image by the release its build stamps.
 func (guardanaSubject) Describe(ctx context.Context, inspect driver.Lookup, pins driver.Pins) driver.Description {
-	image := inspectImage(ctx, inspect, pins.Value("VERIFIER_IMAGE"), pins.Value("VERIFIER_VERSION"), versionLabel)
+	image := driver.InspectImage(ctx, inspect, pins.Value("VERIFIER_IMAGE"), pins.Value("VERIFIER_VERSION"), versionLabel)
 	return driver.Description{Images: []report.Image{image}}
 }
+
+// Env names nothing: the verifier's services read the run's own variables.
+func (guardanaSubject) Env(driver.Run) map[string]string { return nil }
 
 // DownProfiles names the pin step's profile: a pin step that outlived its
 // deadline would otherwise be left on tool-net when the scenario's own

@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/runner/dockercompose"
 )
 
@@ -305,27 +307,35 @@ func labUnderTest(t *testing.T, compose dockercompose.Compose) (lab, string) {
 	writeFile(filepath.Join(root, versionFile), "ENFORCER_TREE="+testTree+"\n")
 	keysDir := t.TempDir()
 	writeFile(filepath.Join(keysDir, "public.txt"), "key_id: ed25519-0011223344556677\npublic_key: cHVibGljLWtleQ==\n")
-	return lab{
-		root:      root,
-		workspace: workspace{dir: resolved(root)},
-		reports:   filepath.Join(root, "reports"),
-		compose:   compose,
-		timeout:   defaultScenarioTimeout,
-		clock:     func() time.Time { return time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC) },
-		suffix:    countingSuffix(),
-		log:       io.Discard,
-		namespace: testNamespace,
-		pin:       testPin,
-		keysDir:   keysDir,
-		sign: func(_ context.Context, signedWith, policy, outDir string) error {
+	space := workspace{dir: hostpath.Resolved(root)}
+	reports := filepath.Join(root, "reports")
+	gate := newTestControl(t, control.Config{
+		Root:      root,
+		Reports:   reports,
+		Workspace: control.Workspace{Dir: space.dir},
+		Inspect:   inspectEnforcer(testTree),
+		Log:       io.Discard,
+		KeysDir:   keysDir,
+		Sign: func(_ context.Context, signedWith, policy, outDir string) error {
 			if signedWith != keysDir || filepath.Base(policy) != "flow-01.json" {
 				t.Errorf("signed %s with %s", policy, signedWith)
 			}
 			return os.WriteFile(filepath.Join(outDir, "policy.bundle"), []byte("signed"), 0o600)
 		},
-		drainBound:    2 * time.Second,
-		enforcerImage: "lab-enforcer:" + testPin,
-		inspect:       inspectEnforcer(testTree),
+		DrainBound: 2 * time.Second,
+		Pins:       testPins(),
+	})
+	return lab{
+		root:      root,
+		workspace: space,
+		reports:   reports,
+		compose:   compose,
+		timeout:   defaultScenarioTimeout,
+		clock:     func() time.Time { return time.Date(2026, 9, 9, 12, 0, 0, 0, time.UTC) },
+		suffix:    countingSuffix(),
+		log:       io.Discard,
+		control:   gate,
+		inspect:   inspectEnforcer(testTree),
 	}, filepath.Join(root, "scenarios/flow/flow-01.yaml")
 }
 

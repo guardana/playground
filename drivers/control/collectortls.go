@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"crypto/ecdsa"
@@ -121,10 +121,10 @@ func certificate(template, parent *x509.Certificate, public any, signer *ecdsa.P
 func writePEMs(runDir string, files map[string]pemFile) error {
 	for _, dir := range []string{exportCADir, collectorTLSDir} {
 		path := filepath.Join(runDir, dir)
-		if err := os.Mkdir(path, reportsMode); err != nil { // #nosec G301,G703 -- inside the run directory the runner made.
+		if err := os.Mkdir(path, publicDirMode); err != nil { // #nosec G301,G703 -- inside the run directory the runner made.
 			return err
 		}
-		if err := os.Chmod(path, reportsMode); err != nil { // #nosec G302,G703 -- a umask must not hide it from the service.
+		if err := os.Chmod(path, publicDirMode); err != nil { // #nosec G302,G703 -- a umask must not hide it from the service.
 			return err
 		}
 	}

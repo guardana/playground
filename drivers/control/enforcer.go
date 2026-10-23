@@ -1,18 +1,19 @@
-package main
+package control
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"sigs.k8s.io/yaml"
 
 	"github.com/guardana/playground/drivers/control/gateway"
-	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
+	"github.com/guardana/playground/runner/driver"
 )
 
 // What the lab owns in the enforcer's configuration, as the compose topology
@@ -41,61 +42,48 @@ func sealedFromAgent(spec labspec.Scenario) []string {
 // prepareEnforcer writes the run's gateway directory and the collector's TLS
 // material, and makes the directories the collector and the decision point
 // double write into.
-func (l lab) prepareEnforcer(ctx context.Context, spec labspec.Scenario, runDir string) error {
+func (d *Driver) prepareEnforcer(ctx context.Context, spec labspec.Scenario, run driver.Run) error {
+	runDir := run.Dir
 	for _, shared := range []string{"collector", "pki"} {
 		if err := makeShared(filepath.Join(runDir, shared)); err != nil {
 			return err
 		}
 	}
-	routes, err := l.routedUpstreams(spec.Proxied())
+	routes, err := d.routedUpstreams(spec.Proxied())
 	if err != nil {
 		return err
 	}
-	if _, err := l.prepareGateway(ctx, spec.Gateway, routes, runDir); err != nil {
+	if _, err := d.prepareGateway(ctx, spec.Gateway, routes, run); err != nil {
 		return err
 	}
-	if err := writeCollectorTLS(runDir, time.Now()); err != nil {
+	if err := writeCollectorTLS(runDir, d.clock()); err != nil {
 		return errors.Join(fmt.Errorf("the collector's certificate: %w", err), dropCollectorKey(runDir))
 	}
 	return nil
 }
 
-// unprepared is the report of a run whose enforcer could not be prepared: no
-// key, a policy that does not sign, a configuration the lab refuses. Nothing
-// was brought up, and the run fails rather than skipping.
-func unprepared(id, runID string, cause error, at time.Time) assertion.Report {
-	return assertion.Report{
-		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
-		Results: []assertion.Result{{
-			Check: "plane/prepared", Outcome: assertion.Fail,
-			Want: "a signed bundle and an assembled configuration for the enforcer",
-			Got:  "the run was refused before anything was brought up", Detail: cause.Error(),
-		}},
-	}
-}
-
 // prepareGateway writes the run's gateway directory: the bundle signed for
 // this run and the configuration assembled around it. It returns the
 // directory, which compose mounts read-only into the enforcer.
-func (l lab) prepareGateway(
-	ctx context.Context, plan *labspec.Gateway, routes []gateway.Upstream, runDir string,
+func (d *Driver) prepareGateway(
+	ctx context.Context, plan *labspec.Gateway, routes []gateway.Upstream, run driver.Run,
 ) (string, error) {
-	if err := l.refuseKeysPlace(); err != nil {
+	if err := d.refuseKeysPlace(); err != nil {
 		return "", err
 	}
-	dir := filepath.Join(runDir, gatewayDirName)
+	dir := filepath.Join(run.Dir, gatewayDirName)
 	if err := os.Mkdir(dir, 0o755); err != nil { // #nosec G301,G703 -- inside the run directory; the enforcer's uid reads it, nothing in it is secret.
 		return "", err
 	}
-	lines, err := os.ReadFile(filepath.Join(l.keysDir, "public.txt")) // #nosec G304 -- the lab key's public half.
+	lines, err := os.ReadFile(filepath.Join(d.config.KeysDir, "public.txt")) // #nosec G304 -- the lab key's public half.
 	if err != nil {
-		return "", fmt.Errorf("no lab key at %s (run make lab-key): %w", l.keysDir, err)
+		return "", fmt.Errorf("no lab key at %s (run make lab-key): %w", d.config.KeysDir, err)
 	}
 	key, err := gateway.ParseKey(lines)
 	if err != nil {
 		return "", err
 	}
-	document, err := os.ReadFile(l.workspace.file(plan.Policy)) // #nosec G304 -- a workspace path the scenario names.
+	document, err := os.ReadFile(d.config.Workspace.file(plan.Policy)) // #nosec G304 -- a workspace path the scenario names.
 	if err != nil {
 		return "", err
 	}
@@ -103,14 +91,14 @@ func (l lab) prepareGateway(
 	if err != nil {
 		return "", err
 	}
-	if err := l.signInto(ctx, l.workspace.file(plan.Policy), dir); err != nil {
+	if err := d.signInto(ctx, d.config.Workspace.file(plan.Policy), dir); err != nil {
 		return "", fmt.Errorf("signing %s: %w", plan.Policy, err)
 	}
-	overrides, err := l.overrides(plan.Unclassified)
+	overrides, err := d.overrides(plan.Unclassified)
 	if err != nil {
 		return "", err
 	}
-	partial, err := os.ReadFile(l.workspace.file(plan.Config)) // #nosec G304 -- a workspace path the scenario names.
+	partial, err := os.ReadFile(d.config.Workspace.file(plan.Config)) // #nosec G304 -- a workspace path the scenario names.
 	if err != nil {
 		return "", err
 	}
@@ -118,23 +106,23 @@ func (l lab) prepareGateway(
 		Partial: partial, Key: key, BundleID: bundleID, BundleFile: gatewayMount + "/policy.bundle",
 		SpoolDir: enforcerSpoolDir, Collector: collectorLogs, Upstreams: routes, Overrides: overrides,
 		UsesPDP: plan.PDPScript != "", UpstreamTenants: plan.UpstreamTenants,
-		Listener: enforcerListener(filepath.Base(runDir)),
+		Listener: net.JoinHostPort(run.GateAddress, servicePort),
 	})
 	if err != nil {
 		return "", err
 	}
 	// Public configuration the enforcer's uid reads.
-	return dir, createNew(filepath.Join(dir, "gateway.yaml"), 0o644, func(file *os.File) error {
+	return dir, runfile.CreateNew(filepath.Join(dir, "gateway.yaml"), 0o644, func(file *os.File) error {
 		_, err := file.Write(assembled)
 		return err
 	})
 }
 
-func (l lab) overrides(unclassified []string) ([]gateway.Override, error) {
+func (d *Driver) overrides(unclassified []string) ([]gateway.Override, error) {
 	var classes []gateway.Class
 	var prints []gateway.Fingerprint
 	for path, into := range map[string]any{classification: &classes, fingerprints: &prints} {
-		body, err := os.ReadFile(filepath.Join(l.root, path)) // #nosec G304 -- the lab's own files.
+		body, err := os.ReadFile(filepath.Join(d.config.Root, path)) // #nosec G304 -- the lab's own files.
 		if err != nil {
 			return nil, err
 		}

@@ -3,7 +3,7 @@ title: Bring your own policy
 summary: Run a policy of your own through the pinned enforcer against the lab's victims, and see what it allows, denies and holds.
 type: runbook
 audience: [engineering, product]
-covers: [runner/workspace.go, runner/enforcer.go, runner/signing.go, drivers/control/gateway/**, config/gateway/classification.yaml, examples/**]
+covers: [runner/workspace.go, drivers/control/enforcer.go, drivers/control/signing.go, drivers/control/gateway/**, config/gateway/classification.yaml, examples/**]
 ---
 
 # Bring your own policy

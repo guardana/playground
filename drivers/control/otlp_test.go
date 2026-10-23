@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	otlpFixture    = "../drivers/control/evidence/testdata/otlp/export_logs_request.json"
+	otlpFixture    = "evidence/testdata/otlp/export_logs_request.json"
 	otlpGoldenNS   = "guardana.control"
 	otlpGoldenSize = 4
 )

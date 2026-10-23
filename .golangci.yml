@@ -21,8 +21,8 @@ linters:
       min-complexity: 12
     depguard:
       # The frozen shared contract: the two file shapes, the reader for the
-      # enforcement plane's evidence, the victims' journal and the assertion
-      # interface. Every lane builds against it, so it may depend on none of
+      # enforcement plane's evidence, the victims' journal, the record of a
+      # tool's run and the assertion interface. Every lane builds against it, so it may depend on none of
       # them; and a check reads records it was handed rather than asking a
       # running service how it is, which is the difference between asserting on
       # evidence and asserting on narrative.
@@ -33,6 +33,7 @@ linters:
             - "**/drivers/control/evidence/**"
             - "**/internal/journal/**"
             - "**/internal/assertion/**"
+            - "**/internal/record/**"
           deny:
             - pkg: "github.com/guardana/playground/victims"
               desc: the shared contract must not depend on a victim

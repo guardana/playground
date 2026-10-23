@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/internal/labspec"
 )
 
@@ -15,8 +16,8 @@ func TestNoWorkspaceMeansTheClone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("openWorkspace: %v", err)
 	}
-	if got.external || got.dir != resolved(root) {
-		t.Errorf("an unset LAB_WORKSPACE opened %+v, want the clone %s", got, resolved(root))
+	if got.external || got.dir != hostpath.Resolved(root) {
+		t.Errorf("an unset LAB_WORKSPACE opened %+v, want the clone %s", got, hostpath.Resolved(root))
 	}
 }
 
@@ -103,7 +104,7 @@ func workspaceHolding(t *testing.T, except string) workspace {
 			writeFile(filepath.Join(dir, path), "x\n")
 		}
 	}
-	return workspace{dir: resolved(dir), external: true}
+	return workspace{dir: hostpath.Resolved(dir), external: true}
 }
 
 func TestAWorkspaceHoldingEveryNamedFileIsTaken(t *testing.T) {

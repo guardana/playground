@@ -59,10 +59,10 @@ func pinSource(probe labspec.ProbeStep) int {
 // which uid 65532 writes into.
 func makeStepDirs(dir string, number int, writesPin bool) error {
 	step := filepath.Join(dir, stepDirName(number))
-	if err := makeDir(step, inputDirMode); err != nil {
+	if err := runfile.MakeDir(step, inputDirMode); err != nil {
 		return err
 	}
-	if err := makeDir(filepath.Join(step, inputsDir), inputDirMode); err != nil {
+	if err := runfile.MakeDir(filepath.Join(step, inputsDir), inputDirMode); err != nil {
 		return err
 	}
 	if writesPin {

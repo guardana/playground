@@ -1,4 +1,4 @@
-package main
+package control
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/guardana/playground/runner/driver"
 )
 
 // errNotTheRunners is a probe whose file was written and belongs to another uid.
@@ -20,7 +22,7 @@ var errNotTheRunners = errors.New("the file it wrote belongs to another uid")
 // user. Root is never tried on a daemon that does not say it is rootless, and
 // a mapping under which neither holds is refused rather than guessed, since
 // the enforcer refuses a key another account owns.
-func containerUser(ctx context.Context, image string, run lookup, ownerOf func(string) (int, error)) (string, error) {
+func containerUser(ctx context.Context, image string, run driver.Lookup, ownerOf func(string) (int, error)) (string, error) {
 	own := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	ownErr := writesAsRunner(ctx, image, own, run, ownerOf)
 	if ownErr == nil {
@@ -46,7 +48,7 @@ func containerUser(ctx context.Context, image string, run lookup, ownerOf func(s
 
 // writesAsRunner has the enforcer's keygen write a throwaway key as user into
 // a directory of the runner's, and says why the result is not the runner's.
-func writesAsRunner(ctx context.Context, image, user string, run lookup, ownerOf func(string) (int, error)) error {
+func writesAsRunner(ctx context.Context, image, user string, run driver.Lookup, ownerOf func(string) (int, error)) error {
 	probe, err := os.MkdirTemp("", "lab-user-")
 	if err != nil {
 		return err
@@ -84,7 +86,7 @@ func fileOwner(path string) (int, error) {
 // onceUser runs containerUser until it succeeds and answers every later call
 // from that success; a failed probe, a cancelled one included, is tried again
 // by the next call rather than kept for the rest of the process.
-func onceUser(image string, run lookup) func(context.Context) (string, error) {
+func onceUser(image string, run driver.Lookup) func(context.Context) (string, error) {
 	var mu sync.Mutex
 	var user string
 	return func(ctx context.Context) (string, error) {

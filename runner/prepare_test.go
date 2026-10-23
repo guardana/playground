@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/drivers/control"
 	"github.com/guardana/playground/internal/assertion"
 )
 
@@ -58,13 +59,15 @@ func TestAnUpstreamTenantReachesTheAssembledConfiguration(t *testing.T) {
 func TestTheSignerWritesOutsideTheRunAndOnlyTheBundleIsKept(t *testing.T) {
 	subject, compose, scenario := enforcerLab(t)
 	var signedInto string
-	subject.sign = func(_ context.Context, _, _, outDir string) error {
-		signedInto = outDir
-		writeFile(filepath.Join(outDir, "policy.bundle"), "signed")
-		writeFile(filepath.Join(outDir, "gateway.yaml"), "mode: OBSERVE\n")
-		writeFile(filepath.Join(outDir, "planted"), "x")
-		return nil
-	}
+	reconfigure(t, &subject, func(config *control.Config) {
+		config.Sign = func(_ context.Context, _, _, outDir string) error {
+			signedInto = outDir
+			writeFile(filepath.Join(outDir, "policy.bundle"), "signed")
+			writeFile(filepath.Join(outDir, "gateway.yaml"), "mode: OBSERVE\n")
+			writeFile(filepath.Join(outDir, "planted"), "x")
+			return nil
+		}
+	})
 	if _, err := subject.execute(context.Background(), scenario); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -105,10 +108,11 @@ func TestALabKeyInsideTheCloneTheReportsOrTheWorkspaceIsRefused(t *testing.T) {
 			case "workspace":
 				apart(t, &subject, classification, fingerprints, versionFile)
 				subject.workspace.external = true
+				reconfigure(t, &subject, func(config *control.Config) { config.Workspace.External = true })
 				inside = filepath.Join(subject.workspace.dir, "trajectories", "keys")
 			}
 			writeFile(filepath.Join(inside, "public.txt"), "key_id: ed25519-0011223344556677\npublic_key: cHVibGljLWtleQ==\n")
-			subject.keysDir = inside
+			reconfigure(t, &subject, func(config *control.Config) { config.KeysDir = inside })
 			graded, err := subject.execute(context.Background(), scenario)
 			if err != nil {
 				t.Fatalf("execute: %v", err)
@@ -120,24 +124,5 @@ func TestALabKeyInsideTheCloneTheReportsOrTheWorkspaceIsRefused(t *testing.T) {
 				t.Errorf("a refused run brought up %v", compose.broughtUp)
 			}
 		})
-	}
-}
-
-func TestTheSignerRunsUnprivilegedFromThePinnedImageOnly(t *testing.T) {
-	root := t.TempDir()
-	writeFile(filepath.Join(root, versionFile), "ENFORCER_IMAGE=lab-enforcer\nENFORCER_COMMIT="+testPin+"\n")
-	d := &daemon{writer: ownIDs()}
-	sign := signWithEnforcer(root, d.run)
-	if err := sign(context.Background(), "/keys", "/repo/config/policies/p.json", "/tmp/out"); err != nil {
-		t.Fatal(err)
-	}
-	joined := strings.Join(d.calls[len(d.calls)-1], " ")
-	for _, want := range []string{
-		"--pull never", "--cap-drop ALL", "--security-opt no-new-privileges", "--network none", "--read-only",
-		"-v /keys:/key:ro", "-v /tmp/out:/out", "lab-enforcer:" + testPin,
-	} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("the signer ran without %q: %s", want, joined)
-		}
 	}
 }

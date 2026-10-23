@@ -12,22 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/guardana/playground/drivers/control/evidence"
-	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/journal"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
 	"github.com/guardana/playground/runner/report"
 )
 
-// maxEvents bounds one run's trail. A trail longer than this is refused rather
-// than read short: reading the first n events of a longer file would grade a
-// run on a prefix whose end nobody saw.
-const maxEvents = 50000
-
 // load reads the two files and checks the rules that need both of them,
-// every file the scenario names read from the workspace.
-func load(space workspace, scenarioPath string) (labspec.Scenario, labspec.Trajectory, error) {
+// every file the scenario names read from the workspace; admit is the gate's
+// own refusal of a pair it could not decide.
+func load(
+	space workspace, scenarioPath string, admit func(labspec.Scenario, labspec.Trajectory) error,
+) (labspec.Scenario, labspec.Trajectory, error) {
 	spec, err := labspec.LoadScenario(scenarioPath)
 	if err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
@@ -47,7 +44,7 @@ func load(space workspace, scenarioPath string) (labspec.Scenario, labspec.Traje
 	if err := labspec.Validate(spec, trajectory); err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}
-	if err := refuseAnotherIdentity(space, spec, trajectory); err != nil {
+	if err := admit(spec, trajectory); err != nil {
 		return labspec.Scenario{}, labspec.Trajectory{}, err
 	}
 	if err := mountable(spec); err != nil {
@@ -105,24 +102,6 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 	return records
 }
 
-// collectTrail reads the evidence trail. Its read error is kept rather than
-// noted alone because a trail nobody could read and a trail with nothing in it
-// are two facts: the second sends a reader to a file that turns out to be full.
-func (l lab) collectTrail(runDir string) trailcheck.Trail {
-	events, err := readTrail(filepath.Join(runDir, "evidence.jsonl"))
-	trail := trailcheck.Trail{Events: events, Read: true}
-	if err != nil {
-		l.note("reading the evidence trail: %v", err)
-		// A trail that is not there is not a trail nobody could read: nothing
-		// wrote one, and a record that should exist and does not is a failure
-		// the evidence check reports as such.
-		if !errors.Is(err, fs.ErrNotExist) {
-			trail.ReadError = err
-		}
-	}
-	return trail
-}
-
 // What a run directory holds and who writes into it.
 //
 // The directory is one run's own scratch output: the evidence trail the
@@ -143,7 +122,7 @@ func (l lab) collectTrail(runDir string) trailcheck.Trail {
 const (
 	reportsMode = 0o755
 	runDirMode  = 0o755
-	sharedMode  = fs.ModeSticky | 0o777
+	sharedMode  = runfile.Shared
 	serviceUID  = 65532
 )
 
@@ -155,19 +134,19 @@ func makeRunDir(reports, runDir string) error {
 	if err := makeReports(reports); err != nil {
 		return err
 	}
-	if err := makeDir(runDir, runDirMode); err != nil {
+	if err := runfile.MakeDir(runDir, runDirMode); err != nil {
 		return err
 	}
 	if err := makeShared(filepath.Join(runDir, "agent")); err != nil {
 		return err
 	}
 	journals := filepath.Join(runDir, "journals")
-	if err := makeDir(journals, runDirMode); err != nil {
+	if err := runfile.MakeDir(journals, runDirMode); err != nil {
 		return err
 	}
 	// The double's persona directory, read-only to it and empty unless the
 	// scenario names a persona: compose refuses a missing source.
-	if err := makeDir(filepath.Join(runDir, personaDir), runDirMode); err != nil {
+	if err := runfile.MakeDir(filepath.Join(runDir, personaDir), runDirMode); err != nil {
 		return err
 	}
 	// Every writer's directory, whatever the scenario boots: the run directory
@@ -193,16 +172,7 @@ func makeReports(reports string) error {
 }
 
 // makeShared creates one directory every service can write into.
-func makeShared(path string) error { return makeDir(path, sharedMode) }
-
-// makeDir sets the mode again after Mkdir, whose mode the umask of whoever ran
-// the runner narrows.
-func makeDir(path string, mode fs.FileMode) error {
-	if err := os.Mkdir(path, mode); err != nil { // #nosec G301,G703 -- see the modes' own comment.
-		return err
-	}
-	return os.Chmod(path, mode) // #nosec G302,G703 -- as above.
-}
+func makeShared(path string) error { return runfile.MakeDir(path, sharedMode) }
 
 // refuseServiceUID refuses a runner with the uid every lab service runs as:
 // the modes of the run directory keep nothing from a service that is its owner.
@@ -211,15 +181,6 @@ func refuseServiceUID(uid int) error {
 		return fmt.Errorf("the runner runs as uid %d, the uid every lab service runs as; run it as another user", uid)
 	}
 	return nil
-}
-
-func readTrail(path string) ([]evidence.Event, error) {
-	file, err := os.Open(path) // #nosec G304,G703 -- the path is inside the run directory the runner made.
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
-	return evidence.DecodeJSONL(file, maxEvents)
 }
 
 // refused is the report of a scenario that never ran. It is a failure and not
@@ -265,16 +226,4 @@ func writeBytes(path string, body []byte) error {
 	return write(path, func(file *os.File) error { _, err := file.Write(body); return err })
 }
 
-func write(path string, body func(*os.File) error) error { return createNew(path, 0o600, body) }
-
-// createNew is every write the runner makes into a run directory, whose
-// subdirectories every service can write into: a link or file already at path
-// is refused, never followed or truncated, so each path is written once.
-func createNew(path string, mode fs.FileMode, body func(*os.File) error) error {
-	// #nosec G304,G703 -- the path is inside the run directory the runner made.
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
-	if err != nil {
-		return err
-	}
-	return errors.Join(body(file), file.Close())
-}
+func write(path string, body func(*os.File) error) error { return runfile.CreateNew(path, 0o600, body) }

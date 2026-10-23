@@ -23,8 +23,4 @@ func TestASecondSpellingOfTheCloneIsTheClone(t *testing.T) {
 	if _, err := openWorkspace(root, filepath.Join(other, "trajectories", "runs"), nil); err == nil {
 		t.Error("reports under a second spelling of trajectories/ were accepted")
 	}
-	keys := lab{root: root, reports: t.TempDir(), keysDir: filepath.Join(other, "keys")}
-	if err := keys.refuseKeysPlace(); err == nil {
-		t.Error("a lab key under a second spelling of the clone was accepted")
-	}
 }

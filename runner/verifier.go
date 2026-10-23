@@ -12,6 +12,7 @@ import (
 	verifierreport "github.com/guardana/playground/drivers/guardana/report"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/runfile"
 	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/driver"
@@ -72,7 +73,7 @@ func everyVictimServesNothing(spec labspec.Scenario, boot assertion.Boot) labspe
 // makeDirs makes each directory in order, readable by the verifier's uid.
 func makeDirs(paths ...string) error {
 	for _, path := range paths {
-		if err := makeDir(path, inputDirMode); err != nil {
+		if err := runfile.MakeDir(path, inputDirMode); err != nil {
 			return err
 		}
 	}

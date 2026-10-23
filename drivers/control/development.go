@@ -1,11 +1,17 @@
-package main
+package control
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/guardana/playground/runner/driver"
 )
+
+// inspectTimeout bounds reading a development image's labels.
+const inspectTimeout = 30 * time.Second
 
 // The labels scripts/build-enforcer-dev.sh sets on a development image.
 const (
@@ -26,8 +32,8 @@ type devBuild struct {
 // readDevelopment reads a development image by its reference and refuses one
 // the development build did not make: no development label, no tree, or a
 // version that is not the tree's.
-func readDevelopment(ctx context.Context, inspect lookup, ref string) (devBuild, error) {
-	ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
+func readDevelopment(ctx context.Context, inspect driver.Lookup, ref string) (devBuild, error) {
+	ctx, cancel := context.WithTimeout(ctx, inspectTimeout)
 	defer cancel()
 	id, err := inspect(ctx, "docker", "image", "inspect", "--format", "{{.Id}}", ref)
 	if err != nil {

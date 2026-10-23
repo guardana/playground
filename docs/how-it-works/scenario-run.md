@@ -3,7 +3,7 @@ title: How a scenario runs
 summary: Which service sits on which network, how one call is decided and held, which file each check reads, and what a run leaves on disk.
 type: explanation
 audience: [engineering]
-covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect*.go, runner/subject*.go, runner/driver/**, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, drivers/control/trailcheck/**, drivers/control/answer/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/*.yaml, scenarios/red-by-design.txt]
+covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/collect*.go, runner/subject*.go, runner/driver/**, runner/env.go, runner/redbydesign.go, runner/check/**, drivers/control/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/*.yaml, scenarios/red-by-design.txt]
 ---
 
 # How a scenario runs
@@ -62,7 +62,7 @@ flowchart LR
   runner -.->|docker compose| enforcer
 ```
 
-Sources: `compose/compose.yaml`, `runner/env.go`, `runner/enforcer.go`, `victims/web/fetch.go`, `victims/mail/delivery.go`.
+Sources: `compose/compose.yaml`, `runner/env.go`, `drivers/control/enforcer.go`, `victims/web/fetch.go`, `victims/mail/delivery.go`.
 
 | network | who sits on it | why |
 |---|---|---|
@@ -143,7 +143,7 @@ sequenceDiagram
   Note over runner: collector/otlp-logs.json decoded into evidence.jsonl
 ```
 
-Sources: `runner/trajectory.go`, `runner/drain.go`, `runner/otlp.go`, `compose/otel/collector.yaml`.
+Sources: `runner/trajectory.go`, `drivers/control/drain.go`, `drivers/control/otlp.go`, `compose/otel/collector.yaml`.
 
 The agent forwards each step's output into the next. A victim journals every
 call it receives, served or refused; a call the enforcer stopped leaves no line.
@@ -163,7 +163,7 @@ carry the first event's `requestId`, `projectId` and `tenantId`, none of them
 empty, and the links must form one chain from one head; a trail with a fork, a
 loop or a link to an event the export does not hold is refused.
 
-The runner reads the collector's export (`runner/otlp.go`) and
+The runner reads the collector's export (`drivers/control/otlp.go`) and
 `internal/journal` reads each journal only as a regular file of bounded size,
 never through a link or a named pipe (`internal/runfile`). An export that is
 empty or decodes to no event is refused rather than read as a run that made no
@@ -282,7 +282,7 @@ The files themselves are listed in the quickstart's
   are exactly the listed scenarios on exactly their listed checks
   (`runner/redbydesign_test.go`).
 - **The trail is the collector's export after the drain**, never the
-  enforcer's own account of it (`runner/drain.go`, `runner/otlp.go`). A trail
+  enforcer's own account of it (`drivers/control/drain.go`, `drivers/control/otlp.go`). A trail
   read before the spool drained could be one the enforcer had not finished
   handing over.
 - **Every run proves the agent reaches only the enforcer**
@@ -296,7 +296,7 @@ The files themselves are listed in the quickstart's
   `make classify-victims` prints the fingerprints again after a victim's tools
   change.
 - **Policies are signed and approvals answered with the enforcer's own
-  commands**, `policy sign` (`runner/signing.go`) and `approvals`
+  commands**, `policy sign` (`drivers/control/signing.go`) and `approvals`
   (`services/approver/command.go`), so the lab exercises the path an operator
   uses.
 - **Trajectories are deterministic.** The scripted agent replays the same
@@ -309,10 +309,10 @@ The files themselves are listed in the quickstart's
 | `compose/compose.yaml` | services, networks, mounts |
 | `runner/lab.go`, `runner/trajectory.go` | one run, end to end |
 | `runner/subjects.go`, `runner/driver/` | which tool fills each role the scenario names, and what the runner asks of a gate |
-| `runner/subject_control.go` | the enforcer as the gate |
-| `runner/probes.go`, `runner/check/topology.go`, `runner/check/listener.go` | the topology probes and their grading |
-| `runner/drain.go`, `runner/otlp.go`, `runner/collectortls.go` | the drain, the export, the collector's TLS |
-| `runner/enforcer.go`, `runner/signing.go`, `drivers/control/gateway/` | the enforcer's configuration and bundle |
+| `drivers/control/subject.go`, `drivers/control/run.go` | the enforcer as the gate |
+| `runner/probes.go`, `drivers/control/listener.go`, `runner/check/topology.go`, `runner/check/listener.go` | the topology probes and their grading |
+| `drivers/control/drain.go`, `drivers/control/otlp.go`, `drivers/control/collectortls.go` | the drain, the export, the collector's TLS |
+| `drivers/control/enforcer.go`, `drivers/control/signing.go`, `drivers/control/gateway/` | the enforcer's configuration and bundle |
 | `runner/check/` | the checks over boot, topology, replay and the victims' journals |
 | `drivers/control/trailcheck/` | the checks over the enforcer's trail, `/healthz` and build |
 | `agents/scripted/`, `drivers/guardana/trace/` | the agent and the trace it writes |

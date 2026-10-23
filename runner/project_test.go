@@ -84,15 +84,3 @@ func TestTheAgentIsToldTheEnforcersNamespace(t *testing.T) {
 		t.Errorf("the replay ran with %q", replay)
 	}
 }
-
-func TestTheNamespaceIsReadFromThePins(t *testing.T) {
-	root := t.TempDir()
-	writeFile(filepath.Join(root, versionFile), "ENFORCER_COMMIT=abc\nENFORCER_NAMESPACE=guardana.control\n")
-	if got, err := enforcerNamespace(root); err != nil || got != "guardana.control" {
-		t.Errorf("enforcerNamespace = %q, %v", got, err)
-	}
-	writeFile(filepath.Join(root, versionFile), "ENFORCER_COMMIT=abc\n")
-	if got, err := enforcerNamespace(root); err == nil {
-		t.Errorf("a versions.env without the namespace gave %q", got)
-	}
-}

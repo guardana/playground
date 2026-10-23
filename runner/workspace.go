@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/internal/labspec"
 )
 
@@ -32,10 +33,10 @@ type workspace struct {
 func openWorkspace(root, reports string, environ []string) (workspace, error) {
 	value, set := lookupSet(environ, workspaceVariable)
 	if !set {
-		if err := refuseReportsInMounts(resolved(root), reports); err != nil {
+		if err := refuseReportsInMounts(hostpath.Resolved(root), reports); err != nil {
 			return workspace{}, err
 		}
-		return workspace{dir: resolved(root)}, refuseReportsInClone(root, reports)
+		return workspace{dir: hostpath.Resolved(root)}, refuseReportsInClone(root, reports)
 	}
 	if err := refuseReportsInClone(root, reports); err != nil {
 		return workspace{}, err
@@ -44,19 +45,19 @@ func openWorkspace(root, reports string, environ []string) (workspace, error) {
 		return workspace{}, fmt.Errorf("%s is set and empty; name a directory, or unset it to run the lab's own scenarios",
 			workspaceVariable)
 	}
-	dir := resolved(value)
+	dir := hostpath.Resolved(value)
 	info, err := os.Stat(dir)
 	switch {
 	case err != nil:
 		return workspace{}, fmt.Errorf("%s: %w", workspaceVariable, err)
 	case !info.IsDir():
 		return workspace{}, fmt.Errorf("%s %s is not a directory", workspaceVariable, value)
-	case within(resolved(reports), dir):
+	case hostpath.Within(hostpath.Resolved(reports), dir):
 		return workspace{}, fmt.Errorf("the reports directory %s is inside the workspace %s; containers mount workspace directories, so keep the reports outside it",
 			reports, value)
-	case within(dir, resolved(root)):
+	case hostpath.Within(dir, hostpath.Resolved(root)):
 		return workspace{}, fmt.Errorf("%s %s is inside the clone %s; keep a workspace outside it", workspaceVariable, value, root)
-	case within(dir, resolved(reports)):
+	case hostpath.Within(dir, hostpath.Resolved(reports)):
 		return workspace{}, fmt.Errorf("%s %s is inside the reports directory %s; keep a workspace outside it",
 			workspaceVariable, value, reports)
 	}
@@ -68,7 +69,7 @@ func openWorkspace(root, reports string, environ []string) (workspace, error) {
 // agent's or a double's view.
 func refuseReportsInMounts(root, reports string) error {
 	for _, dir := range mountedDirs() {
-		if within(resolved(reports), filepath.Join(root, filepath.FromSlash(strings.Trim(dir, "/")))) {
+		if hostpath.Within(hostpath.Resolved(reports), filepath.Join(root, filepath.FromSlash(strings.Trim(dir, "/")))) {
 			return fmt.Errorf("the reports directory %s is inside %s, which containers mount; keep the reports under the clone's reports/ or outside the clone",
 				reports, dir)
 		}
@@ -82,7 +83,7 @@ func refuseReportsInMounts(root, reports string) error {
 // written before the images are built, would sit in a container's view or in
 // an image.
 func refuseReportsInClone(root, reports string) error {
-	clone, at := resolved(root), resolved(reports)
+	clone, at := hostpath.Resolved(root), hostpath.Resolved(reports)
 	written, err := filepath.Abs(reports)
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func refuseReportsInClone(root, reports string) error {
 	if err != nil {
 		return err
 	}
-	if !within(at, clone) && !within(written, lexical) {
+	if !hostpath.Within(at, clone) && !hostpath.Within(written, lexical) {
 		return nil
 	}
 	own := filepath.Join(clone, "reports")
@@ -101,7 +102,7 @@ func refuseReportsInClone(root, reports string) error {
 		return fmt.Errorf("the clone's reports/ at %s is a link; make it a directory, or keep the reports outside the clone", own)
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return err
-	case !within(at, own):
+	case !hostpath.Within(at, own):
 		return fmt.Errorf("the reports directory %s is inside the clone %s and not under its reports/, the only directory there no container mounts and no image is built from",
 			reports, root)
 	}
@@ -188,7 +189,7 @@ func (w workspace) holds(named namedFile) error {
 		return fmt.Errorf("%s %s: %w", named.field, named.path, err)
 	case !info.Mode().IsRegular():
 		return fmt.Errorf("%s %s is not a regular file", named.field, named.path)
-	case !within(found, resolved(w.file(named.dir))):
+	case !hostpath.Within(found, hostpath.Resolved(w.file(named.dir))):
 		return fmt.Errorf("%s %s resolves to %s, outside %s, which is all a container or the runner reads it from",
 			named.field, named.path, found, named.dir)
 	}
