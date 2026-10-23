@@ -6,7 +6,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/guardana/playground/runner/gateway"
+	"github.com/guardana/playground/drivers/control/gateway"
 )
 
 func TestOverridesCarryWhatEachToolReturns(t *testing.T) {

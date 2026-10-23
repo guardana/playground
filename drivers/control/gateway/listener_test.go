@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/guardana/playground/runner/gateway"
+	"github.com/guardana/playground/drivers/control/gateway"
 )
 
 // The listener binds one address on agent-net. Every other form would open it

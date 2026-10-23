@@ -40,6 +40,8 @@ linters:
               desc: the shared contract must not depend on an agent
             - pkg: "github.com/guardana/playground/runner"
               desc: the shared contract must not depend on the runner
+            - pkg: "github.com/guardana/playground/drivers/control/gateway"
+              desc: the shared contract must not depend on the enforcer's configuration
             - pkg: "github.com/guardana/playground/services"
               desc: the shared contract must not depend on a lab service
             - pkg: "net/http"

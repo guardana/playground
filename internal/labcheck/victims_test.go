@@ -12,8 +12,8 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/guardana/playground/drivers/control/gateway"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/gateway"
 )
 
 // The victim list lives in every file that boots, routes, proxies or

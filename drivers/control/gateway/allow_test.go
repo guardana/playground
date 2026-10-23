@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/guardana/playground/runner/gateway"
+	"github.com/guardana/playground/drivers/control/gateway"
 )
 
 // The enforcer reads `a.b: x` as `a: {b: x}`, so a dotted key is another

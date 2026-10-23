@@ -3,7 +3,7 @@ package labcheck_test
 import (
 	"testing"
 
-	"github.com/guardana/playground/runner/gateway"
+	"github.com/guardana/playground/drivers/control/gateway"
 )
 
 // Every tool but the shell declares what it returns, the CRM, database,
