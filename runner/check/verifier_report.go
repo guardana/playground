@@ -3,10 +3,8 @@ package check
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
-	"strings"
 
-	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 	"github.com/guardana/playground/internal/runfile"
 )
 
@@ -113,24 +111,63 @@ func readVerifierFile(path string, values ...any) error {
 
 // readReport reads a report and holds it to the endpoint the step probed: a
 // report about another target is a record of something else.
-func readReport(path, url string) (verifierReport, error) {
+func readReport(path, url string) (record.Run, error) {
 	var report verifierReport
 	var lists reportLists
 	if err := readVerifierFile(path, &report, &lists); err != nil {
-		return verifierReport{}, fmt.Errorf("the verifier's report cannot be read: %w", err)
+		return record.Run{}, fmt.Errorf("the verifier's report cannot be read: %w", err)
 	}
 	switch {
 	case lists.Findings == nil || lists.Unverified == nil || lists.Waived == nil:
-		return verifierReport{}, fmt.Errorf("the report leaves out findings, unverified or waived, which is not saying none")
+		return record.Run{}, fmt.Errorf("the report leaves out findings, unverified or waived, which is not saying none")
 	case report.SchemaVersion != verifierReportSchema:
-		return verifierReport{}, fmt.Errorf("the report is schema %d and the lab reads %d",
+		return record.Run{}, fmt.Errorf("the report is schema %d and the lab reads %d",
 			report.SchemaVersion, verifierReportSchema)
 	case report.Run.Target.Ref != url:
-		return verifierReport{}, fmt.Errorf("the report is about %q, not the probed %s", report.Run.Target.Ref, url)
+		return record.Run{}, fmt.Errorf("the report is about %q, not the probed %s", report.Run.Target.Ref, url)
 	case len(report.Run.ResultSummary.RulesRun) == 0:
-		return verifierReport{}, fmt.Errorf("the report names no rule that ran")
+		return record.Run{}, fmt.Errorf("the report names no rule that ran")
 	}
-	return report, nil
+	return report.toRecord(lists), nil
+}
+
+// toRecord is the report as a neutral record. A list is reported only when the
+// report named it; every value is carried as the report wrote it.
+func (r verifierReport) toRecord(lists reportLists) record.Run {
+	run := record.Run{
+		Target:     r.Run.Target.Ref,
+		Verdict:    r.Run.ResultSummary.Gate,
+		RulesRun:   record.List[string]{Items: r.Run.ResultSummary.RulesRun, Reported: r.Run.ResultSummary.RulesRun != nil},
+		Findings:   toFindings(r.Findings, lists.Findings != nil),
+		Waived:     toFindings(r.Waived, lists.Waived != nil),
+		Unverified: toFindings(r.Unverified, lists.Unverified != nil),
+	}
+	if r.Errors != nil {
+		run.Errors = record.Named(make([]string, 0, len(*r.Errors)))
+		for _, failed := range *r.Errors {
+			run.Errors.Items = append(run.Errors.Items, failed.Source)
+		}
+	}
+	if r.Run.Coverage.Shortfall != nil {
+		run.Coverage = record.Named(make([]record.Gap, 0, len(*r.Run.Coverage.Shortfall)))
+		for _, gap := range *r.Run.Coverage.Shortfall {
+			run.Coverage.Items = append(run.Coverage.Items, record.Gap{Kind: gap.Kind, Name: gap.Name})
+		}
+	}
+	if r.Scope != nil {
+		run.Scope = record.Named(r.Scope.Files)
+	}
+	return run
+}
+
+func toFindings(findings []verifierFinding, named bool) record.List[record.Finding] {
+	list := record.List[record.Finding]{Reported: named}
+	for _, finding := range findings {
+		list.Items = append(list.Items, record.Finding{
+			Rule: finding.RuleID, Severity: finding.Severity, Target: finding.TargetRef, Summary: finding.summary(),
+		})
+	}
+	return list
 }
 
 func readPin(path, url string) (verifierPin, error) {
@@ -147,52 +184,4 @@ func readPin(path, url string) (verifierPin, error) {
 		return verifierPin{}, fmt.Errorf("the pin approves no tool")
 	}
 	return pin, nil
-}
-
-func ruleIDs(findings []verifierFinding) []string {
-	ids := make([]string, 0, len(findings))
-	for _, finding := range findings {
-		ids = append(ids, finding.RuleID)
-	}
-	return ids
-}
-
-// concludedClean reports whether a rule ran and left nothing: no finding, no
-// waived finding, no unverified result and no error. A rule that never ran, ran
-// and could not tell, or found something a waiver accepted, has not established
-// that the thing it looks for is absent.
-func (r verifierReport) concludedClean(rule string) (bool, string) {
-	switch {
-	case !slices.Contains(r.Run.ResultSummary.RulesRun, rule):
-		return false, "the rule did not run"
-	case slices.Contains(ruleIDs(r.Findings), rule):
-		return false, "the rule reported a finding"
-	case slices.Contains(ruleIDs(r.Waived), rule):
-		return false, "the rule reported a finding, and it was waived"
-	case slices.Contains(ruleIDs(r.Unverified), rule):
-		return false, "the rule ran and could not reach a verdict"
-	case slices.ContainsFunc(deref(r.Errors), func(e verifierError) bool { return e.Source == rule }):
-		return false, "the rule raised an error"
-	}
-	return true, "the rule ran and reported nothing"
-}
-
-// hasFinding reports whether a finding matches everything the expectation
-// states, and otherwise what the findings of that rule say.
-func (r verifierReport) hasFinding(want labspec.FindingExpectation) (bool, string) {
-	var seen []string
-	for _, finding := range r.Findings {
-		if finding.RuleID != want.RuleID {
-			continue
-		}
-		seen = append(seen, fmt.Sprintf("%s %q", finding.Severity, finding.summary()))
-		if (want.Severity == "" || finding.Severity == want.Severity) &&
-			strings.Contains(finding.summary(), want.SummaryContains) {
-			return true, fmt.Sprintf("%s: %s %q", finding.RuleID, finding.Severity, finding.summary())
-		}
-	}
-	if len(seen) == 0 {
-		return false, "no finding of " + want.RuleID
-	}
-	return false, strings.Join(seen, "; ")
 }
