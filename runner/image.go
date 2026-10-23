@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/runner/dockercompose"
 )
 
@@ -18,7 +18,7 @@ const treeLabel = "io.guardana.playground.enforcer.tree"
 
 // readImages records which image the run's enforcer container ran and which
 // image the pin's tag names on this machine, with the commit it was built from.
-func (l lab) readImages(ctx context.Context, compose dockercompose.Compose, profiles []string, plane *check.Plane) {
+func (l lab) readImages(ctx context.Context, compose dockercompose.Compose, profiles []string, plane *trailcheck.Plane) {
 	var problems []string
 	running, err := compose.ContainerImage(ctx, profiles, enforcerService)
 	if err != nil {
@@ -45,7 +45,7 @@ func (l lab) readImages(ctx context.Context, compose dockercompose.Compose, prof
 
 // readTree records the tree versions.env pins the enforcer's source at and the
 // tree label of the image the run's enforcer container runs.
-func (l lab) readTree(ctx context.Context, plane *check.Plane) []string {
+func (l lab) readTree(ctx context.Context, plane *trailcheck.Plane) []string {
 	var problems []string
 	pins, err := readPins(filepath.Join(l.root, versionFile))
 	if err != nil {

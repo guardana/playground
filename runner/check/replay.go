@@ -33,7 +33,7 @@ func (r Replay) Run(_ context.Context, _ assertion.Records) ([]assertion.Result,
 		Check:  "trajectory/replayed",
 		Want:   "every step sent",
 		Source: r.Source,
-		Detail: spoken(r.Detail),
+		Detail: Spoken(r.Detail),
 	}
 	switch {
 	case !r.Ran:

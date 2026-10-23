@@ -10,10 +10,26 @@ import (
 	"github.com/guardana/playground/runner/check"
 )
 
+// StepRow is one step's grade and everything the report table shows about it.
+// The check and the written report build it from the same function, so the
+// table a person reads and the outcome the build gates on cannot disagree.
+type StepRow struct {
+	Step        int
+	Want        string
+	Got         string
+	ReasonCodes []string
+	Obligations []string
+	Source      string
+	Outcome     assertion.Outcome
+	Detail      string
+	// Wanted is what a named gap wants this step to be; printed, never graded.
+	Wanted string
+}
+
 // WriteMarkdown writes the report a person opens after a red run. Every row
 // names the file the value was read from, because the next thing that reader
 // does is open it.
-func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p Provenance) error {
+func WriteMarkdown(w io.Writer, r assertion.Report, rows []StepRow, p Provenance) error {
 	out := &writer{to: w}
 	out.printf("# %s\n\n", or(r.Scenario, "an unnamed scenario"))
 	out.printf("- Run: `%s`\n", or(r.RunID, "unnamed"))
@@ -39,13 +55,13 @@ func WriteMarkdown(w io.Writer, r assertion.Report, rows []check.DecisionRow, p 
 	return out.err
 }
 
-func writeDecisions(out *writer, rows []check.DecisionRow) {
+func writeDecisions(out *writer, rows []StepRow) {
 	out.printf("## Decisions\n\n")
 	if len(rows) == 0 {
 		out.printf("No step was graded, so the run establishes nothing about any decision.\n\n")
 		return
 	}
-	wanted := slices.ContainsFunc(rows, func(row check.DecisionRow) bool { return row.Wanted != "" })
+	wanted := slices.ContainsFunc(rows, func(row StepRow) bool { return row.Wanted != "" })
 	out.printf("| Step | Expected | Recorded | Reason codes | Outcome | Source |%s\n", ifWanted(wanted, " Wanted |"))
 	out.printf("|---|---|---|---|---|---|%s\n", ifWanted(wanted, "---|"))
 	for _, row := range rows {

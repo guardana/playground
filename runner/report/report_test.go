@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -189,7 +188,7 @@ func TestJUnitEscapesWhatAServiceSaid(t *testing.T) {
 }
 
 func TestMarkdownShowsEveryStepAndWhereItWasRead(t *testing.T) {
-	rows := []check.DecisionRow{
+	rows := []report.StepRow{
 		{
 			Step: 1, Want: "ALLOW", Got: "ALLOW", ReasonCodes: []string{"RULE_ALLOW"},
 			Source: "reports/r/evidence.jsonl:2", Outcome: assertion.Pass,

@@ -29,7 +29,7 @@ func (b Boot) Run(_ context.Context, records assertion.Records) ([]assertion.Res
 			Want:    "one record per service in the profile",
 			Got:     "no service was recorded",
 			Source:  b.Source,
-			Detail:  "nothing was observed about profile " + spoken(records.Boot.Profile),
+			Detail:  "nothing was observed about profile " + Spoken(records.Boot.Profile),
 		}}, nil
 	}
 	results := make([]assertion.Result, 0, len(records.Boot.Services))
@@ -45,7 +45,7 @@ func (b Boot) Run(_ context.Context, records assertion.Records) ([]assertion.Res
 		} else {
 			result.Outcome = assertion.Fail
 			result.Got = "not running"
-			result.Detail = "the last thing it said: " + spoken(service.Detail)
+			result.Detail = "the last thing it said: " + Spoken(service.Detail)
 		}
 		results = append(results, result)
 	}
@@ -140,7 +140,7 @@ func (v VerifierReach) gradeRoutes() assertion.Result {
 		Check:  "verifier-reach/no-default-route",
 		Want:   "no default route in /proc/net/route or /proc/net/ipv6_route",
 		Source: v.Source,
-		Detail: spoken(v.Routes.Detail),
+		Detail: Spoken(v.Routes.Detail),
 	}
 	switch {
 	case !v.Routes.Ran:
@@ -158,7 +158,7 @@ func (v VerifierReach) gradeProxy() assertion.Result {
 		Check:  "verifier-reach/no-proxy",
 		Want:   "no *_proxy variable in the verifier's environment",
 		Source: v.Source,
-		Detail: spoken(v.Proxy.Detail),
+		Detail: Spoken(v.Proxy.Detail),
 	}
 	switch {
 	case !v.Proxy.Ran:
@@ -180,7 +180,7 @@ func gradeReach(name string, probe Probe, wantReached bool, source string) asser
 	if !probe.Ran {
 		result.Outcome = assertion.Indeterminate
 		result.Got = "the probe did not run"
-		result.Detail = spoken(probe.Detail)
+		result.Detail = Spoken(probe.Detail)
 		return result
 	}
 	result.Got = describeReach(probe.Target, probe.Reached)
