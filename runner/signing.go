@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/guardana/playground/runner/report"
+	"github.com/guardana/playground/runner/driver"
 )
 
 // signer signs a policy document into a bundle with the lab key. The key is
@@ -27,9 +27,9 @@ func signWithEnforcer(root string, run lookup) signer {
 	var err error
 	return func(ctx context.Context, keysDir, policy, outDir string) error {
 		once.Do(func() {
-			var pins []report.Pin
-			if pins, err = readPins(filepath.Join(root, versionFile)); err == nil {
-				sign = signWithImage(pinValue(pins, "ENFORCER_IMAGE")+":"+pinValue(pins, "ENFORCER_COMMIT"), run)
+			var pins driver.Pins
+			if pins, err = driver.ReadPins(filepath.Join(root, versionFile)); err == nil {
+				sign = signWithImage(pins.Value("ENFORCER_IMAGE")+":"+pins.Value("ENFORCER_COMMIT"), run)
 			}
 		})
 		if err != nil {

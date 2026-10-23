@@ -8,6 +8,7 @@ import (
 
 	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 )
 
 // treeLabel is where scripts/build-enforcer.sh records the tree it verified the
@@ -47,11 +48,11 @@ func (l lab) readImages(ctx context.Context, compose dockercompose.Compose, prof
 // tree label of the image the run's enforcer container runs.
 func (l lab) readTree(ctx context.Context, plane *trailcheck.Plane) []string {
 	var problems []string
-	pins, err := readPins(filepath.Join(l.root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(l.root, versionFile))
 	if err != nil {
 		problems = append(problems, "the pins cannot be read: "+err.Error())
 	}
-	plane.TreePin = pinValue(pins, "ENFORCER_TREE")
+	plane.TreePin = pins.Value("ENFORCER_TREE")
 	if l.development != nil {
 		plane.TreePin = l.development.Tree
 	}

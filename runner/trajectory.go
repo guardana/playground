@@ -5,87 +5,52 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
-	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 	"github.com/guardana/playground/runner/report"
 )
 
-// gradeTrajectory replays the trajectory through the gateway and grades the
-// decisions, the trail and the victims' journals.
+// gradeTrajectory replays the trajectory through the gate and grades what the
+// gate recorded, the grader's analysis when there is one, and the victims'
+// journals. Every trajectory scenario names a gateway, so the gate is set.
 func (l lab) gradeTrajectory(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory,
-	boot assertion.Boot, runID, runDir string,
+	ctx context.Context, chosen picked, run driver.Run, spec labspec.Scenario, trajectory labspec.Trajectory,
+	boot assertion.Boot,
 ) (assertion.Report, []report.StepRow) {
-	gateway, victim, sealed, probed := l.probes(ctx, compose, spec, trajectory, runDir)
-	checks := []assertion.Check{
-		check.Boot{Source: filepath.Join(runDir, "boot.json")},
-		check.NetworkIsolation{Gateway: gateway, Victim: victim, Sealed: sealed, Source: probed},
+	gate := chosen.gate.Begin(run, spec, trajectory)
+	checks := []assertion.Check{check.Boot{Source: filepath.Join(run.Dir, "boot.json")}, gate.Isolation(ctx)}
+	flags := gate.AgentFlags()
+	if chosen.grader != nil {
+		flags = append(flags, chosen.grader.AgentFlags(run)...)
 	}
-	trail := &trailcheck.Trail{}
-	checks = append(checks, l.replayUnderChaos(ctx, compose, spec, trajectory, trail, runID, runDir)...)
-	if spec.Trace != nil {
-		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
+	checks = append(checks, gate.Chaos(ctx, func(ctx context.Context) assertion.Check {
+		return l.replay(ctx, run, spec, flags)
+	})...)
+	if chosen.grader != nil {
+		checks = append(checks, chosen.grader.Analyze(ctx, run, spec))
 	}
-	checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
-		trailcheck.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl"), Trail: trail})
-	if spec.Expect.Health != nil {
-		checks = append(checks, trailcheck.Health{Expect: *spec.Expect.Health, Source: filepath.Join(runDir, healthRecord)})
-	}
+	checks = append(checks, gate.AfterReplay(ctx)...)
 	// Every victim the profile booted answers for what it served, named or not.
 	served := everyVictimServesNothing(spec, boot)
-	records := l.collect(served, boot, runID, runDir, trail)
-
-	evidenceFile := filepath.Join(runDir, "evidence.jsonl")
-	graded := assertion.Run(ctx, records, append(checks,
-		trailcheck.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: trail},
-		trailcheck.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: trail},
-		check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")},
-		trailcheck.Evidence{
-			Scenario: spec, EvidenceFile: evidenceFile, Trail: trail,
-			// The trail is read from runDir, which execute created for this run
-			// and refuses when it already exists.
-			FreshTrail: true,
-		},
-	)...)
-	return graded, trailcheck.DecisionRows(spec, trajectory, trail.Events, evidenceFile)
-}
-
-// replayUnderChaos applies the scenario's faults, replays the trajectory and
-// lifts the faults again, all before anything drains the trail.
-func (l lab) replayUnderChaos(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, trail *trailcheck.Trail,
-	runID, runDir string,
-) []assertion.Check {
-	if len(spec.Chaos) == 0 {
-		return []assertion.Check{l.replay(ctx, compose, spec, runID, runDir)}
-	}
-	run := l.applyChaos(ctx, compose, spec)
-	replayed := l.replay(ctx, compose, spec, runID, runDir)
-	graded := l.liftChaos(ctx, compose, spec, run, runDir)
-	graded.Scenario, graded.Trajectory, graded.Trail = spec, trajectory, trail
-	return []assertion.Check{replayed, graded}
+	records := l.collect(served, boot, run.ID, run.Dir)
+	before, after := gate.Collect()
+	checks = append(append(checks, before...), check.Effects{Scenario: served, JournalDir: filepath.Join(run.Dir, "journals")})
+	graded := assertion.Run(ctx, records, append(checks, after...)...)
+	return graded, gate.Rows()
 }
 
 // replay runs the trajectory by running the agent, and keeps what the agent
 // printed. The exit status is the record; the agent's own log is not read.
-func (l lab) replay(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runID, runDir string,
-) check.Replay {
-	source := filepath.Join(runDir, "replay.log")
-	args := []string{
+func (l lab) replay(ctx context.Context, run driver.Run, spec labspec.Scenario, flags []string) check.Replay {
+	source := filepath.Join(run.Dir, "replay.log")
+	args := append([]string{
 		"-trajectory", inContainer(spec.Trajectory),
-		"-gateway", "http://" + enforcerService + ":" + servicePort + "/mcp",
-		"-run-id", runID,
-		"-namespace", l.namespace,
-		"-out", path.Join(containerReports, runID, "agent", "agent.jsonl"),
-	}
-	if spec.Trace != nil {
-		args = append(args, "-trace", path.Join(containerReports, runID, "agent", traceFile))
-	}
-	execution, err := compose.RunOnce(ctx, spec.Profile, agentService, args)
+		"-run-id", run.ID,
+		"-out", path.Join(containerReports, run.ID, "agent", "agent.jsonl"),
+	}, flags...)
+	execution, err := run.Compose.RunOnce(ctx, spec.Profile, agentService, args)
 	if writeErr := writeBytes(source, []byte(execution.Output)); writeErr != nil {
 		l.note("writing what the agent printed: %v", writeErr)
 	}

@@ -67,14 +67,13 @@ func mountable(spec labspec.Scenario) error {
 	return nil
 }
 
-// collect reads what the run left on disk, and fills trail, when there is one
-// to fill, with the enforcer's evidence trail.
+// collect reads the victims' journals the run left on disk.
 //
 // A journal that could not be read is left out of the map rather than entered
 // as an empty one: a victim that never started and a victim that served nothing
 // are the two answers a denial scenario has to tell apart, and only the
 // presence of the file tells them apart.
-func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string, trail *trailcheck.Trail) assertion.Records {
+func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string) assertion.Records {
 	records := assertion.Records{
 		RunID:    runID,
 		Scenario: spec.ID,
@@ -83,10 +82,6 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		Auth:     map[string][]journal.Auth{},
 		Unread:   map[string]string{},
 	}
-	if trail != nil && !spec.IsVerifier() {
-		*trail = l.collectTrail(runDir)
-	}
-
 	for _, victim := range slices.Sorted(maps.Keys(spec.Expect.Effects)) {
 		entries, err := journal.ReadServer(filepath.Join(runDir, "journals"), victim)
 		if err != nil {

@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
-	"slices"
 
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/internal/runfile"
@@ -123,16 +122,6 @@ func probeArgs(url string, probe labspec.ProbeStep) []string {
 		args = append(args, "--mcp-token-env", mcpTokenVariable)
 	}
 	return args
-}
-
-// downProfiles names every profile a run's containers can belong to, the pin
-// step's included: a pin step that outlived its deadline would otherwise be
-// left on tool-net when the scenario's own profile comes down.
-func downProfiles(spec labspec.Scenario) []string {
-	if spec.IsVerifier() {
-		return append(slices.Clone(spec.Profile), verifierPinProfile)
-	}
-	return spec.Profile
 }
 
 // pinFinished refuses the pin of a step that did not exit 0: a container

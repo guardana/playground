@@ -1,18 +1,15 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/guardana/playground/internal/assertion"
+	"github.com/guardana/playground/runner/driver"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -25,82 +22,47 @@ const (
 	versionLabel  = "org.opencontainers.image.version"
 )
 
-var pinLine = regexp.MustCompile(`^([A-Z][A-Z0-9_]*)=(.*)$`)
-
 // lookup runs one program and returns its trimmed output; command is the real
 // one, and a test hands in what the program would have said.
-type lookup func(ctx context.Context, name string, args ...string) (string, error)
-
-// readPins reads versions.env in file order. A line that is not a comment, not
-// blank and not NAME=VALUE is refused rather than skipped.
-func readPins(path string) ([]report.Pin, error) {
-	file, err := os.Open(path) // #nosec G304 -- the lab's own versions.env.
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
-	var pins []report.Pin
-	scanner := bufio.NewScanner(file)
-	for number := 1; scanner.Scan(); number++ {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		match := pinLine.FindStringSubmatch(line)
-		if match == nil {
-			return nil, fmt.Errorf("%s:%d: not NAME=VALUE: %q", path, number, line)
-		}
-		pins = append(pins, report.Pin{Name: match[1], Value: match[2]})
-	}
-	return pins, scanner.Err()
-}
-
-func pinValue(pins []report.Pin, name string) string {
-	for _, pin := range pins {
-		if pin.Name == name {
-			return pin.Value
-		}
-	}
-	return ""
-}
+type lookup = driver.Lookup
 
 // describeHost reads what produced a run from the lab's checkout, the
-// workspace, versions.env, the local Docker daemon and the runtime.
-func describeHost(root string, space workspace, run lookup, dev *devBuild) func(context.Context) report.Provenance {
+// workspace, versions.env, the local Docker daemon, the runtime and each
+// subject's own account of its build.
+func describeHost(root string, space workspace, run lookup, subjects []driver.Subject) func(context.Context) report.Provenance {
 	return func(ctx context.Context) report.Provenance {
 		ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
 		defer cancel()
 		described := report.Provenance{
 			Lab: labCommit(ctx, run, root), Workspace: describeWorkspace(ctx, run, space), Machine: machine(ctx, run),
 		}
-		pins, err := readPins(filepath.Join(root, versionFile))
-		if dev != nil {
-			described.Development = dev.describe(pinValue(pins, "ENFORCER_COMMIT"))
-		}
+		pins, err := driver.ReadPins(filepath.Join(root, versionFile))
+		said := describeSubjects(ctx, subjects, run, pins)
+		described.Development = said.Development
 		if err != nil {
 			described.Pins = []report.Pin{{Name: versionFile, Value: "unreadable: " + err.Error()}}
 			return described
 		}
 		described.Pins = pins
-		described.Images = images(ctx, run, pins)
+		described.Images = said.Images
 		return described
 	}
 }
 
-// images reads the enforcer by the commit and the tree its build stamps and
-// the verifier by the release its build stamps.
-func images(ctx context.Context, run lookup, pins []report.Pin) []report.Image {
-	name, commit := pinValue(pins, "ENFORCER_IMAGE"), pinValue(pins, "ENFORCER_COMMIT")
-	enforcer := inspectImage(ctx, run, name, commit, revisionLabel)
-	enforcer.TreeWant = or(pinValue(pins, "ENFORCER_TREE"), "none in versions.env")
-	if enforcer.Missing == "" {
-		tree := inspectImage(ctx, run, name, commit, treeLabel)
-		enforcer.Tree = or(tree.Missing, tree.Label)
+// describeSubjects joins what every subject says of its build, in the order
+// the subjects are listed.
+func describeSubjects(ctx context.Context, subjects []driver.Subject, run lookup, pins driver.Pins) driver.Description {
+	var joined driver.Description
+	var development []string
+	for _, subject := range subjects {
+		said := subject.Describe(ctx, run, pins)
+		joined.Images = append(joined.Images, said.Images...)
+		if said.Development != "" {
+			development = append(development, said.Development)
+		}
 	}
-	return []report.Image{
-		enforcer,
-		inspectImage(ctx, run, pinValue(pins, "VERIFIER_IMAGE"), pinValue(pins, "VERIFIER_VERSION"), versionLabel),
-	}
+	joined.Development = strings.Join(development, "; ")
+	return joined
 }
 
 func or(value, otherwise string) string {
@@ -117,14 +79,14 @@ func (l lab) refuseVerifierImage(ctx context.Context) error {
 	if l.inspect == nil {
 		return errors.New("nothing reads the verifier's image")
 	}
-	pins, err := readPins(filepath.Join(l.root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(l.root, versionFile))
 	if err != nil {
 		return fmt.Errorf("the pins cannot be read: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, provenanceTimeout)
 	defer cancel()
-	want := pinValue(pins, "VERIFIER_VERSION")
-	image := inspectImage(ctx, l.inspect, pinValue(pins, "VERIFIER_IMAGE"), want, versionLabel)
+	want := pins.Value("VERIFIER_VERSION")
+	image := inspectImage(ctx, l.inspect, pins.Value("VERIFIER_IMAGE"), want, versionLabel)
 	switch {
 	case image.Missing != "":
 		return fmt.Errorf("%s: %s", image.Ref, image.Missing)
@@ -132,18 +94,6 @@ func (l lab) refuseVerifierImage(ctx context.Context) error {
 		return fmt.Errorf("%s carries %s %q, want %q", image.Ref, versionLabel, image.Label, want)
 	}
 	return nil
-}
-
-// imageRefused is the report of a run refused over the verifier's image.
-func imageRefused(id, runID string, cause error, at time.Time) assertion.Report {
-	return assertion.Report{
-		Scenario: id, RunID: runID, StartedAt: at, EndedAt: at,
-		Results: []assertion.Result{{
-			Check: "verifier/image", Outcome: assertion.Fail,
-			Want: "the verifier's image built from VERIFIER_VERSION",
-			Got:  "the run was refused before anything was brought up", Detail: cause.Error(),
-		}},
-	}
 }
 
 func (l lab) provenance(ctx context.Context) report.Provenance {

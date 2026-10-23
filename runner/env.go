@@ -8,6 +8,8 @@ import (
 	"net/netip"
 	"path/filepath"
 	"strings"
+
+	"github.com/guardana/playground/runner/driver"
 )
 
 // agentPool is where every run's agent-net is carved from: private, and outside
@@ -85,11 +87,11 @@ func projectName(runID string) string {
 // gateway marks the answers it makes itself under it, and the agent is told it
 // so an upstream result shaped like a pending answer is not retried as one.
 func enforcerNamespace(root string) (string, error) {
-	pins, err := readPins(filepath.Join(root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
 	if err != nil {
 		return "", fmt.Errorf("the pins cannot be read: %w", err)
 	}
-	namespace := pinValue(pins, "ENFORCER_NAMESPACE")
+	namespace := pins.Value("ENFORCER_NAMESPACE")
 	if namespace == "" {
 		return "", fmt.Errorf("%s pins no ENFORCER_NAMESPACE", versionFile)
 	}
@@ -98,11 +100,11 @@ func enforcerNamespace(root string) (string, error) {
 
 // enforcerPin is the commit versions.env pins the enforcer at.
 func enforcerPin(root string) (string, error) {
-	pins, err := readPins(filepath.Join(root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
 	if err != nil {
 		return "", fmt.Errorf("the pins cannot be read: %w", err)
 	}
-	pin := pinValue(pins, "ENFORCER_COMMIT")
+	pin := pins.Value("ENFORCER_COMMIT")
 	if pin == "" {
 		return "", fmt.Errorf("%s pins no ENFORCER_COMMIT", versionFile)
 	}
@@ -111,11 +113,11 @@ func enforcerPin(root string) (string, error) {
 
 // enforcerImage is the enforcer's image as versions.env pins it, name and tag.
 func enforcerImage(root string) (string, error) {
-	pins, err := readPins(filepath.Join(root, versionFile))
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
 	if err != nil {
 		return "", fmt.Errorf("the pins cannot be read: %w", err)
 	}
-	name, commit := pinValue(pins, "ENFORCER_IMAGE"), pinValue(pins, "ENFORCER_COMMIT")
+	name, commit := pins.Value("ENFORCER_IMAGE"), pins.Value("ENFORCER_COMMIT")
 	if name == "" || commit == "" {
 		return "", fmt.Errorf("%s pins no ENFORCER_IMAGE or no ENFORCER_COMMIT", versionFile)
 	}
