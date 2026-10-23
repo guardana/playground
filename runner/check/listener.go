@@ -33,7 +33,7 @@ var (
 // answer that shows the listener closed; an error the probe did not name
 // measured nothing and is indeterminate.
 func gradeListener(probe Probe, source string) assertion.Result {
-	result := assertion.Result{Source: source, Detail: spoken(probe.Detail)}
+	result := assertion.Result{Source: source, Detail: Spoken(probe.Detail)}
 	switch probe.Kind {
 	case ListenerByName:
 		result.Check = "network-isolation/listener-closed-to/" + probe.From

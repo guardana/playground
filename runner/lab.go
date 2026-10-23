@@ -11,7 +11,6 @@ import (
 
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
 	"github.com/guardana/playground/runner/report"
 )
@@ -133,7 +132,7 @@ func (l lab) prepare(ctx context.Context, spec labspec.Scenario, runID, runDir s
 
 func (l lab) runScenario(
 	ctx context.Context, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
-) (assertion.Report, []check.DecisionRow) {
+) (assertion.Report, []report.StepRow) {
 	if spec.IsVerifier() || spec.Trace != nil {
 		if err := l.refuseVerifierImage(ctx); err != nil {
 			return imageRefused(spec.ID, runID, err, l.clock()), nil
@@ -166,7 +165,7 @@ func (l lab) runScenario(
 	boot := l.boot(ctx, compose, spec, inProfile, runDir)
 
 	var graded assertion.Report
-	var rows []check.DecisionRow
+	var rows []report.StepRow
 	if spec.IsVerifier() {
 		graded = l.gradeVerifier(ctx, compose, spec, boot, runID, runDir, token)
 	} else {

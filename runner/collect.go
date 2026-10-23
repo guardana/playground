@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/guardana/playground/drivers/control/evidence"
+	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/journal"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/report"
 )
 
@@ -74,7 +74,7 @@ func mountable(spec labspec.Scenario) error {
 // as an empty one: a victim that never started and a victim that served nothing
 // are the two answers a denial scenario has to tell apart, and only the
 // presence of the file tells them apart.
-func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string, trail *check.Trail) assertion.Records {
+func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string, trail *trailcheck.Trail) assertion.Records {
 	records := assertion.Records{
 		RunID:    runID,
 		Scenario: spec.ID,
@@ -113,9 +113,9 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 // collectTrail reads the evidence trail. Its read error is kept rather than
 // noted alone because a trail nobody could read and a trail with nothing in it
 // are two facts: the second sends a reader to a file that turns out to be full.
-func (l lab) collectTrail(runDir string) check.Trail {
+func (l lab) collectTrail(runDir string) trailcheck.Trail {
 	events, err := readTrail(filepath.Join(runDir, "evidence.jsonl"))
-	trail := check.Trail{Events: events, Read: true}
+	trail := trailcheck.Trail{Events: events, Read: true}
 	if err != nil {
 		l.note("reading the evidence trail: %v", err)
 		// A trail that is not there is not a trail nobody could read: nothing
@@ -247,7 +247,7 @@ func refused(id, runID, scenarioPath string, cause error, at time.Time) assertio
 	}
 }
 
-func writeReports(runDir string, graded assertion.Report, rows []check.DecisionRow, provenance report.Provenance) error {
+func writeReports(runDir string, graded assertion.Report, rows []report.StepRow, provenance report.Provenance) error {
 	return errors.Join(
 		write(filepath.Join(runDir, "junit.xml"), func(file *os.File) error {
 			return report.WriteJUnit(file, graded, provenance)

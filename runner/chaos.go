@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/guardana/playground/drivers/control/gateway"
+	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
 )
 
@@ -111,7 +111,7 @@ func (l lab) sealedProxies(spec labspec.Scenario) ([]string, error) {
 
 // chaosRun is what applying and lifting a scenario's faults left behind.
 type chaosRun struct {
-	faults []check.ChaosFault
+	faults []trailcheck.ChaosFault
 	log    strings.Builder
 }
 
@@ -120,7 +120,7 @@ type chaosRun struct {
 func (l lab) applyChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario) *chaosRun {
 	run := &chaosRun{}
 	for _, fault := range spec.Chaos {
-		recorded := check.ChaosFault{Name: faultName(fault)}
+		recorded := trailcheck.ChaosFault{Name: faultName(fault)}
 		switch {
 		case fault.Toxic != nil:
 			l.applyToxic(ctx, compose, spec, *fault.Toxic, &recorded, &run.log)
@@ -141,7 +141,7 @@ func (l lab) applyChaos(ctx context.Context, compose dockercompose.Compose, spec
 // the victim's proxy. A hang is held to the call timeout the scenario's
 // gateway configuration sets.
 func (l lab) applyToxic(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, toxic labspec.Toxic, fault *check.ChaosFault, log *strings.Builder,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, toxic labspec.Toxic, fault *trailcheck.ChaosFault, log *strings.Builder,
 ) {
 	fault.Victim = toxic.Victim
 	switch toxic.Type {
@@ -163,7 +163,7 @@ func (l lab) applyToxic(
 // liftChaos mends every fault after the replay and before the drain: toxics
 // removed, the collector's backlog read and the collector started again. A
 // second listing has nothing to lift.
-func (l lab) liftChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, run *chaosRun, runDir string) check.Chaos {
+func (l lab) liftChaos(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, run *chaosRun, runDir string) trailcheck.Chaos {
 	for i, fault := range spec.Chaos {
 		recorded := &run.faults[i]
 		switch {
@@ -177,12 +177,12 @@ func (l lab) liftChaos(ctx context.Context, compose dockercompose.Compose, spec 
 	if err := writeBytes(source, []byte(run.log.String())); err != nil {
 		l.note("writing the chaos record: %v", err)
 	}
-	return check.Chaos{Faults: run.faults, Source: source}
+	return trailcheck.Chaos{Faults: run.faults, Source: source}
 }
 
 // noteRead adds one thing the runner read about a fault to what the report
 // says was read.
-func noteRead(fault *check.ChaosFault, format string, values ...any) {
+func noteRead(fault *trailcheck.ChaosFault, format string, values ...any) {
 	if fault.Detail != "" {
 		fault.Detail += "; "
 	}

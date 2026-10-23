@@ -82,7 +82,7 @@ func (v Verifier) grade(run VerifierRun, want labspec.VerifierExpectation) []ass
 	if !run.Ran {
 		return []assertion.Result{{
 			Check: stepName(run.Step, "ran"), Outcome: assertion.Indeterminate,
-			Want: "the verifier run", Got: "the verifier was not run", Detail: spoken(run.Detail),
+			Want: "the verifier run", Got: "the verifier was not run", Detail: Spoken(run.Detail),
 		}}
 	}
 	if run.Probe.WritePin {

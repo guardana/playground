@@ -3,7 +3,7 @@ title: How a scenario runs
 summary: Which service sits on which network, how one call is decided and held, which file each check reads, and what a run leaves on disk.
 type: explanation
 audience: [engineering]
-covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
+covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, drivers/control/trailcheck/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
 ---
 
 # How a scenario runs
@@ -310,7 +310,8 @@ The files themselves are listed in the quickstart's
 | `runner/probes.go`, `runner/check/topology.go`, `runner/check/listener.go` | the topology probes and their grading |
 | `runner/drain.go`, `runner/otlp.go`, `runner/collectortls.go` | the drain, the export, the collector's TLS |
 | `runner/enforcer.go`, `runner/signing.go`, `drivers/control/gateway/` | the enforcer's configuration and bundle |
-| `runner/check/` | every check |
+| `runner/check/` | the checks over boot, topology, replay and the victims' journals |
+| `drivers/control/trailcheck/` | the checks over the enforcer's trail, `/healthz` and build |
 | `agents/scripted/` | the agent and its trace |
 | `services/approver/`, `services/pdp-double/` | the doubles |
 | `internal/assertion/`, `drivers/control/evidence/`, `internal/journal/` | outcomes, the trail reader, the journal reader |

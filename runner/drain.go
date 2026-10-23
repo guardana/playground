@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/guardana/playground/runner/check"
+	"github.com/guardana/playground/drivers/control/trailcheck"
 	"github.com/guardana/playground/runner/dockercompose"
 )
 
@@ -29,14 +29,14 @@ var errNotDrained = errors.New("the spool still holds unacknowledged records")
 // unacknowledged and lost nothing on the way, stops the collector so its file
 // exporter flushes, and writes the run's evidence.jsonl from that file. Every
 // step is recorded in plane.log.
-func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, profiles []string, pin, runDir string) check.Plane {
+func (l lab) drainPlane(ctx context.Context, compose dockercompose.Compose, profiles []string, pin, runDir string) trailcheck.Plane {
 	bound := l.drainBound
 	if bound <= 0 {
 		bound = drainTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, bound)
 	defer cancel()
-	plane := check.Plane{Pin: pin, Source: filepath.Join(runDir, "plane.log")}
+	plane := trailcheck.Plane{Pin: pin, Source: filepath.Join(runDir, "plane.log")}
 	if l.development != nil {
 		plane.Builder = "scripts/build-enforcer-dev.sh"
 	}
