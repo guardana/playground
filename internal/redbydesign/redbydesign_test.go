@@ -10,7 +10,7 @@ import (
 
 func TestParseReadsAnIDItsChecksAndItsFindingPerLine(t *testing.T) {
 	list := "# comment\n\nmode-01-observe evidence/executed-digest  the enforcer completes a refused call\n" +
-		"verify-04-drift\tverifier/step-2/finding/guardana.agent.mcp_server_manifest,verifier/step-2/exit-code" +
+		"verify-04-drift\tverifier/step-2/finding/lab.example.drift,verifier/step-2/exit-code" +
 		"\tthe verifier reports CRITICAL, the catalogue HIGH\n"
 	got, err := Parse(strings.NewReader(list), "list")
 	if err != nil {
@@ -23,7 +23,7 @@ func TestParseReadsAnIDItsChecksAndItsFindingPerLine(t *testing.T) {
 		},
 		{
 			ID:      "verify-04-drift",
-			Checks:  []string{"verifier/step-2/finding/guardana.agent.mcp_server_manifest", "verifier/step-2/exit-code"},
+			Checks:  []string{"verifier/step-2/finding/lab.example.drift", "verifier/step-2/exit-code"},
 			Finding: "the verifier reports CRITICAL, the catalogue HIGH",
 		},
 	}

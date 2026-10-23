@@ -1,0 +1,21 @@
+# Paths where a system under test is named because it is the subject, read by
+# scripts/check-product-names.sh. One shell pattern per line (* also crosses a
+# slash), then the reason. Deny by default: an entry that matches no file, or
+# covers no line the rule would refuse, fails the check until it is removed.
+
+drivers/**                      the code that drives each tool is where its names belong
+versions.env                    the pins name each system under test
+scenarios/**                    a tool's own scenarios name the tool they exercise
+config/**                       policies, gateway, verifier profiles and contracts are per-tool configuration
+compose/verifier/**             the hash-locked install of the verifier's package
+CHANGELOG.md                    releases record what changed for which tool
+README.md                       introduces the systems under test
+ROADMAP.md                      plans name the tool they are for
+AGENTS.md                       the project law names the systems under test
+docs/reference/glossary.md      defines each system's name
+docs/dependencies.md            names the pinned packages and where they come from
+docs/lab-files.md               until the format split (L7)
+docs/how-it-works/*.md          until the format split (L7)
+docs/runbooks/*.md              until the format split (L7)
+scripts/check-hygiene.sh        refuses the sibling checkouts by their directory names
+scripts/check-product-names.sh  the rule names what it refuses

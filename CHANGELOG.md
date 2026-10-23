@@ -41,6 +41,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Each tool under test is driven from `drivers/<tool>/` through the gate,
+  prober and grader roles in `runner/driver`: Control from `drivers/control`,
+  Guardana from `drivers/guardana`. A tool run is graded from a neutral record
+  (`internal/record`) that keeps a list the tool never gave apart from an empty
+  one. Scenario files, `versions.env` and check ids are unchanged.
+- `make quality` runs `scripts/check-product-names.sh`, which refuses a tool's
+  name outside its driver, its pins, its own scenarios and configuration, and
+  the pages that introduce it, with a reason for every allowed path. A repoguard
+  test holds the import graph: the neutral core imports no driver and no driver
+  imports another.
 - The lab is described as tool-neutral: README, `AGENTS.md`, the roadmap and
   the glossary name roles and treat Control and Guardana as the two tools wired
   in first. `AGENTS.md` gains the rule that no tool gets a special place. The

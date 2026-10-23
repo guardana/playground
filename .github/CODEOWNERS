@@ -3,6 +3,7 @@
 
 *                       @guardana/maintainers
 
+/drivers/               @guardana/maintainers
 /runner/                @guardana/maintainers
 /scenarios/             @guardana/maintainers
 /.github/workflows/     @guardana/maintainers

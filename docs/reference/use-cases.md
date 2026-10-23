@@ -79,4 +79,4 @@ The gate the lab runs today is the enforcer at `ENFORCER_COMMIT`, and the
 grader the verifier at `VERIFIER_VERSION`. A victim's journal and a trajectory
 say nothing about which gate stood between them; running another gate, grader
 or monitor against the same victims is
-[planned](../../ROADMAP.md#p8--more-gates-graders-and-monitors-planned).
+[planned](../../ROADMAP.md#p8--more-gates-graders-and-monitors-partly-implemented).

@@ -28,14 +28,14 @@ expect:
       shortfall: []
       errors: []
       scope: [model.pkl, sub/notes.txt]
-      findings: [{ rule_id: guardana.supply_chain.pickle_opcode, severity: CRITICAL, file: model.pkl, summary_contains: clab }]
+      findings: [{ rule_id: lab.example.pickle_opcode, severity: CRITICAL, file: model.pkl, summary_contains: clab }]
 `
 
 // The scan's report as the verifier prints it for the copied target.
 const scanAnswer = `{"schema_version": 18, "run": {"target": {"type": "artifact", "ref": "target"},
- "result_summary": {"rules_run": ["guardana.supply_chain.pickle_opcode"], "gate": "fail"}, "coverage": {"shortfall": []}},
+ "result_summary": {"rules_run": ["lab.example.pickle_opcode"], "gate": "fail"}, "coverage": {"shortfall": []}},
  "scope": {"files": ["target/model.pkl", "target/sub/notes.txt"]},
- "findings": [{"rule_id": "guardana.supply_chain.pickle_opcode", "severity": "CRITICAL", "target_ref": "target/model.pkl",
+ "findings": [{"rule_id": "lab.example.pickle_opcode", "severity": "CRITICAL", "target_ref": "target/model.pkl",
   "evidence": {"summary": "imports clab_never_a_module.nothing"}}], "unverified": [], "waived": [], "errors": []}`
 
 // scanUnderTest is a scan lab whose scan-verifier answers with scanAnswer when

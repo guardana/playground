@@ -27,7 +27,7 @@ func TestATraceComesWithItsContractAndItsExpectation(t *testing.T) {
 		"no ai system":           strings.Replace(traced, "ai_system: support-agent", "ai_system: ''", 1),
 		"no exit code":           strings.Replace(traced, "exit_code: 0, ", "", 1),
 		"an exit code alone":     strings.Replace(traced, ", findings_exclude: [contract.lab.never-shell]", "", 1),
-		"no contract rule named": strings.Replace(traced, "contract.lab.never-shell", "guardana.mcp.cache_scope", 1),
+		"no contract rule named": strings.Replace(traced, "contract.lab.never-shell", "lab.example.cache_scope", 1),
 		"no trace profile":       strings.Replace(traced, "profile: [core, enforcer, trace]", "profile: [core, enforcer]", 1),
 		"a trace profile alone":  strings.Replace(strings.Replace(traced, traceLine, "", 1), traceExpectLine, "", 1),
 	} {

@@ -83,7 +83,7 @@ func parse(args []string, out io.Writer) (options, error) {
 	set.StringVar(&settings.gateway, "gateway", "", "the gateway's MCP endpoint, for example http://enforcer:8080/mcp")
 	set.StringVar(&settings.runID, "run-id", "", "the identifier of this run, minted by the runner")
 	set.StringVar(&settings.namespace, "namespace", "",
-		"the enforcer's namespace, under which its gateway marks an answer it made itself, for example guardana.control")
+		"the enforcer's namespace, under which its gateway marks an answer it made itself (ENFORCER_NAMESPACE in versions.env)")
 	set.StringVar(&settings.out, "out", "", "where to write the agent's own log, as JSON lines")
 	set.StringVar(&settings.probe, "probe", "", "dial host:port, exit zero only if a TCP connection was made")
 	set.StringVar(&settings.trace, "trace", "", "where to write the run in the verifier's native trace dialect")

@@ -70,7 +70,7 @@ func parseSettings(args []string, lookup func(string) (string, bool)) (settings,
 	if s.sans, err = splitSANs(*san); err != nil {
 		return settings{}, err
 	}
-	// Control verifies the certificate for the identifier's host; one the SANs
+	// The enforcer verifies the certificate for the identifier's host; one the SANs
 	// miss fails every handshake and reads as PDP_UNAVAILABLE with nothing journalled.
 	if !coversHost(s.sans, s.base.Hostname()) {
 		return settings{}, fmt.Errorf("%w: -san does not cover the -identifier host %q", errInvalidConfig, s.base.Hostname())
@@ -94,7 +94,7 @@ func (s *settings) readEnv(lookup func(string) (string, bool)) error {
 	return nil
 }
 
-// checkIdentifier accepts what control's client accepts for an https
+// checkIdentifier accepts what the enforcer's client accepts for an https
 // identifier: an absolute URL with a host and no userinfo, query or fragment.
 func checkIdentifier(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
@@ -145,7 +145,7 @@ func (s settings) discoveryPath() string {
 	return "/.well-known/authzen-configuration" + s.basePath()
 }
 
-// endpoint is the evaluation endpoint as control derives it from the
+// endpoint is the evaluation endpoint as the enforcer derives it from the
 // identifier, which is what its metadata check compares against.
 func (s settings) endpoint() string {
 	u := *s.base

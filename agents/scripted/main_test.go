@@ -86,7 +86,7 @@ steps:
 		"-trajectory", trajectory,
 		"-gateway", endpoint.URL,
 		"-run-id", "run-11",
-		"-namespace", "guardana.control",
+		"-namespace", "lab.example.gate",
 		"-out", log,
 	}, &out)
 	if err != nil {

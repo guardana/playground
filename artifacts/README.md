@@ -1,6 +1,6 @@
 # Scan artifacts
 
-Plain-text files the verifier's `guardana scan` grades. Each case holds a
+Plain-text files the verifier's scan grades. Each case holds a
 `control` and a `defect` directory with the same file names; exactly one file
 differs, and that file carries the one defect the scan must report.
 
