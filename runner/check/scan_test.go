@@ -119,3 +119,12 @@ func TestAFindingOnALineIsAboutItsFile(t *testing.T) {
 		t.Errorf("a finding on another file: step-1/findings = %s (%q), want fail", result.Outcome, result.Got)
 	}
 }
+
+// The scan names a file under the target it was handed. A finding named
+// without that target is not about the target's file of the same name.
+func TestAFindingNamedWithoutItsTargetIsNotAboutTheTargetsFile(t *testing.T) {
+	report := strings.Replace(scanReport, `"target_ref": "target/model.pkl"`, `"target_ref": "model.pkl"`, 1)
+	if result := gradeScan(t, scanExpectation(), report)["verifier/step-1/findings"]; result.Outcome != assertion.Fail {
+		t.Errorf("step-1/findings = %s (%q), want fail", result.Outcome, result.Got)
+	}
+}

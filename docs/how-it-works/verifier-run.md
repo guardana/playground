@@ -3,7 +3,7 @@ title: How a verifier scenario runs
 summary: How the runner runs the pinned verifier against the victims and over the agent's own trace, and which file each verifier check reads.
 type: explanation
 audience: [engineering]
-covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
+covers: [runner/verifier.go, runner/verifier_files.go, runner/token.go, runner/verifier_reach.go, runner/trace.go, runner/provenance.go, runner/check/verifier.go, runner/check/verifier_report.go, runner/check/toolrun.go, runner/check/verifier_verdict.go, runner/check/token.go, runner/check/authdouble.go, runner/check/effects_auth.go, runner/check/trace.go, runner/check/topology.go, agents/scripted/trace.go, compose/compose.yaml, compose/Dockerfile.verifier, compose/verifier/**, scripts/build-verifier.sh, versions.env, scenarios/verify/**, scenarios/trace/**, config/contracts/**, config/verifier/**, config/auth/**, services/auth-double/**, victims/vault*/**, runner/scan.go, runner/check/scan.go, scenarios/scan/**, artifacts/**]
 ---
 
 # How a verifier scenario runs
@@ -125,7 +125,7 @@ effects checks grade what the enforcer and the victims recorded.
 | `verifier/step-<n>/report` | any other step left a report of schema 18 about the probed URL, naming at least one rule that ran | `verifier/step-<n>.json` |
 | `verifier/step-<n>/exit-code` | the exit code is the one stated; beside a missing record it is indeterminate, since a non-zero exit may be docker's | the pin or the report |
 | `verifier/step-<n>/finding/<rule>` | a verifier finding of that rule with the stated severity and summary text | the report |
-| `verifier/step-<n>/no-finding/<rule>` | the rule ran and left no verifier finding, waived one, unverified result or error | the report |
+| `verifier/step-<n>/no-finding/<rule>` | the rule ran and left no verifier finding, waived one, unverified result or error; a report without the `errors` list fails | the report |
 | `verifier/step-<n>/unverified/<rule>` | the rule is reported unverified | the report |
 | `verifier/step-<n>/gate` | the report's own verdict, `run.result_summary.gate`, is the one stated; a report without it fails | the report |
 | `verifier/step-<n>/shortfall` | `run.coverage.shortfall` holds exactly the stated gaps, one each, by kind and, where stated, name; a report without it fails | the report |
@@ -150,7 +150,7 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
   (`runner/check/verifier_report.go`): its schema, its target and its rules
   run are checked before any verifier finding is read.
 - **`no-finding` means the rule ran and concluded**, not that its verifier
-  finding is absent (`runner/check/verifier_report.go`). A rule that did not run, could
+  finding is absent (`runner/check/toolrun.go`). A rule that did not run, could
   not tell, or was waived has established nothing.
 - **A step's inputs reach it read-only, in a directory of its own**
   (`runner/verifier_files.go`, `compose/compose.yaml`). The verifier writes only
@@ -188,6 +188,6 @@ at `VERIFIER_VERSION` says; 2 is an unanswered question, never a clean result.
 | `runner/verifier_reach.go` | the reach dials and the routing tables |
 | `runner/trace.go` | the trace handed over and analysed |
 | `runner/provenance.go` | the image refusal |
-| `runner/check/verifier.go`, `runner/check/verifier_report.go`, `runner/check/trace.go` | the grading |
+| `runner/check/verifier.go`, `runner/check/toolrun.go`, `runner/check/verifier_report.go`, `runner/check/trace.go` | the grading |
 | `agents/scripted/trace.go` | the trace the agent writes |
 | `compose/Dockerfile.verifier`, `compose/verifier/requirements.lock` | the verifier image, hash-locked |

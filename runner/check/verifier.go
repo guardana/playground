@@ -3,11 +3,11 @@ package check
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 )
 
 // VerifierPrefix starts the name of every result the Verifier check reports.
@@ -83,12 +83,12 @@ func (v Verifier) grade(run VerifierRun, want labspec.VerifierExpectation) []ass
 			exitResult(run, want, run.Pin, err),
 		}
 	}
-	report, err := readReport(run.Report, run.URL)
+	ran, err := readReport(run.Report, run.URL)
 	results := []assertion.Result{
 		recordResult(run, "report", run.Report, "a JSON report about "+run.URL, err),
 		exitResult(run, want, run.Report, err),
 	}
-	return append(results, gradeReport(run, want, report, err)...)
+	return append(results, gradeReport(run, want, ran, err)...)
 }
 
 // recordResult fails a step whose record is missing or about something else:
@@ -120,9 +120,9 @@ func exitResult(run VerifierRun, want labspec.VerifierExpectation, source string
 	return result
 }
 
-// gradeReport grades what the report names. Beside a report that could not be
-// read every expectation is indeterminate: it was never looked at.
-func gradeReport(run VerifierRun, want labspec.VerifierExpectation, report verifierReport, unread error) []assertion.Result {
+// gradeReport grades what the step's record names. Beside a report that could
+// not be read every expectation is indeterminate: it was never looked at.
+func gradeReport(run VerifierRun, want labspec.VerifierExpectation, ran record.Run, unread error) []assertion.Result {
 	var results []assertion.Result
 	add := func(what, wanted string, grade func() (bool, string)) {
 		result := assertion.Result{Check: stepName(run.Step, what), Want: wanted, Source: run.Report}
@@ -139,20 +139,15 @@ func gradeReport(run VerifierRun, want labspec.VerifierExpectation, report verif
 		results = append(results, result)
 	}
 	for _, finding := range want.FindingsInclude {
-		add("finding/"+finding.RuleID, describeFinding(finding), func() (bool, string) { return report.hasFinding(finding) })
+		add("finding/"+finding.RuleID, describeFinding(finding), func() (bool, string) { return hasFinding(ran, finding) })
 	}
 	for _, rule := range want.FindingsExclude {
-		add("no-finding/"+rule, "the rule ran and reported nothing", func() (bool, string) { return report.concludedClean(rule) })
+		add("no-finding/"+rule, "the rule ran and reported nothing", func() (bool, string) { return concludedClean(ran, rule) })
 	}
-	gradeVerdict(want, report, add)
-	gradeScan(want, report, run.URL+"/", add)
+	gradeVerdict(want, ran, add)
+	gradeScan(want, ran, run.URL+"/", add)
 	for _, rule := range want.UnverifiedInclude {
-		add("unverified/"+rule, "the rule ran and could not reach a verdict", func() (bool, string) {
-			if slices.Contains(ruleIDs(report.Unverified), rule) {
-				return true, "reported unverified"
-			}
-			return false, "not among the unverified results"
-		})
+		add("unverified/"+rule, "the rule ran and could not reach a verdict", func() (bool, string) { return hasUnverified(ran, rule) })
 	}
 	return results
 }

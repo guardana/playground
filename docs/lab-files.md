@@ -474,7 +474,7 @@ expect:
   summary contains. `findings_exclude` names a rule that ran and left nothing:
   no finding, no waived finding, no unverified result, no error. A rule that
   did not run, ran and could not tell, or found something a waiver accepted,
-  fails it, and it cannot also be named in `findings_include` or
+  fails it, as does a report that leaves out its `errors` list, and it cannot also be named in `findings_include` or
   `unverified_include`. `unverified_include` names a rule reported as
   unverified. A `write_pin` step states only `exit_code`.
 - `gate` is the verdict the report records for its own run: `pass`, `fail` or
