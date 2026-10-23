@@ -111,7 +111,7 @@ func runListenerCases(t *testing.T, cases map[string]listenerCase) {
 			probe := test.probe
 			probe.Reached = strings.HasPrefix(probe.Detail, "{")
 			checker := check.NetworkIsolation{Gateway: gateway, Victim: victim, Sealed: []check.Probe{probe}, Source: bootFile}
-			results, err := checker.Run(context.Background(), records(nil, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatal(err)
 			}

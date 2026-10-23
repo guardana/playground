@@ -22,38 +22,40 @@ func (l lab) gradeTrajectory(
 		check.Boot{Source: filepath.Join(runDir, "boot.json")},
 		check.NetworkIsolation{Gateway: gateway, Victim: victim, Sealed: sealed, Source: probed},
 	}
-	checks = append(checks, l.replayUnderChaos(ctx, compose, spec, trajectory, runID, runDir)...)
+	trail := &check.Trail{}
+	checks = append(checks, l.replayUnderChaos(ctx, compose, spec, trajectory, trail, runID, runDir)...)
 	if spec.Trace != nil {
 		checks = append(checks, l.analyzeTrace(ctx, compose, spec, runID, runDir))
 	}
 	checks = append(checks, l.drainPlane(ctx, compose, spec.Profile, l.pin, runDir),
-		check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl")})
+		check.TrailClaims{Scenario: spec, EvidenceFile: filepath.Join(runDir, "evidence.jsonl"), Trail: trail})
 	if spec.Expect.Health != nil {
 		checks = append(checks, check.Health{Expect: *spec.Expect.Health, Source: filepath.Join(runDir, healthRecord)})
 	}
 	// Every victim the profile booted answers for what it served, named or not.
 	served := everyVictimServesNothing(spec, boot)
-	records, unreadable := l.collect(served, boot, runID, runDir)
+	records := l.collect(served, boot, runID, runDir, trail)
 
-	trail := filepath.Join(runDir, "evidence.jsonl")
+	evidenceFile := filepath.Join(runDir, "evidence.jsonl")
 	graded := assertion.Run(ctx, records, append(checks,
-		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
-		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: trail},
+		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: trail},
+		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: trail},
 		check.Effects{Scenario: served, JournalDir: filepath.Join(runDir, "journals")},
 		check.Evidence{
-			Scenario: spec, EvidenceFile: trail, ReadError: unreadable,
+			Scenario: spec, EvidenceFile: evidenceFile, Trail: trail,
 			// The trail is read from runDir, which execute created for this run
 			// and refuses when it already exists.
 			FreshTrail: true,
 		},
 	)...)
-	return graded, check.DecisionRows(spec, trajectory, records, trail)
+	return graded, check.DecisionRows(spec, trajectory, trail.Events, evidenceFile)
 }
 
 // replayUnderChaos applies the scenario's faults, replays the trajectory and
 // lifts the faults again, all before anything drains the trail.
 func (l lab) replayUnderChaos(
-	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, runID, runDir string,
+	ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, trajectory labspec.Trajectory, trail *check.Trail,
+	runID, runDir string,
 ) []assertion.Check {
 	if len(spec.Chaos) == 0 {
 		return []assertion.Check{l.replay(ctx, compose, spec, runID, runDir)}
@@ -61,7 +63,7 @@ func (l lab) replayUnderChaos(
 	run := l.applyChaos(ctx, compose, spec)
 	replayed := l.replay(ctx, compose, spec, runID, runDir)
 	graded := l.liftChaos(ctx, compose, spec, run, runDir)
-	graded.Scenario, graded.Trajectory = spec, trajectory
+	graded.Scenario, graded.Trajectory, graded.Trail = spec, trajectory, trail
 	return []assertion.Check{replayed, graded}
 }
 

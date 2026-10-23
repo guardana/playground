@@ -26,14 +26,19 @@ type Decisions struct {
 	// EvidenceFile is named in every Source, because a red run is read by
 	// someone who then opens that file at that line.
 	EvidenceFile string
+	Trail        *Trail
 }
 
 // ID names the check in a report.
 func (Decisions) ID() string { return "decisions" }
 
 // Run grades one result per step the scenario names.
-func (d Decisions) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
-	rows := DecisionRows(d.Scenario, d.Trajectory, records, d.EvidenceFile)
+func (d Decisions) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
+	events, err := d.Trail.events()
+	if err != nil {
+		return nil, err
+	}
+	rows := DecisionRows(d.Scenario, d.Trajectory, events, d.EvidenceFile)
 	results := make([]assertion.Result, 0, len(rows))
 	for _, row := range rows {
 		results = append(results, assertion.Result{
@@ -66,13 +71,13 @@ type DecisionRow struct {
 
 // DecisionRows grades every step the scenario names, in step order.
 func DecisionRows(
-	spec labspec.Scenario, trajectory labspec.Trajectory, records assertion.Records, evidenceFile string,
+	spec labspec.Scenario, trajectory labspec.Trajectory, events []evidence.Event, evidenceFile string,
 ) []DecisionRow {
-	paired := pairTrails(spec, trajectory, records.Evidence)
+	paired := pairTrails(spec, trajectory, events)
 	steps := slices.Sorted(maps.Keys(spec.Expect.Decisions))
 	rows := make([]DecisionRow, 0, len(steps))
 	for _, step := range steps {
-		row := gradeStep(spec, records, evidenceFile, paired, step)
+		row := gradeStep(spec, events, evidenceFile, paired, step)
 		if spec.Gap != nil {
 			if wanted, named := spec.Gap.Wanted[step]; named {
 				row.Wanted = describeExpectation(wanted)
@@ -83,7 +88,7 @@ func DecisionRows(
 	return rows
 }
 
-func gradeStep(spec labspec.Scenario, records assertion.Records, file string, paired pairing, step int) DecisionRow {
+func gradeStep(spec labspec.Scenario, events []evidence.Event, file string, paired pairing, step int) DecisionRow {
 	want := spec.Expect.Decisions[step]
 	row := DecisionRow{Step: step, Want: describeExpectation(want), Source: file}
 	if want.Opens == labspec.OpensNone {
@@ -110,15 +115,15 @@ func gradeStep(spec labspec.Scenario, records assertion.Records, file string, pa
 		return row
 	}
 	tolerated := slices.Contains(spec.Tolerance.AllowIndeterminateForSteps, step)
-	return gradeTrail(row, want, records, file, found.requestID, tolerated)
+	return gradeTrail(row, want, events, file, found.requestID, tolerated)
 }
 
 // gradeTrail grades what the step states against the one trail it is paired
 // with: the kernel's verdict, then the block, then the whole sequence of kinds.
 func gradeTrail(
-	row DecisionRow, want labspec.DecisionExpectation, records assertion.Records, file, requestID string, tolerated bool,
+	row DecisionRow, want labspec.DecisionExpectation, events []evidence.Event, file, requestID string, tolerated bool,
 ) DecisionRow {
-	events, run := records.Evidence, planeRun(records.Evidence)
+	run := planeRun(events)
 	var got []string
 	fail := func(detail string) DecisionRow {
 		row.Got, row.Outcome, row.Detail = strings.Join(got, "; "), assertion.Fail, detail

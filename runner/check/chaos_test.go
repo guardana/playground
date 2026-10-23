@@ -30,13 +30,13 @@ func oneCallTo(took time.Duration) (check.Chaos, assertion.Records) {
 			Result: &evidence.ActionResult{StartedAt: &started, EndedAt: &ended}},
 	}
 	graded := check.Chaos{
-		Scenario: spec, Trajectory: trajectory, Source: "chaos.log",
+		Scenario: spec, Trajectory: trajectory, Source: "chaos.log", Trail: collected(events),
 		Faults: []check.ChaosFault{{
 			Name: "latency 1.5s on victim-fs", Victim: "victim-fs", Latency: 1500 * time.Millisecond,
 			Applied: true, Held: true, Lifted: true,
 		}},
 	}
-	return graded, assertion.Records{RunID: thisRun, Evidence: events}
+	return graded, assertion.Records{RunID: thisRun}
 }
 
 func chaosOutcomes(t *testing.T, graded check.Chaos, records assertion.Records) []assertion.Result {
@@ -118,7 +118,7 @@ func TestAHangIsTheCallTimeoutOnTheTrail(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			graded, records := oneCallTo(tc.took)
 			graded.Faults[0].Latency, graded.Faults[0].Hang, graded.Faults[0].CallTimeout = 0, true, tc.bound
-			records.Evidence[1].Kind, records.Evidence[1].Result.Status = evidence.KindActionFailed, tc.status
+			graded.Trail.Events[1].Kind, graded.Trail.Events[1].Result.Status = evidence.KindActionFailed, tc.status
 			results := chaosOutcomes(t, graded, records)
 			if results[0].Outcome != tc.want || !strings.Contains(results[0].Got, tc.says) {
 				t.Errorf("got %s: %s", results[0].Outcome, results[0].Got)

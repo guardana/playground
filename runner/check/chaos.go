@@ -51,6 +51,8 @@ type Chaos struct {
 	Trajectory labspec.Trajectory
 	Faults     []ChaosFault
 	Source     string
+	// Trail is read only for a fault the trail has to show in the path.
+	Trail *Trail
 }
 
 // ID names the check in a report.
@@ -58,7 +60,7 @@ func (Chaos) ID() string { return "chaos" }
 
 // Run reports one result per fault; a scenario naming faults the runner
 // recorded nothing about is indeterminate.
-func (c Chaos) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
+func (c Chaos) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
 	if len(c.Faults) == 0 || len(c.Faults) != len(c.Scenario.Chaos) {
 		return []assertion.Result{{
 			Check: "chaos/applied", Outcome: assertion.Indeterminate, Source: c.Source,
@@ -74,7 +76,10 @@ func (c Chaos) Run(_ context.Context, records assertion.Records) ([]assertion.Re
 		}
 		defects, read := faultDefects(fault), fault.Detail
 		if fault.Latency > 0 || fault.Hang {
-			calls, untimed := c.timedCalls(fault.Victim, records)
+			calls, untimed, err := c.timedCalls(fault.Victim)
+			if err != nil {
+				return nil, err
+			}
 			read = strings.Join(append([]string{read}, trailRead(calls)...), "; ")
 			for _, step := range untimed {
 				defects = append(defects, fmt.Sprintf("step %d's call to %s closed without exactly one timed result", step, fault.Victim))
@@ -183,20 +188,24 @@ func trailRead(calls []timedCall) []string {
 // carrying a start and an end, and the steps whose call closed any other way:
 // two closings, or a result without its times. A call that never closed,
 // blocked before it ran, is neither.
-func (c Chaos) timedCalls(victim string, records assertion.Records) ([]timedCall, []int) {
-	paired := pairTrails(c.Scenario, c.Trajectory, records.Evidence)
+func (c Chaos) timedCalls(victim string) ([]timedCall, []int, error) {
+	events, err := c.Trail.events()
+	if err != nil {
+		return nil, nil, err
+	}
+	paired := pairTrails(c.Scenario, c.Trajectory, events)
 	var calls []timedCall
 	var untimed []int
 	for step, found := range paired.byStep {
 		if step > len(c.Trajectory.Steps) || c.Trajectory.Steps[step-1].Call.Server != victim {
 			continue
 		}
-		closing := append(eventsOn(records.Evidence, paired.run, found.requestID, evidence.KindActionCompleted),
-			eventsOn(records.Evidence, paired.run, found.requestID, evidence.KindActionFailed)...)
+		closing := append(eventsOn(events, paired.run, found.requestID, evidence.KindActionCompleted),
+			eventsOn(events, paired.run, found.requestID, evidence.KindActionFailed)...)
 		if len(closing) == 0 {
 			continue
 		}
-		result := records.Evidence[closing[0]].Result
+		result := events[closing[0]].Result
 		if len(closing) != 1 || result == nil || result.StartedAt == nil || result.EndedAt == nil {
 			untimed = append(untimed, step)
 			continue
@@ -205,5 +214,5 @@ func (c Chaos) timedCalls(victim string, records assertion.Records) ([]timedCall
 	}
 	slices.SortFunc(calls, func(a, b timedCall) int { return a.step - b.step })
 	slices.Sort(untimed)
-	return calls, untimed
+	return calls, untimed, nil
 }

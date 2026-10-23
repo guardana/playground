@@ -32,7 +32,7 @@ func TestReplayGradesWhetherTheTrajectoryWasSent(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			results, err := test.checker.Run(context.Background(), records(nil, nil))
+			results, err := test.checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}

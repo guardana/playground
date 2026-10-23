@@ -38,7 +38,8 @@ func runClaims(t *testing.T, mode string, events []evidence.Event) map[string]as
 	t.Helper()
 	spec := scenario(nil)
 	spec.EnforcementMode = mode
-	results, err := check.TrailClaims{Scenario: spec, EvidenceFile: evidenceFile}.Run(context.Background(), records(events, nil))
+	results, err := check.TrailClaims{Scenario: spec, EvidenceFile: evidenceFile, Trail: collected(events)}.
+		Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

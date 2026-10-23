@@ -13,8 +13,8 @@ import (
 
 func TestATrailIsAssertedToNameOneRunOnEveryRequest(t *testing.T) {
 	run := func(events []evidence.Event) assertion.Result {
-		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: true}.
-			Run(context.Background(), records(events, nil))
+		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: true, Trail: collected(events)}.
+			Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,8 +60,8 @@ func TestARequestDecidedWithNoRunNamesNone(t *testing.T) {
 		2: {Verdict: "ALLOW"},
 	})
 	runID := func(events []evidence.Event) assertion.Result {
-		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true}.
-			Run(context.Background(), records(events, nil))
+		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true, Trail: collected(events)}.
+			Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -83,8 +83,8 @@ func TestEventsWithNoRequestAreGradedApartFromTheChains(t *testing.T) {
 	spec := heldSpec()
 	spec.Expect.Evidence.ChainComplete = true
 	find := func(events []evidence.Event) (assertion.Result, int) {
-		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true}.
-			Run(context.Background(), records(events, nil))
+		results, err := check.Evidence{Scenario: spec, EvidenceFile: evidenceFile, FreshTrail: true, Trail: collected(events)}.
+			Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,8 +115,8 @@ func TestEventsWithNoRequestAreGradedApartFromTheChains(t *testing.T) {
 func TestARequestlessEventNamesNoOtherRun(t *testing.T) {
 	reload := evidence.Event{EventID: "reload-1", Kind: evidence.KindPolicyReloaded, ProjectID: thisProject, TenantID: thisTenant}
 	run := func(events []evidence.Event) assertion.Result {
-		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: true}.
-			Run(context.Background(), records(events, nil))
+		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: true, Trail: collected(events)}.
+			Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -136,8 +136,9 @@ func TestARequestlessEventNamesNoOtherRun(t *testing.T) {
 
 func TestATrailIsOnlyThisRunsWhenTheRunnerMadeItsDirectory(t *testing.T) {
 	for _, fresh := range []bool{false, true} {
-		results, err := check.Evidence{Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: fresh}.
-			Run(context.Background(), records(heldThenResumed().events, nil))
+		results, err := check.Evidence{
+			Scenario: heldSpec(), EvidenceFile: evidenceFile, FreshTrail: fresh, Trail: collected(heldThenResumed().events),
+		}.Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatal(err)
 		}

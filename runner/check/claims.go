@@ -16,6 +16,7 @@ import (
 type TrailClaims struct {
 	Scenario     labspec.Scenario
 	EvidenceFile string
+	Trail        *Trail
 }
 
 // ID names the check in a report.
@@ -24,12 +25,16 @@ func (TrailClaims) ID() string { return "trail-claims" }
 // Run grades the mode always, and the executed digests when anything closed
 // or started carrying one: a run where every call was blocked has no digest to
 // compare, and the effects check reads what its victims served.
-func (c TrailClaims) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
-	results := []assertion.Result{c.modeResult(records.Evidence)}
-	if executed, found := c.executedResult(records.Evidence); found {
+func (c TrailClaims) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
+	events, err := c.Trail.events()
+	if err != nil {
+		return nil, err
+	}
+	results := []assertion.Result{c.modeResult(events)}
+	if executed, found := c.executedResult(events); found {
 		results = append(results, executed)
 	}
-	if completed, found := c.completedResult(records.Evidence); found {
+	if completed, found := c.completedResult(events); found {
 		results = append(results, completed)
 	}
 	return results, nil

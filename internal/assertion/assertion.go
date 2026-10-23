@@ -6,16 +6,15 @@
 // arrive at the same answer, which is that nothing was established. Pass has to
 // be written down by something that read a record.
 //
-// A check reads records: the evidence trail the enforcement plane wrote, the
-// journals the victim tool servers kept, and which services actually came up.
-// Nothing here reads what the agent said about its own work.
+// A check reads records: what the system under test recorded, the journals the
+// victim tool servers kept, and which services actually came up. Nothing here
+// reads what the agent said about its own work.
 package assertion
 
 import (
 	"context"
 	"time"
 
-	"github.com/guardana/playground/internal/evidence"
 	"github.com/guardana/playground/internal/journal"
 )
 
@@ -89,14 +88,12 @@ type Check interface {
 	Run(ctx context.Context, records Records) ([]Result, error)
 }
 
-// Records is everything one run left behind.
+// Records is what every run leaves behind, whichever system it tests. A
+// system's own trail is held by the checks that grade it.
 type Records struct {
 	RunID    string
 	Scenario string
 	Boot     Boot
-	// Evidence is the whole trail of the run, in the order it was written. A
-	// check that wants one request's trail groups it with evidence.ByRequest.
-	Evidence []evidence.Event
 	// Journals is what each victim tool server recorded, keyed by the name
 	// compose gives the server.
 	Journals map[string][]journal.Entry

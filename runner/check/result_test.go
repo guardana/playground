@@ -43,8 +43,9 @@ func TestAStepsClosingResultIsGraded(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			spec := resultStep("BLOCKED")
-			results, err := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: "evidence.jsonl"}.
-				Run(context.Background(), records(aborted(tc.recorded), nil))
+			results, err := check.Decisions{
+				Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: "evidence.jsonl", Trail: collected(aborted(tc.recorded)),
+			}.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -64,8 +65,9 @@ func TestAStepsResultNeedsOneClosingRecord(t *testing.T) {
 		Verdict: "ALLOW", Result: &labspec.ResultExpectation{Status: "SUCCESS"},
 	}
 	blocked := trail(decided{step: 1, requestID: "r1", verdict: "ALLOW", blocked: true})
-	results, err := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: "evidence.jsonl"}.
-		Run(context.Background(), records(blocked, nil))
+	results, err := check.Decisions{
+		Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: "evidence.jsonl", Trail: collected(blocked),
+	}.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
