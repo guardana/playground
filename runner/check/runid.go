@@ -19,15 +19,15 @@ const uncomputed = "flow.v1.state=uncomputed"
 // envelope's own context names none, since nothing sets it through MCP. The
 // id is the enforcer's, so the trail is this lab run's only because the runner
 // created the directory it was read from.
-func (e Evidence) runResult(records assertion.Records) assertion.Result {
+func (e Evidence) runResult(events []evidence.Event) assertion.Result {
 	result := assertion.Result{
 		Check: "evidence/run-id",
 		Want: "every event on a request names the same one run, or none where its proposal was decided with no run, " +
 			"and no envelope names a run of its own",
 		Source: e.EvidenceFile,
 	}
-	run := planeRun(records.Evidence)
-	wrong, stamped, unstamped := runsNamed(records.Evidence, run)
+	run := planeRun(events)
+	wrong, stamped, unstamped := runsNamed(events, run)
 	got := fmt.Sprintf("%d events on requests naming run %q, %d on requests decided with no run", stamped, run, unstamped)
 	switch {
 	case len(wrong) > 0:

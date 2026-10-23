@@ -47,7 +47,7 @@ func TestBootGradesEveryServiceTheRunnerBroughtUp(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			given := records(nil, nil)
+			given := records(nil)
 			given.Boot = test.boot
 			results, err := check.Boot{Source: bootFile}.Run(context.Background(), given)
 			if err != nil {
@@ -117,7 +117,7 @@ func TestNetworkIsolationReadsBothProbes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			checker := check.NetworkIsolation{Gateway: test.gateway, Victim: test.victim, Source: bootFile}
-			results, err := checker.Run(context.Background(), records(nil, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -141,7 +141,7 @@ func TestNetworkIsolationCarriesTheReasonAProbeGave(t *testing.T) {
 		Victim:  check.Probe{Target: "victim-fs:8080", Ran: true, Detail: "lookup victim-fs: no such host"},
 		Source:  bootFile,
 	}
-	results, err := checker.Run(context.Background(), records(nil, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

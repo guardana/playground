@@ -25,8 +25,9 @@ func TestContentCaptureIsNotPassedOnATrailWithNoEnvelope(t *testing.T) {
 	checker := check.Evidence{
 		Scenario:     evidenceScenario(labspec.EvidenceExpectation{ContentCaptured: false}),
 		EvidenceFile: evidenceFile,
+		Trail:        collected(withoutProposals),
 	}
-	results, err := checker.Run(context.Background(), records(withoutProposals, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

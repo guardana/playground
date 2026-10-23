@@ -20,7 +20,7 @@ func TestACallToTheFaultedVictimWithoutTimesFails(t *testing.T) {
 	}
 	graded.Trajectory.Steps = append(graded.Trajectory.Steps, labspec.Step{Call: labspec.Call{Server: "victim-fs", Tool: "fs.list"}})
 	graded.Scenario.Expect.Decisions[2] = labspec.DecisionExpectation{Verdict: "ALLOW"}
-	records.Evidence = append(records.Evidence,
+	graded.Trail.Events = append(graded.Trail.Events,
 		evidence.Event{EventID: "e3", Kind: evidence.KindActionProposed, RequestID: "r2", Proposed: &evidence.ActionEnvelope{
 			RequestID: "r2", Action: &evidence.Action{Name: "fs.list"}}},
 		evidence.Event{EventID: "e4", Kind: evidence.KindActionCompleted, RequestID: "r2", PrevEventID: "e3",

@@ -32,7 +32,7 @@ func committedResult(t *testing.T, want map[string][]journal.Effect, served int,
 	if collected {
 		journals["victim-pay"] = entries
 	}
-	results, err := checker.Run(context.Background(), records(nil, journals))
+	results, err := checker.Run(context.Background(), records(journals))
 	if err != nil {
 		t.Fatal(err)
 	}

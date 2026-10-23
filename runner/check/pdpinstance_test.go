@@ -38,8 +38,10 @@ func TestDecisionsGradeTheDecisionPointADecisionNames(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW", PDPInstance: test.want}})
-			checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
-			results, err := checker.Run(context.Background(), records(consulted(test.recorded), nil))
+			checker := check.Decisions{
+				Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(consulted(test.recorded)),
+			}
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil || len(results) != 1 {
 				t.Fatalf("Run: %d results, %v", len(results), err)
 			}
@@ -54,8 +56,10 @@ func TestDecisionsGradeTheDecisionPointADecisionNames(t *testing.T) {
 // decision names.
 func TestDecisionsLeaveAnUnstatedDecisionPointUngraded(t *testing.T) {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}})
-	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
-	results, err := checker.Run(context.Background(), records(consulted(doubleIdentifier), nil))
+	checker := check.Decisions{
+		Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(consulted(doubleIdentifier)),
+	}
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil || len(results) != 1 || results[0].Outcome != assertion.Pass {
 		t.Fatalf("got %+v, %v; want one pass", results, err)
 	}

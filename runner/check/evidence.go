@@ -23,10 +23,7 @@ import (
 type Evidence struct {
 	Scenario     labspec.Scenario
 	EvidenceFile string
-	// ReadError is why the trail could not be read, when it could not be. A
-	// trail nobody could read and a trail with nothing in it are two facts, and
-	// the second one sends a reader to a file that turns out to be full.
-	ReadError error
+	Trail        *Trail
 	// FreshTrail is set by the runner when the trail file lives in the run
 	// directory it has just created. The run id the enforcer writes is one it
 	// minted, so without this nothing says the trail is this lab run's.
@@ -39,8 +36,12 @@ func (Evidence) ID() string { return "evidence" }
 // Run grades the trail. chain_complete and policy_digest_present are asserted
 // only when the scenario asks for them; content_captured is asserted either
 // way, because false is the assertion that the privacy default held.
-func (e Evidence) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
-	if trail, nothingToGrade := e.trailResult(records); nothingToGrade {
+func (e Evidence) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
+	events, err := e.Trail.events()
+	if err != nil {
+		return nil, err
+	}
+	if trail, nothingToGrade := e.trailResult(events); nothingToGrade {
 		return []assertion.Result{trail}, nil
 	}
 	if e.Scenario.Expect.Evidence == nil {
@@ -50,14 +51,14 @@ func (e Evidence) Run(_ context.Context, records assertion.Records) ([]assertion
 		}}, nil
 	}
 	expect := *e.Scenario.Expect.Evidence
-	results := []assertion.Result{e.runResult(records)}
+	results := []assertion.Result{e.runResult(events)}
 	if expect.ChainComplete {
-		results = append(results, e.chainResults(records.Evidence)...)
+		results = append(results, e.chainResults(events)...)
 	}
 	if expect.PolicyDigestPresent {
-		results = append(results, e.digestResult(records.Evidence))
+		results = append(results, e.digestResult(events))
 	}
-	return append(results, e.captureResult(records.Evidence, expect.ContentCaptured)), nil
+	return append(results, e.captureResult(events, expect.ContentCaptured)), nil
 }
 
 // trailResult reports on the file itself when there was nothing in it to grade,
@@ -69,18 +70,18 @@ func (e Evidence) Run(_ context.Context, records assertion.Records) ([]assertion
 // as an empty trail sends a person to a file that turns out to be full. The
 // second is a failure — the enforcement plane recorded no decision, and unknown
 // is never a pass.
-func (e Evidence) trailResult(records assertion.Records) (assertion.Result, bool) {
+func (e Evidence) trailResult(events []evidence.Event) (assertion.Result, bool) {
 	result := assertion.Result{
 		Check:  "evidence/trail",
 		Want:   "a trail to read",
 		Source: e.EvidenceFile,
 	}
 	switch {
-	case e.ReadError != nil:
+	case e.Trail.ReadError != nil:
 		result.Outcome = assertion.Indeterminate
 		result.Got = "the trail could not be read"
-		result.Detail = e.ReadError.Error()
-	case len(records.Evidence) == 0:
+		result.Detail = e.Trail.ReadError.Error()
+	case len(events) == 0:
 		result.Outcome = assertion.Fail
 		result.Got = "no events"
 		result.Detail = "the trail holds no event, so the enforcement plane recorded no decision"

@@ -89,7 +89,7 @@ func TestEffectsCountWhatTheVictimRecorded(t *testing.T) {
 			spec.Expect.Effects = test.expect
 			checker := check.Effects{Scenario: spec, JournalDir: journalDir}
 
-			results, err := checker.Run(context.Background(), records(nil, test.journals))
+			results, err := checker.Run(context.Background(), records(test.journals))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -118,7 +118,7 @@ func TestEffectsSourceNamesTheJournalItRead(t *testing.T) {
 	}
 	checker := check.Effects{Scenario: spec, JournalDir: journalDir}
 
-	results, err := checker.Run(context.Background(), records(nil, given))
+	results, err := checker.Run(context.Background(), records(given))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestEffectsCountOnlyTheCallsServedInThisRun(t *testing.T) {
 			checker := check.Effects{Scenario: spec, JournalDir: journalDir}
 
 			results, err := checker.Run(context.Background(),
-				records(nil, map[string][]journal.Entry{"victim-fs": test.entries}))
+				records(map[string][]journal.Entry{"victim-fs": test.entries}))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}

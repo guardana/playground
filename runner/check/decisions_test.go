@@ -101,9 +101,11 @@ func TestDecisionsGradeEachStepFromTheTrail(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			spec := scenario(map[int]labspec.DecisionExpectation{1: test.expect})
 			spec.Tolerance.AllowIndeterminateForSteps = test.tolerated
-			checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
+			checker := check.Decisions{
+				Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(test.recorded),
+			}
 
-			results, err := checker.Run(context.Background(), records(test.recorded, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -129,9 +131,9 @@ func TestDecisionsSourceNamesTheLineTheVerdictWasReadFrom(t *testing.T) {
 		decided{step: 1, requestID: "r1", verdict: "ALLOW"},
 		decided{step: 2, requestID: "r2", verdict: "DENY", blocked: true},
 	)
-	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(recorded)}
 
-	results, err := checker.Run(context.Background(), records(recorded, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -155,16 +157,16 @@ func TestDecisionsSourceNamesTheLineTheVerdictWasReadFrom(t *testing.T) {
 func TestDecisionsGradeEveryStepTheScenarioNames(t *testing.T) {
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}, 2: {Verdict: "DENY"}, 3: {Verdict: "DENY"}})
 	recorded := trail(decided{step: 1, requestID: "r1", verdict: "ALLOW"})
-	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(recorded)}
 
-	results, err := checker.Run(context.Background(), records(recorded, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if len(results) != 3 {
 		t.Fatalf("got %d results for a scenario naming three steps", len(results))
 	}
-	report := assertion.Run(context.Background(), records(recorded, nil), checker)
+	report := assertion.Run(context.Background(), records(nil), checker)
 	if report.Outcome() != assertion.Fail {
 		t.Errorf("a run missing two of three decisions reported %s", report.Outcome())
 	}
@@ -178,9 +180,9 @@ func TestDecisionsDoNotGradeAStepFromAnotherRunsTrail(t *testing.T) {
 		decided{step: 1, requestID: "r1", verdict: "DENY", blocked: true},
 		decided{step: 1, requestID: "r2", verdict: "ALLOW", runID: "run-yesterday"},
 	)
-	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile}
+	checker := check.Decisions{Scenario: spec, Trajectory: sameTool(spec), EvidenceFile: evidenceFile, Trail: collected(events)}
 
-	results, err := checker.Run(context.Background(), records(events, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

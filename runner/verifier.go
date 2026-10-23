@@ -42,7 +42,7 @@ func (l lab) gradeVerifier(
 	reach := l.verifierReach(ctx, compose.WithEnv(map[string]string{stepVariable: reachDir}), spec, runDir)
 	runs := l.runVerifier(ctx, compose, spec, dir, made, token)
 	served := everyVictimServesNothing(spec, boot)
-	records, _ := l.collect(served, boot, runID, runDir)
+	records := l.collect(served, boot, runID, runDir, nil)
 	checks := []assertion.Check{reach, check.Verifier{Scenario: spec, Runs: runs}, check.TokenKeptOut{RunDir: runDir, Token: token}}
 	if !spec.IsScan() {
 		// A scan's profile boots no service and reaches no victim, so nothing

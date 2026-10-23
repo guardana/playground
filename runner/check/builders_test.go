@@ -7,6 +7,7 @@ import (
 	"github.com/guardana/playground/internal/evidence"
 	"github.com/guardana/playground/internal/journal"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/runner/check"
 )
 
 // The builders below assemble a trail by hand rather than by running anything,
@@ -153,14 +154,18 @@ func trail(parts ...decided) []evidence.Event {
 	return events
 }
 
-func records(events []evidence.Event, journals map[string][]journal.Entry) assertion.Records {
+func records(journals map[string][]journal.Entry) assertion.Records {
 	return assertion.Records{
 		RunID:    thisRun,
 		Scenario: "scenario-1",
 		Boot:     assertion.Boot{Profile: "core"},
-		Evidence: events,
 		Journals: journals,
 	}
+}
+
+// collected is a trail the runner read and found events in.
+func collected(events []evidence.Event) *check.Trail {
+	return &check.Trail{Events: events, Read: true}
 }
 
 // served is one journal line for a call the victim answered, stamped with the

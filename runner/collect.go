@@ -67,16 +67,14 @@ func mountable(spec labspec.Scenario) error {
 	return nil
 }
 
-// collect reads what the run left on disk. The error it returns is why the
-// evidence trail could not be read, and it is returned rather than noted
-// because a trail nobody could read and a trail with nothing in it are two
-// facts: the second sends a reader to a file that turns out to be full.
+// collect reads what the run left on disk, and fills trail, when there is one
+// to fill, with the enforcer's evidence trail.
 //
 // A journal that could not be read is left out of the map rather than entered
 // as an empty one: a victim that never started and a victim that served nothing
 // are the two answers a denial scenario has to tell apart, and only the
 // presence of the file tells them apart.
-func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string) (assertion.Records, error) {
+func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir string, trail *check.Trail) assertion.Records {
 	records := assertion.Records{
 		RunID:    runID,
 		Scenario: spec.ID,
@@ -85,22 +83,9 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		Auth:     map[string][]journal.Auth{},
 		Unread:   map[string]string{},
 	}
-	var events []evidence.Event
-	var err error
-	if !spec.IsVerifier() {
-		events, err = readTrail(filepath.Join(runDir, "evidence.jsonl"))
+	if trail != nil && !spec.IsVerifier() {
+		*trail = l.collectTrail(runDir)
 	}
-	var unreadable error
-	if err != nil {
-		l.note("reading the evidence trail: %v", err)
-		// A trail that is not there is not a trail nobody could read: nothing
-		// wrote one, and a record that should exist and does not is a failure
-		// the evidence check reports as such.
-		if !errors.Is(err, fs.ErrNotExist) {
-			unreadable = err
-		}
-	}
-	records.Evidence = events
 
 	for _, victim := range slices.Sorted(maps.Keys(spec.Expect.Effects)) {
 		entries, err := journal.ReadServer(filepath.Join(runDir, "journals"), victim)
@@ -122,7 +107,25 @@ func (l lab) collect(spec labspec.Scenario, boot assertion.Boot, runID, runDir s
 		}
 		records.Auth[victim] = decisions
 	}
-	return records, unreadable
+	return records
+}
+
+// collectTrail reads the evidence trail. Its read error is kept rather than
+// noted alone because a trail nobody could read and a trail with nothing in it
+// are two facts: the second sends a reader to a file that turns out to be full.
+func (l lab) collectTrail(runDir string) check.Trail {
+	events, err := readTrail(filepath.Join(runDir, "evidence.jsonl"))
+	trail := check.Trail{Events: events, Read: true}
+	if err != nil {
+		l.note("reading the evidence trail: %v", err)
+		// A trail that is not there is not a trail nobody could read: nothing
+		// wrote one, and a record that should exist and does not is a failure
+		// the evidence check reports as such.
+		if !errors.Is(err, fs.ErrNotExist) {
+			trail.ReadError = err
+		}
+	}
+	return trail
 }
 
 // What a run directory holds and who writes into it.

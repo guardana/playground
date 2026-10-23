@@ -25,8 +25,9 @@ func captureOf(t *testing.T, captured bool, events []evidence.Event) assertion.R
 	checker := check.Evidence{
 		Scenario:     evidenceScenario(labspec.EvidenceExpectation{ContentCaptured: captured}),
 		EvidenceFile: evidenceFile,
+		Trail:        collected(events),
 	}
-	results, err := checker.Run(context.Background(), records(events, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

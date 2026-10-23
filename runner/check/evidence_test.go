@@ -64,8 +64,9 @@ func TestEvidenceChainCompleteSeparatesBrokenFromIndeterminate(t *testing.T) {
 			checker := check.Evidence{
 				Scenario:     evidenceScenario(labspec.EvidenceExpectation{ChainComplete: true}),
 				EvidenceFile: evidenceFile,
+				Trail:        collected(test.recorded),
 			}
-			results, err := checker.Run(context.Background(), records(test.recorded, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -84,8 +85,9 @@ func TestEvidenceChainCompleteIsNotAssertedWhenTheScenarioDoesNotAskForIt(t *tes
 	checker := check.Evidence{
 		Scenario:     evidenceScenario(labspec.EvidenceExpectation{ChainComplete: false}),
 		EvidenceFile: evidenceFile,
+		Trail:        collected(broken),
 	}
-	results, err := checker.Run(context.Background(), records(broken, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -124,8 +126,9 @@ func TestEvidencePolicyDigestIsReadFromEveryDecision(t *testing.T) {
 			checker := check.Evidence{
 				Scenario:     evidenceScenario(labspec.EvidenceExpectation{PolicyDigestPresent: true}),
 				EvidenceFile: evidenceFile,
+				Trail:        collected(test.recorded),
 			}
-			results, err := checker.Run(context.Background(), records(test.recorded, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -158,8 +161,9 @@ func TestEvidenceContentCaptureIsAssertedInBothDirections(t *testing.T) {
 			checker := check.Evidence{
 				Scenario:     evidenceScenario(labspec.EvidenceExpectation{ContentCaptured: test.captured}),
 				EvidenceFile: evidenceFile,
+				Trail:        collected(test.recorded),
 			}
-			results, err := checker.Run(context.Background(), records(test.recorded, nil))
+			results, err := checker.Run(context.Background(), records(nil))
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
@@ -184,8 +188,9 @@ func TestEvidenceFailsOnATrailWithNothingInIt(t *testing.T) {
 			ContentCaptured:     false,
 		}),
 		EvidenceFile: evidenceFile,
+		Trail:        collected(nil),
 	}
-	results, err := checker.Run(context.Background(), records(nil, nil))
+	results, err := checker.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -197,7 +202,7 @@ func TestEvidenceFailsOnATrailWithNothingInIt(t *testing.T) {
 			t.Errorf("%s is %s over an empty trail, want fail", got.Check, got.Outcome)
 		}
 	}
-	report := assertion.Run(context.Background(), records(nil, nil), checker)
+	report := assertion.Run(context.Background(), records(nil), checker)
 	if report.Outcome() != assertion.Fail {
 		t.Errorf("a run over an empty trail reported %s", report.Outcome())
 	}
@@ -210,9 +215,11 @@ func TestEvidenceSeparatesATrailItCouldNotReadFromAnEmptyOne(t *testing.T) {
 	unreadable := check.Evidence{
 		Scenario:     evidenceScenario(labspec.EvidenceExpectation{ChainComplete: true}),
 		EvidenceFile: evidenceFile,
-		ReadError:    errors.New("line 3: evidence: malformed line: unexpected end of JSON input"),
+		Trail: &check.Trail{
+			Read: true, ReadError: errors.New("line 3: evidence: malformed line: unexpected end of JSON input"),
+		},
 	}
-	results, err := unreadable.Run(context.Background(), records(nil, nil))
+	results, err := unreadable.Run(context.Background(), records(nil))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

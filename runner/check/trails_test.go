@@ -94,10 +94,10 @@ func gradeAgainst(
 	t.Helper()
 	graded := map[string]assertion.Result{}
 	for _, subject := range []assertion.Check{
-		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile},
-		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile},
+		check.Decisions{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: collected(events)},
+		check.Trails{Scenario: spec, Trajectory: trajectory, EvidenceFile: evidenceFile, Trail: collected(events)},
 	} {
-		results, err := subject.Run(context.Background(), records(events, nil))
+		results, err := subject.Run(context.Background(), records(nil))
 		if err != nil {
 			t.Fatalf("%s: %v", subject.ID(), err)
 		}

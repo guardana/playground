@@ -28,7 +28,7 @@ func gradeFS(t *testing.T, expect labspec.EffectExpectation, entries ...journal.
 	spec := scenario(map[int]labspec.DecisionExpectation{1: {Verdict: "ALLOW"}})
 	spec.Expect.Effects = map[string]labspec.EffectExpectation{"victim-fs": expect}
 	results, err := check.Effects{Scenario: spec, JournalDir: journalDir}.Run(context.Background(),
-		records(nil, map[string][]journal.Entry{"victim-fs": entries}))
+		records(map[string][]journal.Entry{"victim-fs": entries}))
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}

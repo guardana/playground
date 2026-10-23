@@ -123,14 +123,19 @@ type Trails struct {
 	Scenario     labspec.Scenario
 	Trajectory   labspec.Trajectory
 	EvidenceFile string
+	Trail        *Trail
 }
 
 // ID names the check in a report.
 func (Trails) ID() string { return "trails" }
 
 // Run reports one result: the openings against the steps that open one.
-func (t Trails) Run(_ context.Context, records assertion.Records) ([]assertion.Result, error) {
-	paired := pairTrails(t.Scenario, t.Trajectory, records.Evidence)
+func (t Trails) Run(_ context.Context, _ assertion.Records) ([]assertion.Result, error) {
+	events, err := t.Trail.events()
+	if err != nil {
+		return nil, err
+	}
+	paired := pairTrails(t.Scenario, t.Trajectory, events)
 	result := assertion.Result{
 		Check:   "trails/opened",
 		Want:    fmt.Sprintf("%d trails, one per step that opens one, each proposing its step's tool", len(paired.openers)),
