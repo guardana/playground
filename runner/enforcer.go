@@ -10,9 +10,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/guardana/playground/drivers/control/gateway"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/gateway"
 )
 
 // What the lab owns in the enforcer's configuration, as the compose topology

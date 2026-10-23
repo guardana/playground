@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/control/gateway"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
 	"github.com/guardana/playground/runner/dockercompose"
-	"github.com/guardana/playground/runner/gateway"
 )
 
 // What the runner and the chaos proxy agree on.

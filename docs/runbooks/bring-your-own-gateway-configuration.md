@@ -3,7 +3,7 @@ title: Bring your own gateway configuration
 summary: Which settings of the enforcer's gateway a scenario sets, which the lab owns and refuses, and how a run assembles the rest.
 type: runbook
 audience: [engineering, product]
-covers: [runner/gateway/**, runner/enforcer.go, runner/env.go, compose/compose.yaml, config/gateway/**, examples/**]
+covers: [drivers/control/gateway/**, runner/enforcer.go, runner/env.go, compose/compose.yaml, config/gateway/**, examples/**]
 ---
 
 # Bring your own gateway configuration
@@ -32,7 +32,7 @@ At the pin, `mode`, `project_id`, `tenant_id`, `listener.principal.id` and
 ## What a scenario sets
 
 Only these keys, each where the enforcer's configuration puts it
-(`runner/gateway/allow.go` holds the list):
+(`drivers/control/gateway/allow.go` holds the list):
 
 | group | keys |
 |---|---|

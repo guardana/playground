@@ -10,8 +10,8 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/guardana/playground/drivers/control/gateway"
 	"github.com/guardana/playground/internal/labspec"
-	"github.com/guardana/playground/runner/gateway"
 )
 
 // Every tool a victim lists is classified by the lab and pinned to the

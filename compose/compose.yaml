@@ -496,7 +496,7 @@ services:
   # builds out of its pinned commit. The runner names it in LAB_ENFORCER_REF,
   # which is a development build only when it was asked for one. It is told nothing the lab decided about
   # a verdict: the runner hands it a bundle signed for the run and a
-  # configuration assembled from the scenario's part (runner/gateway), both
+  # configuration assembled from the scenario's part (drivers/control/gateway), both
   # read-only. It trusts two roots and no other: the decision point double's CA
   # in pki/, and in export-ca/ the CA the runner made for the collector.
   enforcer:
@@ -505,7 +505,7 @@ services:
     <<: *hardened
     user: "65532:65532"
     command: ["run", "--config", "/gateway/gateway.yaml"]
-    # The agent listener binds this address alone (runner/gateway), so no
+    # The agent listener binds this address alone (drivers/control/gateway), so no
     # service on the enforcer's other networks can open a session at it.
     networks:
       agent-net:

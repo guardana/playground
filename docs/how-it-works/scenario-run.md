@@ -309,7 +309,7 @@ The files themselves are listed in the quickstart's
 | `runner/lab.go`, `runner/trajectory.go` | one run, end to end |
 | `runner/probes.go`, `runner/check/topology.go`, `runner/check/listener.go` | the topology probes and their grading |
 | `runner/drain.go`, `runner/otlp.go`, `runner/collectortls.go` | the drain, the export, the collector's TLS |
-| `runner/enforcer.go`, `runner/signing.go`, `runner/gateway/` | the enforcer's configuration and bundle |
+| `runner/enforcer.go`, `runner/signing.go`, `drivers/control/gateway/` | the enforcer's configuration and bundle |
 | `runner/check/` | every check |
 | `agents/scripted/` | the agent and its trace |
 | `services/approver/`, `services/pdp-double/` | the doubles |

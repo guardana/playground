@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/guardana/playground/runner/gateway"
+	"github.com/guardana/playground/drivers/control/gateway"
 )
 
 func inputs(partial string) gateway.Inputs {

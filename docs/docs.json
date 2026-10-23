@@ -45,6 +45,7 @@
     "attacks/**",
     "compose/**",
     "config/**",
+    "drivers/**",
     "internal/assertion/**",
     "internal/evidence/**",
     "internal/journal/**",
