@@ -1,4 +1,4 @@
-package check_test
+package main
 
 import (
 	"context"
@@ -61,7 +61,7 @@ func driftExpectation() labspec.VerifierExpectation {
 }
 
 // writeRuns writes the pin and the report into a run directory and returns
-// the two steps as the runner would record them.
+// the two steps as the runner records and reads them.
 func writeRuns(t *testing.T, pin, report string) []check.VerifierRun {
 	t.Helper()
 	dir := t.TempDir()
@@ -74,15 +74,17 @@ func writeRuns(t *testing.T, pin, report string) []check.VerifierRun {
 			t.Fatal(err)
 		}
 	}
-	return []check.VerifierRun{
+	runs := []check.VerifierRun{
 		{Step: 1, Probe: labspec.ProbeStep{Server: "victim-fs", WritePin: true}, URL: fsURL, Ran: true,
 			Report: filepath.Join(dir, "step-1.json"), Pin: filepath.Join(dir, "pin-1.json")},
 		{Step: 2, Probe: labspec.ProbeStep{Server: "victim-fs", PinFrom: 1}, URL: fsURL, Ran: true, ExitCode: 1,
 			Report: filepath.Join(dir, "step-2.json")},
 	}
+	readRecords(runs)
+	return runs
 }
 
-func gradeVerifier(t *testing.T, spec labspec.Scenario, runs []check.VerifierRun) map[string]assertion.Result {
+func gradeVerifierRuns(t *testing.T, spec labspec.Scenario, runs []check.VerifierRun) map[string]assertion.Result {
 	t.Helper()
 	results, err := check.Verifier{Scenario: spec, Runs: runs}.Run(context.Background(), assertion.Records{})
 	if err != nil {
@@ -116,7 +118,7 @@ func wantOutcomes(t *testing.T, got map[string]assertion.Result, want map[string
 }
 
 func TestADriftReportIsGradedFromItsFindings(t *testing.T) {
-	got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, fsPin, driftReport))
+	got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), writeRuns(t, fsPin, driftReport))
 	pass := assertion.Pass
 	wantOutcomes(t, got, map[string]assertion.Outcome{
 		"verifier/step-1/pin":                                         pass,
@@ -157,7 +159,7 @@ func TestEachStatedExpectationCanFailOnItsOwn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			want := driftExpectation()
 			test.change(&want)
-			got := gradeVerifier(t, verifierSpec(want), writeRuns(t, fsPin, driftReport))
+			got := gradeVerifierRuns(t, verifierSpec(want), writeRuns(t, fsPin, driftReport))
 			for check, result := range got {
 				wanted := assertion.Pass
 				if check == test.red {
@@ -192,7 +194,7 @@ func TestAMissingOrForeignRecordGradesNothingBesideIt(t *testing.T) {
 		"a null waived list":     {fsPin, strings.Replace(driftReport, `"waived": []`, `"waived": null`, 1)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, test.pin, test.report))
+			got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), writeRuns(t, test.pin, test.report))
 			if got["verifier/step-2/report"].Outcome != assertion.Fail {
 				t.Errorf("report = %s, want fail", got["verifier/step-2/report"].Outcome)
 			}
@@ -215,7 +217,7 @@ func TestAPinStepIsGradedFromThePinItWrote(t *testing.T) {
 		"a pin that is prose ": "Wrote 3 approved tool description(s)",
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, pin, driftReport))
+			got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), writeRuns(t, pin, driftReport))
 			if got["verifier/step-1/pin"].Outcome != assertion.Fail {
 				t.Errorf("pin = %s, want fail", got["verifier/step-1/pin"].Outcome)
 			}
@@ -229,7 +231,7 @@ func TestAPinStepIsGradedFromThePinItWrote(t *testing.T) {
 func TestAStepThatNeverRanEstablishesNothing(t *testing.T) {
 	runs := writeRuns(t, fsPin, driftReport)
 	runs[1].Ran, runs[1].Detail = false, "docker compose run: no such service"
-	got := gradeVerifier(t, verifierSpec(driftExpectation()), runs[1:])
+	got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), runs[1:])
 	wantOutcomes(t, got, map[string]assertion.Outcome{
 		"verifier/step-1/ran": assertion.Indeterminate,
 		"verifier/step-2/ran": assertion.Indeterminate,
@@ -246,7 +248,7 @@ func TestAWaivedFindingIsNotAnExcludedOne(t *testing.T) {
 	if waived == driftReport {
 		t.Fatal("the replacement changed nothing")
 	}
-	got := gradeVerifier(t, verifierSpec(driftExpectation()), writeRuns(t, fsPin, waived))
+	got := gradeVerifierRuns(t, verifierSpec(driftExpectation()), writeRuns(t, fsPin, waived))
 	result := got["verifier/step-2/no-finding/guardana.mcp.cache_scope"]
 	if result.Outcome != assertion.Fail || !strings.Contains(result.Got, "waived") {
 		t.Errorf("no-finding = %s (%q), want a failure naming the waiver", result.Outcome, result.Got)

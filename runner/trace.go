@@ -50,6 +50,7 @@ func (l lab) analyzeTrace(ctx context.Context, compose dockercompose.Compose, sp
 	}
 	graded.Analysis.Ran, graded.Analysis.ExitCode = true, split.ExitCode
 	graded.Analysis.Detail = fmt.Sprintf("exit %d", split.ExitCode)
+	readRecord(&graded.Analysis)
 	return graded
 }
 

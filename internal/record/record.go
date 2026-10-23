@@ -51,3 +51,10 @@ type Run struct {
 	// Scope is the files the run listed.
 	Scope List[string]
 }
+
+// Approval is what a tool approved for a later run to compare against: the
+// server it approved and how many of that server's tools.
+type Approval struct {
+	Server string
+	Tools  int
+}

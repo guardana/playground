@@ -1,4 +1,4 @@
-package check
+package report
 
 import (
 	"os"
@@ -21,7 +21,7 @@ func TestTheRecordKeepsWhatTheReportLeftOutApartFromWhatItNamedEmpty(t *testing.
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	ran, err := readReport(path, "target")
+	ran, err := Read(path, "target")
 	if err != nil {
 		t.Fatal(err)
 	}

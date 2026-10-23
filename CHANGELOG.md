@@ -99,6 +99,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `drivers/control/evidence`. Its types and decoding are unchanged. A test
   refuses a depguard rule whose `files` glob or `deny` path names nothing in
   the module.
+- The reader of the verifier's JSON report and pin now lives at
+  `drivers/guardana/report`. The runner reads each step's files there and
+  hands the checks a neutral record; what is read and how it grades are
+  unchanged, and a step whose record nobody read grades `indeterminate`.
 
 ### Fixed
 

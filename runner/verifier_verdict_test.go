@@ -1,4 +1,4 @@
-package check_test
+package main
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func undecidedRuns(t *testing.T, report string) []check.VerifierRun {
 }
 
 func TestTheVerdictAndItsCauseAreGradedExactly(t *testing.T) {
-	got := gradeVerifier(t, verifierSpec(undecidedExpectation()), undecidedRuns(t, undecidedReport))
+	got := gradeVerifierRuns(t, verifierSpec(undecidedExpectation()), undecidedRuns(t, undecidedReport))
 	pass := assertion.Pass
 	wantOutcomes(t, got, map[string]assertion.Outcome{
 		"verifier/step-1/pin":       pass,
@@ -82,7 +82,7 @@ func TestEachVerdictExpectationFailsOnItsOwn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			want := undecidedExpectation()
 			test.change(&want)
-			got := gradeVerifier(t, verifierSpec(want), undecidedRuns(t, undecidedReport))
+			got := gradeVerifierRuns(t, verifierSpec(want), undecidedRuns(t, undecidedReport))
 			for _, what := range []string{"gate", "shortfall", "errors"} {
 				outcome, wanted := got["verifier/step-2/"+what].Outcome, assertion.Pass
 				if what == test.fails {
@@ -113,7 +113,7 @@ func TestAReportSilentOnTheVerdictFailsWhatTheStepAsserts(t *testing.T) {
 			if report == undecidedReport {
 				t.Fatal("the replacement changed nothing")
 			}
-			got := gradeVerifier(t, verifierSpec(undecidedExpectation()), undecidedRuns(t, report))
+			got := gradeVerifierRuns(t, verifierSpec(undecidedExpectation()), undecidedRuns(t, report))
 			if result := got["verifier/step-2/"+test.fails]; result.Outcome != assertion.Fail {
 				t.Errorf("step-2/%s = %s (%q), want fail", test.fails, result.Outcome, result.Got)
 			}
@@ -132,7 +132,7 @@ func TestTwoAlikeGapsAreMatchedOneEach(t *testing.T) {
 	manifest := labspec.ShortfallExpectation{Kind: "demanded_check", Name: "guardana.agent.mcp_server_manifest"}
 	want := undecidedExpectation()
 	want.Shortfall = shortfalls(manifest, manifest)
-	got := gradeVerifier(t, verifierSpec(want), undecidedRuns(t, report))
+	got := gradeVerifierRuns(t, verifierSpec(want), undecidedRuns(t, report))
 	if result := got["verifier/step-2/shortfall"]; result.Outcome != assertion.Pass {
 		t.Errorf("step-2/shortfall = %s (%q), want pass", result.Outcome, result.Got)
 	}
