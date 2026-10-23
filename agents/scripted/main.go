@@ -132,7 +132,7 @@ func runTrajectory(ctx context.Context, settings options) error {
 	if settings.trace == "" {
 		return replay(ctx, session, trajectory, settings.runID, settings.namespace, log, nil)
 	}
-	tracer := trace.New(settings.runID, settings.namespace, trace.Producer{Name: agentName, Version: agentVersion})
+	tracer := trace.New(settings.runID, trace.Producer{Name: agentName, Version: agentVersion})
 	replayed := replay(ctx, session, trajectory, settings.runID, settings.namespace, log, tracer)
 	return errors.Join(replayed, writeTrace(settings.trace, tracer, replayed == nil))
 }

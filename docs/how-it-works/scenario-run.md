@@ -3,7 +3,7 @@ title: How a scenario runs
 summary: Which service sits on which network, how one call is decided and held, which file each check reads, and what a run leaves on disk.
 type: explanation
 audience: [engineering]
-covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, drivers/control/trailcheck/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
+covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, drivers/control/trailcheck/**, drivers/control/answer/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
 ---
 
 # How a scenario runs
@@ -198,10 +198,11 @@ sequenceDiagram
   enforcer-->>agent: result
 ```
 
-Sources: `services/approver/approver.go`, `agents/scripted/pending.go`, `compose/compose.yaml`.
+Sources: `services/approver/approver.go`, `agents/scripted/pending.go`, `drivers/control/answer/answer.go`, `compose/compose.yaml`.
 
 The agent retries only an answer marked under `ENFORCER_NAMESPACE`, so an
-upstream result shaped like a pending answer is not retried. The approver
+upstream result shaped like a pending answer is not retried. That mark is read
+in one place, `drivers/control/answer/answer.go`. The approver
 writes nothing itself: every answer is the enforcer's own command, copied from
 the run's enforcer image, and every answer it gives is journalled. A rejected
 call never reaches the victim

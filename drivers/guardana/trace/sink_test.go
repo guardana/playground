@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 )
 
 // Every victim a trajectory may call has a sink, and nothing else has one, so
@@ -29,8 +30,8 @@ func TestAServerWithNoSinkIsAnError(t *testing.T) {
 	if sink, err := sinkOf("victim-unlisted"); err == nil {
 		t.Errorf("victim-unlisted has sink %q, want an error", sink)
 	}
-	w := &Writer{namespace: "lab"}
-	if err := w.Record(1, traceStep("victim-unlisted", "x.y"), map[string]any{}, nil, false); err == nil {
+	w := New("run-1", Producer{})
+	if err := w.Record(1, traceStep("victim-unlisted", "x.y"), map[string]any{}, nil, record.AnswerBlocked, false); err == nil {
 		t.Error("a step to a server with no sink was recorded")
 	}
 }

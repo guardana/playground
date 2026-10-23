@@ -4,32 +4,13 @@ import (
 	"context"
 	"time"
 
+	gateanswer "github.com/guardana/playground/drivers/control/answer"
 	"github.com/guardana/playground/internal/labspec"
+	"github.com/guardana/playground/internal/record"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// approvalPending is the reason code the enforcer's gateway answers a held
-// request with, in the result's structured content, and pendingMark the value
-// it puts under `<namespace>/answer` in `_meta` to say it made that answer
-// itself. Both are read only to decide whether to send the call again, never
-// to grade anything.
-const (
-	approvalPending = "APPROVAL_PENDING"
-	pendingMark     = "pending"
-)
-
 const pendingOutcome outcome = "pending"
-
-// isPending reports whether the gateway itself answered that the request is
-// held. The reason code alone is not enough: an upstream tool can return it,
-// and only the gateway may write under its own namespace.
-func isPending(result *mcp.CallToolResult, namespace string) bool {
-	if result == nil || !result.IsError || result.Meta[namespace+"/answer"] != pendingMark {
-		return false
-	}
-	fields, ok := result.StructuredContent.(map[string]any)
-	return ok && fields["reason_code"] == approvalPending
-}
 
 // callWhilePending sends the call, and sends it again while the step allows and
 // the gateway answers that the request is still held. Every pending answer is
@@ -40,8 +21,9 @@ func callWhilePending(
 	pended := false
 	for retries := 0; ; retries++ {
 		result, err := caller.CallTool(ctx, params)
-		pended = pended || (err == nil && isPending(result, log.namespace))
-		if err != nil || step.RetryWhilePending == nil || !isPending(result, log.namespace) ||
+		held := err == nil && gateanswer.Classify(result, log.namespace) == record.AnswerHeld
+		pended = pended || held
+		if err != nil || step.RetryWhilePending == nil || !held ||
 			retries >= step.RetryWhilePending.AtMost {
 			return result, pended, err
 		}
