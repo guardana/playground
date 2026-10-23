@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 const (
-	otlpFixture    = "../internal/evidence/testdata/otlp/export_logs_request.json"
+	otlpFixture    = "../drivers/control/evidence/testdata/otlp/export_logs_request.json"
 	otlpGoldenNS   = "guardana.control"
 	otlpGoldenSize = 4
 )

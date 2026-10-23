@@ -13,7 +13,7 @@
 package check
 
 import (
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/journal"
 )
 

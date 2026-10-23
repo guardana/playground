@@ -3,7 +3,7 @@ title: How a scenario runs
 summary: Which service sits on which network, how one call is decided and held, which file each check reads, and what a run leaves on disk.
 type: explanation
 audience: [engineering]
-covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, internal/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
+covers: [compose/compose.yaml, victims/web/fetch.go, victims/mail/delivery.go, compose/otel/**, compose/Dockerfile.approver, versions.env, go.mod, runner/lab.go, runner/trajectory.go, runner/probes.go, runner/drain.go, runner/otlp.go, runner/collect.go, runner/collectortls.go, runner/enforcer.go, runner/env.go, runner/signing.go, runner/redbydesign.go, runner/check/**, agents/scripted/**, services/approver/**, services/pdp-double/**, internal/assertion/**, drivers/control/evidence/**, internal/journal/**, internal/redbydesign/**, scripts/build-enforcer.sh, config/gateway/classification.yaml, config/gateway/fingerprints.yaml, scenarios/red-by-design.txt]
 ---
 
 # How a scenario runs
@@ -154,9 +154,9 @@ still running, or `plane/drained` fails; an answer that does not parse ends the
 wait at once. The last answer is kept as `healthz.json`. The wait is bounded at
 90 seconds.
 
-`internal/evidence` reads the export as the enforcer's frozen v1 wire contract
-carries it over JSON. It takes one event from each log record's body and
-refuses a log record whose attributes disagree with it; it collapses a
+`drivers/control/evidence` reads the export as the enforcer's frozen v1 wire
+contract carries it over JSON. It takes one event from each log record's body
+and refuses a log record whose attributes disagree with it; it collapses a
 byte-identical redelivery and refuses two different events under one id. It
 orders each trail by its `prevEventId` links. Every event of a trail must
 carry the first event's `requestId`, `projectId` and `tenantId`, none of them
@@ -270,11 +270,11 @@ The files themselves are listed in the quickstart's
 ## Why it works this way
 
 - **The lab tests pinned bytes, never the enforcer's code.** No module of the
-  enforcer is in `go.mod`, and `internal/evidence/event.go` mirrors its wire
-  contract by hand: calling the producer's validator would ask the system under
-  test whether it agrees with itself. `scripts/build-enforcer.sh` builds the
-  image from `git archive` of `ENFORCER_COMMIT` and refuses an archive whose
-  tree is not `ENFORCER_TREE`.
+  enforcer is in `go.mod`, and `drivers/control/evidence/event.go` mirrors its
+  wire contract by hand: calling the producer's validator would ask the system
+  under test whether it agrees with itself. `scripts/build-enforcer.sh` builds
+  the image from `git archive` of `ENFORCER_COMMIT` and refuses an archive
+  whose tree is not `ENFORCER_TREE`.
 - **Unknown is never a pass, and a red never hides another.** An outcome's
   zero value is `indeterminate` (`internal/assertion/assertion.go`,
   `TestZeroOutcomeIsIndeterminate`). `-red-by-design` passes only when the reds
@@ -313,4 +313,4 @@ The files themselves are listed in the quickstart's
 | `runner/check/` | every check |
 | `agents/scripted/` | the agent and its trace |
 | `services/approver/`, `services/pdp-double/` | the doubles |
-| `internal/assertion/`, `internal/evidence/`, `internal/journal/` | outcomes, the trail reader, the journal reader |
+| `internal/assertion/`, `drivers/control/evidence/`, `internal/journal/` | outcomes, the trail reader, the journal reader |

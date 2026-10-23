@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // A line is one event. Anything else on it, or a JSON value that decodes into

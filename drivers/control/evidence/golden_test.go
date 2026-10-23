@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // The request the enforcer's exporter is held to, decoded here, is the four

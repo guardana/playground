@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/internal/evidence"
 	"github.com/guardana/playground/internal/labspec"
 )
 

@@ -95,6 +95,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   be read now does, apart from `no journal`. `make up` refuses a link on the
   way to a directory it makes, and `check-hygiene.sh` a link anywhere in the
   tree. The file format is unchanged.
+- The mirror of the enforcer's v1 evidence contract now lives at
+  `drivers/control/evidence`. Its types and decoding are unchanged. A test
+  refuses a depguard rule whose `files` glob or `deny` path names nothing in
+  the module.
 
 ### Fixed
 

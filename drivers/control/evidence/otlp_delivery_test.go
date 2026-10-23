@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // Export is at-least-once: a batch the collector took but did not acknowledge

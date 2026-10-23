@@ -12,10 +12,10 @@ receivers:
           key_file: /tls/key.pem
 
 # The file exporter writes one ExportLogsServiceRequest per delivery, which is
-# the shape internal/evidence.DecodeOTLP reads. The path is the one directory
-# the compose service mounts writable. append keeps a restart (the enforcer's
-# collector-down scenario) from truncating what an earlier delivery already
-# wrote to the same run directory.
+# the shape drivers/control/evidence.DecodeOTLP reads. The path is the one
+# directory the compose service mounts writable. append keeps a restart (the
+# enforcer's collector-down scenario) from truncating what an earlier delivery
+# already wrote to the same run directory.
 exporters:
   file:
     path: /lab-run/otlp-logs.json

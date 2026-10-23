@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // chainOf builds one well-linked, single-scope trail of kinds, so the only

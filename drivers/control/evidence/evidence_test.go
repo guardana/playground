@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guardana/playground/internal/evidence"
+	"github.com/guardana/playground/drivers/control/evidence"
 )
 
 // One well formed trail, as protojson writes it: enum names, a timestamp in

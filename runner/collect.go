@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/guardana/playground/drivers/control/evidence"
 	"github.com/guardana/playground/internal/assertion"
-	"github.com/guardana/playground/internal/evidence"
 	"github.com/guardana/playground/internal/journal"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/check"
