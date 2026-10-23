@@ -1,6 +1,6 @@
 ---
 title: Glossary
-summary: The lab's own terms, one name per concept, and the name each page uses for the two systems under test.
+summary: The lab's own terms, one name per concept, and the role names pages use for the systems under test.
 type: reference
 audience: [engineering, product]
 covers: [versions.env, compose/compose.yaml, internal/assertion/**, internal/labspec/**, internal/journal/**, runner/lab.go, runner/env.go, runner/workspace.go, scenarios/red-by-design.txt, config/gateway/classification.yaml, victims/*/README.md]
@@ -17,11 +17,11 @@ record) are defined in `docs/concepts/glossary.md` in its repository at
 
 | name | meaning | not |
 |---|---|---|
-| the enforcer | the system that decides one tool call as it is made and records why, from `ENFORCER_REPOSITORY` at `ENFORCER_COMMIT` in [versions.env](../../versions.env); the compose service `enforcer`. A page that introduces it names the product once, "Control (the enforcer)", and says "the enforcer" after | "Guardana Control", "enforcement plane"; "plane" survives only in check names such as `plane/image` |
-| the verifier | the system that grades a deployed system or a recorded run after the fact: the package `VERIFIER_PACKAGE` at `VERIFIER_VERSION`, run as the command `VERIFIER_CLI`; the compose services `verifier` and `trace-verifier`. A page that introduces it names the product once, "Guardana (the verifier)", and says "the verifier" after | "Guardana" after the introduction |
+| the enforcer | the role of a system that decides one tool call as it is made and records why. Today Control, from `ENFORCER_REPOSITORY` at `ENFORCER_COMMIT` in [versions.env](../../versions.env); the compose service `enforcer`. A page that introduces it names the product once, "Control (the enforcer)", and says "the enforcer" after | "Guardana Control", "enforcement plane"; "plane" survives only in check names such as `plane/image` |
+| the verifier | the role of a system that grades a deployed system, its artifacts or a recorded run after the fact. Today Guardana: the package `VERIFIER_PACKAGE` at `VERIFIER_VERSION`, run as the command `VERIFIER_CLI`; the compose services `verifier` and `trace-verifier`. A page that introduces it names the product once, "Guardana (the verifier)", and says "the verifier" after | "Guardana" after the introduction |
 | gateway | the enforcer's MCP gateway (`ENFORCER_GATEWAY_BIN`), the process the agent talks to | a system of its own; the scenario's configuration, which is the gateway part |
 | gateway part | a scenario's `gateway:` key and the files it names: the enforcer's configuration, policy and doubles' scripts for that scenario ([format](../lab-files.md#what-decides-the-run)) | "gateway" |
-| system under test | the enforcer or the verifier, at its pin; read and attacked from here, never edited | |
+| system under test | a tool the lab tests, at its pin, in whatever role it plays; read and attacked from here, never edited | |
 | pin | the exact version the lab runs, in `versions.env`: the enforcer's commit, its release tag and its tree; the verifier's release; every pulled image by tag and digest. A result is evidence about that pin and nothing wider | "latest" |
 
 ## What a run is made of

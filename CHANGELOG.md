@@ -41,6 +41,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The lab is described as tool-neutral: README, `AGENTS.md`, the roadmap and
+  the glossary name roles and treat Control and Guardana as the two tools wired
+  in first. `AGENTS.md` gains the rule that no tool gets a special place. The
+  project is called Playground, and the compose project is `playground`.
 - The victim journal format is versioned. A victim that requires a bearer
   token appends an auth line for each request to its `/mcp`: whether it
   carried the run's token, another credential or none, whether its session id

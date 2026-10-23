@@ -1,11 +1,14 @@
 # Roadmap
 
-This repository is one playground for testing AI security controls; testing
-agents and model endpoints is planned
+This repository is a tool-neutral playground for testing AI tools and models.
+Two tools are wired in today: Control (the enforcer) decides tool calls inline,
+and Guardana (the verifier) probes servers, scans artifacts and grades recorded
+runs. Drivers that plug any other
+gate, grader, scanner or monitor in the same way are planned
+([P8](#p8--more-gates-graders-and-monitors-planned)), and so are agent trials
+and model endpoints
 ([P5](#p5--agent-trials-in-the-same-playground-planned),
-[P7](#p7--model-artifacts-and-endpoints-partly-implemented)). Control (the enforcer) is
-the inline gate; Guardana (the verifier) grades independently. The planned
-Range path will run an agent as the subject under test. Each path uses synthetic victims,
+[P7](#p7--model-artifacts-and-endpoints-partly-implemented)). Each path uses synthetic victims,
 scripted scenarios and records of actual effects. The enforcer's scenarios and the
 verifier's probes return a verdict without the other system; the verifier's
 trace grading reads a run made through the enforcer.
@@ -94,8 +97,10 @@ with a stated budget and version; replay, not a live response, decides CI.
 
 ## P8 — More gates, graders and monitors (planned)
 
-Use a driver for each other control under test: pinned build, scenario
-configuration, record reader and checks against the same victim effects.
+Use a driver for each tool under test, the two wired in first included: pinned
+build, scenario configuration, record reader and checks against the same victim
+effects. A tool's maintainers can then run the lab against an unreleased build
+through that driver.
 Compare the verifier's reports between pins once both have stable result records.
 Add a monitor when it can be checked on a stream with known missed and false
 alerts. Do not infer a pass from the absence of a finding.
