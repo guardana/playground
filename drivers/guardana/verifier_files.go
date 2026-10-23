@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"fmt"
@@ -66,7 +66,7 @@ func makeStepDirs(dir string, number int, writesPin bool) error {
 		return err
 	}
 	if writesPin {
-		return makeShared(filepath.Join(step, outputsDir))
+		return runfile.MakeDir(filepath.Join(step, outputsDir), runfile.Shared)
 	}
 	return nil
 }
@@ -74,13 +74,13 @@ func makeStepDirs(dir string, number int, writesPin bool) error {
 // handOver makes a step's directories and copies into in/ the profile and the
 // pin it names, before its container starts. earlier holds every step that
 // ran before this one, in order.
-func handOver(space workspace, dir string, number int, probe labspec.ProbeStep, earlier []check.VerifierRun) error {
+func (d *Driver) handOver(dir string, number int, probe labspec.ProbeStep, earlier []check.StepRun) error {
 	if err := makeStepDirs(dir, number, probe.WritePin); err != nil {
 		return err
 	}
 	in := filepath.Join(dir, stepDirName(number), inputsDir)
 	if probe.Profile != "" {
-		if err := copyInput(space.file(probe.Profile), filepath.Join(in, profileInput)); err != nil {
+		if err := copyInput(d.file(probe.Profile), filepath.Join(in, profileInput)); err != nil {
 			return fmt.Errorf("the profile %s: %w", probe.Profile, err)
 		}
 	}
@@ -102,7 +102,7 @@ func copyInput(from, to string) error {
 	if err != nil {
 		return err
 	}
-	return keepNew(to, string(body), inputMode)
+	return runfile.KeepNew(to, string(body), inputMode)
 }
 
 // probeArgs names each input by the path the step's container sees it at.
@@ -119,7 +119,7 @@ func probeArgs(url string, probe labspec.ProbeStep) []string {
 		args = append(args, "--profile", path.Join(verifierMount, inputsDir, profileInput))
 	}
 	if probe.Credential {
-		args = append(args, "--mcp-token-env", mcpTokenVariable)
+		args = append(args, "--mcp-token-env", labspec.MCPTokenVariable)
 	}
 	return args
 }
@@ -127,7 +127,7 @@ func probeArgs(url string, probe labspec.ProbeStep) []string {
 // pinFinished refuses the pin of a step that did not exit 0: a container
 // killed at its deadline, or one that failed, may have left a pin it never
 // finished writing, or be writing it still.
-func pinFinished(source check.VerifierRun) error {
+func pinFinished(source check.StepRun) error {
 	switch {
 	case !source.Ran:
 		return fmt.Errorf("step %d did not run", source.Step)

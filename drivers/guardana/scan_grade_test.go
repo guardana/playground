@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"context"
@@ -41,7 +41,8 @@ func gradeScan(t *testing.T, want labspec.VerifierExpectation, report string) ma
 		Verifier: []labspec.VerifierStep{{Scan: &labspec.ScanStep{Target: "artifacts/pickle-import/defect"}}},
 		Expect:   labspec.Expect{Verifier: map[int]labspec.VerifierExpectation{1: want}},
 	}
-	runs := []check.VerifierRun{{Step: 1, URL: "target", Ran: true, ExitCode: 1, Report: filepath.Join(dir, "step-1.json")}}
+	runs := []check.StepRun{newScanRun(1, dir)}
+	runs[0].Ran, runs[0].ExitCode = true, 1
 	readRecords(runs)
 	results, err := check.Verifier{Scenario: spec, Runs: runs}.Run(context.Background(), assertion.Records{})
 	if err != nil {

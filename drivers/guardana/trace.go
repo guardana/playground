@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"context"
@@ -24,14 +24,11 @@ const (
 // analyzeTrace hands the agent's trace to the verifier with the scenario's
 // contract and returns what the verifier's report is graded on. The trace is
 // copied into the verifier's own directory, the only one it mounts.
-func (l lab) analyzeTrace(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runID, runDir string) check.Trace {
-	dir := filepath.Join(runDir, "verifier")
-	analysis := check.VerifierRun{
-		URL:    path.Join(verifierMount, traceFile) + "#" + runID,
-		Report: filepath.Join(dir, "trace-report.json"),
-	}
+func (d *Driver) analyzeTrace(ctx context.Context, compose dockercompose.Compose, spec labspec.Scenario, runID, runDir string) check.Trace {
+	dir := filepath.Join(runDir, verifierDir)
+	analysis := reportRun(0, path.Join(verifierMount, traceFile)+"#"+runID, filepath.Join(dir, "trace-report.json"))
 	graded := check.Trace{Analysis: analysis, Want: *spec.Expect.Trace}
-	if err := copyTrace(filepath.Join(runDir, "agent", traceFile), dir); err != nil {
+	if err := copyTrace(filepath.Join(runDir, agentDir, traceFile), dir); err != nil {
 		graded.Analysis.Detail = "the agent's trace could not be handed over: " + err.Error()
 		return graded
 	}
@@ -44,7 +41,7 @@ func (l lab) analyzeTrace(ctx context.Context, compose dockercompose.Compose, sp
 		graded.Analysis.Detail = err.Error()
 		return graded
 	}
-	if err := keepNew(analysis.Report, split.Stdout, 0o600); err != nil {
+	if err := runfile.KeepNew(analysis.Source, split.Stdout, 0o600); err != nil {
 		graded.Analysis.Detail = "the report could not be kept: " + err.Error()
 		return graded
 	}
@@ -69,5 +66,5 @@ func copyTrace(from, directory string) error {
 	if err := os.Chmod(directory, 0o755); err != nil { // #nosec G302,G703 -- the umask narrowed it; the verifier's uid reads it.
 		return err
 	}
-	return keepNew(filepath.Join(directory, traceFile), string(body), 0o644)
+	return runfile.KeepNew(filepath.Join(directory, traceFile), string(body), 0o644)
 }

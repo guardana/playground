@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/drivers/control"
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/redbydesign"
 	"github.com/guardana/playground/runner/dockercompose"
@@ -82,11 +83,15 @@ func run(ctx context.Context, args, environ []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	gate, err := newControl(ctx, root, space, chosen, environ, out)
+	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
+	if err != nil {
+		return fmt.Errorf("the pins cannot be read: %w", err)
+	}
+	gate, err := newControl(ctx, root, space, chosen, environ, out, pins)
 	if err != nil {
 		return err
 	}
-	subject := newLab(root, space, chosen, environ, out, gate)
+	subject := newLab(root, space, chosen, environ, out, gate, pins)
 	err = execute(ctx, subject, scenarios, chosen.redByDesign != "", listed, out)
 	if subject.development != "" {
 		_, _ = fmt.Fprintf(out, "runner: graded against the %s\n", subject.development)
@@ -106,12 +111,8 @@ func execute(
 // newControl builds the enforcer's driver from the lab-wide inputs, at its
 // pins or on the development image -enforcer-dev names.
 func newControl(
-	ctx context.Context, root string, space workspace, chosen settings, environ []string, out io.Writer,
+	ctx context.Context, root string, space workspace, chosen settings, environ []string, out io.Writer, pins driver.Pins,
 ) (*control.Driver, error) {
-	pins, err := driver.ReadPins(filepath.Join(root, versionFile))
-	if err != nil {
-		return nil, fmt.Errorf("the pins cannot be read: %w", err)
-	}
 	return control.New(ctx, control.Config{
 		Root:        root,
 		Reports:     chosen.reports,
@@ -156,7 +157,9 @@ func parse(args []string, out io.Writer) (settings, error) {
 	return chosen, empty
 }
 
-func newLab(root string, space workspace, chosen settings, environ []string, out io.Writer, gate *control.Driver) lab {
+func newLab(
+	root string, space workspace, chosen settings, environ []string, out io.Writer, gate *control.Driver, pins driver.Pins,
+) lab {
 	built := lab{
 		root:      root,
 		workspace: space,
@@ -174,8 +177,8 @@ func newLab(root string, space workspace, chosen settings, environ []string, out
 		suffix:      randomSuffix,
 		log:         out,
 		control:     gate,
+		verifier:    guardana.New(guardana.Config{Workspace: space.dir, Inspect: dockercompose.Output, Log: out, Pins: pins}),
 		development: gate.Development(),
-		inspect:     dockercompose.Output,
 	}
 	built.describe = describeHost(root, space, dockercompose.Output, built.subjects())
 	return built

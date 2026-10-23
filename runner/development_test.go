@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/guardana/playground/drivers/control"
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/runner/dockercompose"
 )
@@ -71,7 +72,7 @@ func developmentLabWith(t *testing.T, serves string, wrap func(lookup) lookup) (
 		}
 		return answer(ctx, name, args...)
 	})
-	subject.inspect = docker
+	reconfigureVerifier(t, &subject, func(config *guardana.Config) { config.Inspect = docker })
 	reconfigure(t, &subject, func(config *control.Config) {
 		config.Inspect, config.Development = docker, devRef
 	})

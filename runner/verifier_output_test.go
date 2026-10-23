@@ -9,8 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/runner/dockercompose"
+	"github.com/guardana/playground/runner/driver"
 )
 
 const testVerifierImage = "lab-verifier"
@@ -21,18 +23,21 @@ const testVerifierImage = "lab-verifier"
 func pinVerifierImage(t *testing.T, subject *lab, label string) {
 	t.Helper()
 	writeFile(filepath.Join(subject.root, versionFile), "VERIFIER_IMAGE="+testVerifierImage+"\nVERIFIER_VERSION=1.0.0rc5\n")
-	other := subject.inspect
-	subject.inspect = func(ctx context.Context, name string, args ...string) (string, error) {
-		switch {
-		case other == nil && !strings.HasPrefix(args[len(args)-1], testVerifierImage+":"):
-			return "", errors.New("the test inspects no other image")
-		case !strings.HasPrefix(args[len(args)-1], testVerifierImage+":"):
-			return other(ctx, name, args...)
-		case label == "":
-			return "", errors.New("exit status 1: Error response from daemon: No such image: " + args[len(args)-1])
+	reconfigureVerifier(t, subject, func(config *guardana.Config) {
+		config.Pins = driver.Pins{{Name: "VERIFIER_IMAGE", Value: testVerifierImage}, {Name: "VERIFIER_VERSION", Value: "1.0.0rc5"}}
+		other := config.Inspect
+		config.Inspect = func(ctx context.Context, name string, args ...string) (string, error) {
+			switch {
+			case other == nil && !strings.HasPrefix(args[len(args)-1], testVerifierImage+":"):
+				return "", errors.New("the test inspects no other image")
+			case !strings.HasPrefix(args[len(args)-1], testVerifierImage+":"):
+				return other(ctx, name, args...)
+			case label == "":
+				return "", errors.New("exit status 1: Error response from daemon: No such image: " + args[len(args)-1])
+			}
+			return "sha256:cc " + label, nil
 		}
-		return "sha256:cc " + label, nil
-	}
+	})
 }
 
 func TestAVerifierImageNotBuiltFromThePinIsRefused(t *testing.T) {

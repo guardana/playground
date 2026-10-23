@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/drivers/control"
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/labspec"
 	"github.com/guardana/playground/runner/dockercompose"
@@ -65,12 +66,13 @@ type lab struct {
 	// describe reads what produced the run for the report header; nil records
 	// that nothing was read.
 	describe func(context.Context) report.Provenance
-	// control is the enforcer, the gate of every scenario with a gateway.
-	control *control.Driver
+	// control is the enforcer, the gate of every scenario with a gateway, and
+	// verifier probes the victims or grades the agent's trace.
+	control  *control.Driver
+	verifier *guardana.Driver
 	// development names a build a subject runs in place of its pin, for the
 	// run's lines; empty when every subject runs at its pin.
 	development string
-	inspect     lookup
 }
 
 // execute runs one scenario and writes its reports. It returns an error only
@@ -159,7 +161,7 @@ func (l lab) runScenario(
 	var graded assertion.Report
 	var rows []report.StepRow
 	if chosen.prober != nil {
-		graded = l.gradeVerifier(ctx, chosen.prober, run, spec, boot, token)
+		graded = l.gradeProber(ctx, chosen.prober, run, spec, boot, token)
 	} else {
 		graded, rows = l.gradeTrajectory(ctx, chosen, run, spec, trajectory, boot)
 	}

@@ -1,4 +1,4 @@
-package main
+package guardana
 
 import (
 	"context"
@@ -30,21 +30,21 @@ const (
 	maxScanDepth = 8
 )
 
-func newScanRun(number int, dir string) check.VerifierRun {
-	return check.VerifierRun{Step: number, URL: scanTarget, Report: filepath.Join(dir, fmt.Sprintf("step-%d.json", number))}
+func newScanRun(number int, dir string) check.StepRun {
+	return reportRun(number, scanTarget, filepath.Join(dir, fmt.Sprintf("step-%d.json", number)))
 }
 
 // runScan copies a scan step's target into its inputs and scans it. A target
 // that cannot be copied whole is not scanned: a scan of part of it would be
 // graded as a scan of all of it.
-func (l lab) runScan(
-	ctx context.Context, compose dockercompose.Compose, profiles []string, dir string, made error, scan labspec.ScanStep, run *check.VerifierRun,
+func (d *Driver) runScan(
+	ctx context.Context, compose dockercompose.Compose, profiles []string, dir string, made error, scan labspec.ScanStep, run *check.StepRun,
 ) {
 	if made != nil {
 		run.Detail = "the verifier's directory could not be made: " + made.Error()
 		return
 	}
-	if err := handOverScan(l.workspace, dir, run.Step, scan); err != nil {
+	if err := d.handOverScan(dir, run.Step, scan); err != nil {
 		run.Detail = "the step's inputs could not be handed over: " + err.Error()
 		return
 	}
@@ -53,25 +53,25 @@ func (l lab) runScan(
 		args = append(args, "--profile", path.Join(verifierMount, inputsDir, profileInput))
 	}
 	step := compose.WithEnv(map[string]string{stepVariable: stepDirName(run.Step)})
-	l.runOnce(ctx, step, profiles, scanService, args, run)
+	d.runOnce(ctx, step, profiles, scanService, args, dir, run)
 }
 
 // handOverScan makes the step's directories, copies the target into in/target
 // and the profile beside it.
-func handOverScan(space workspace, dir string, number int, scan labspec.ScanStep) error {
+func (d *Driver) handOverScan(dir string, number int, scan labspec.ScanStep) error {
 	if err := makeStepDirs(dir, number, false); err != nil {
 		return err
 	}
 	in := filepath.Join(dir, stepDirName(number), inputsDir)
 	if scan.Profile != "" {
-		if err := copyInput(space.file(scan.Profile), filepath.Join(in, profileInput)); err != nil {
+		if err := copyInput(d.file(scan.Profile), filepath.Join(in, profileInput)); err != nil {
 			return fmt.Errorf("the profile %s: %w", scan.Profile, err)
 		}
 	}
-	if err := refuseLinkOnTheWay(space.dir, scan.Target); err != nil {
+	if err := refuseLinkOnTheWay(d.config.Workspace, scan.Target); err != nil {
 		return fmt.Errorf("the target %s: %w", scan.Target, err)
 	}
-	if err := copyTree(space.file(scan.Target), filepath.Join(in, scanTarget)); err != nil {
+	if err := copyTree(d.file(scan.Target), filepath.Join(in, scanTarget)); err != nil {
 		return fmt.Errorf("the target %s: %w", scan.Target, err)
 	}
 	return nil
@@ -154,7 +154,7 @@ func copyFromRoot(root *os.Root, name, to string) error {
 	if len(body) > maxInputBytes {
 		return fmt.Errorf("%s grew past %d bytes", name, maxInputBytes)
 	}
-	return keepNew(to, string(body), inputMode)
+	return runfile.KeepNew(to, string(body), inputMode)
 }
 
 // refuseLinkOnTheWay refuses a target any directory on the way to which, the

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/guardana/playground/drivers/control"
+	"github.com/guardana/playground/drivers/guardana"
 	"github.com/guardana/playground/internal/assertion"
 	"github.com/guardana/playground/internal/hostpath"
 	"github.com/guardana/playground/runner/dockercompose"
@@ -335,7 +336,7 @@ func labUnderTest(t *testing.T, compose dockercompose.Compose) (lab, string) {
 		suffix:    countingSuffix(),
 		log:       io.Discard,
 		control:   gate,
-		inspect:   inspectEnforcer(testTree),
+		verifier:  guardana.New(guardana.Config{Workspace: space.dir, Inspect: inspectEnforcer(testTree), Log: io.Discard}),
 	}, filepath.Join(root, "scenarios/flow/flow-01.yaml")
 }
 
