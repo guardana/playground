@@ -9,8 +9,8 @@ Two tools are wired in today, each at the pin in `versions.env`:
 [Control](https://github.com/guardana/control) (the enforcer) decides tool
 calls inline, and [Guardana](https://github.com/guardana/guardana) (the
 verifier) probes servers, scans artifacts and grades recorded runs. Each is a
-driver in `drivers/`, behind roles any gate, grader, scanner or monitor can
-fill; a driver for a third tool is `planned`
+driver in `drivers/` behind the gate, prober and grader roles; a third tool's
+driver and a monitor role are `planned`
 ([P8](ROADMAP.md#p8--more-gates-graders-and-monitors-partly-implemented)).
 
 A tool's maintainers test its releases; adopters test their own policy, gateway

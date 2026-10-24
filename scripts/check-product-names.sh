@@ -121,7 +121,11 @@ BEGIN { nn = split(names, name, " "); ns = split(stripped, token, " "); nd = spl
 	text = substr(rest, index(rest, ":") + 1)
 	for (k = 1; k <= ns; k++) text = replace(text, token[k], "")
 	dir = path; sub(/\/[^\/]*$/, "", dir)
-	if (path ~ /\.go$/ && index(" " wiring " ", " " dir " ")) text = unwire(text)
+	if (path ~ /\.go$/ && index(" " wiring " ", " " dir " ")) {
+		# Only code is wiring: a comment that names a driver is prose like any other.
+		c = (text ~ /^[ \t]*\/\//) ? 1 : index(text, " //")
+		text = c ? unwire(substr(text, 1, c - 1)) substr(text, c) : unwire(text)
+	}
 	hit = index(tolower(text), tolower(anycase)) || whole(text, wordname)
 	for (k = 1; k <= nn && !hit; k++) hit = whole(text, name[k])
 	if (hit) print
