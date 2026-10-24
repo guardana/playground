@@ -45,6 +45,10 @@ func TestTheProductNameGuardRefusesWhatItClaimsTo(t *testing.T) {
 			product + ".playground/step, " + product + "-playground, @" + product + "/maintainers\n", ""},
 		{"a driver wired in the runner's main package", "runner/x.go", "package main\n\nimport \"" + module + "/drivers/" +
 			product + "\"\n\nvar d *" + product + ".Driver\n", ""},
+		{"a driver named in a comment where drivers are wired", "runner/x.go", "package main\n\n// " + product +
+			".Verdict decides here\n", "runner/x.go:3:"},
+		{"a driver named in a trailing comment where drivers are wired", "runner/x.go", "package main\n\nvar d *" + product +
+			".Driver // " + product + ".Verdict decides here\n", "runner/x.go:3:"},
 		{"a driver named outside a main package", "runner/check/x.go", "package check\n\nimport \"" + module + "/drivers/" +
 			product + "\"\n", "runner/check/x.go:3:"},
 		{"a name derived from versions.env", "runner/x.go", "package main\n\n// runs acme-gateway\n", "runner/x.go:3:"},

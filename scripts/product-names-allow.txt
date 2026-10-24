@@ -6,7 +6,7 @@
 drivers/**                      the code that drives each tool is where its names belong
 versions.env                    the pins name each system under test
 scenarios/**                    a tool's own scenarios name the tool they exercise
-config/**                       policies, gateway, verifier profiles and contracts are per-tool configuration
+config/verifier/**              the verifier's profiles
 compose/verifier/**             the hash-locked install of the verifier's package
 CHANGELOG.md                    releases record what changed for which tool
 README.md                       introduces the systems under test
@@ -14,8 +14,8 @@ ROADMAP.md                      plans name the tool they are for
 AGENTS.md                       the project law names the systems under test
 docs/reference/glossary.md      defines each system's name
 docs/dependencies.md            names the pinned packages and where they come from
-docs/lab-files.md               until the format split (L7)
-docs/how-it-works/*.md          until the format split (L7)
-docs/runbooks/*.md              until the format split (L7)
+docs/lab-files.md               until a scenario format every driver shares (ROADMAP P8)
+docs/how-it-works/*.md          until a scenario format every driver shares (ROADMAP P8)
+docs/runbooks/*.md              until a scenario format every driver shares (ROADMAP P8)
 scripts/check-hygiene.sh        refuses the sibling checkouts by their directory names
 scripts/check-product-names.sh  the rule names what it refuses

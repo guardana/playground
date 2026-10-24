@@ -3,8 +3,8 @@
 This repository is a tool-neutral playground for testing AI tools and models.
 Two tools are wired in today: Control (the enforcer) decides tool calls inline,
 and Guardana (the verifier) probes servers, scans artifacts and grades recorded
-runs. Each is a driver behind roles any gate, grader, scanner or monitor can
-fill; drivers for other tools are planned
+runs. Each is a driver behind the gate, prober and grader roles; drivers for
+other tools and a monitor role are planned
 ([P8](#p8--more-gates-graders-and-monitors-partly-implemented)), and so are agent trials
 and model endpoints
 ([P5](#p5--agent-trials-in-the-same-playground-planned),
