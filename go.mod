@@ -8,7 +8,7 @@ tool (
 )
 
 require (
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
